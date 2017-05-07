@@ -32,6 +32,6 @@ make
 
 ## API
 
-Currently only `R.SETBIT` and `R.GETBIT` operations are supported as a proof-of-concept.
+Currently only `R.SETBIT` and `R.GETBIT` operations are supported as a proof-of-concept. They are the same as redis' [SETBIT](https://redis.io/commands/setbit) and [GETBIT](https://redis.io/commands/getbit) commands on the underlying `roaring_bitmap_t` data structure.
 
 More commands coming soon.
