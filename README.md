@@ -16,19 +16,9 @@ Otherwise, you can simply run the `./configure` script and it will compile the s
 
 ## Build
 
-This project can be built with `cmake`, or simply using the `build.sh` script
+This project can be built with `cmake`:
 
-```
-# builds CRoaring
-pushd .
-cd deps/CRoaring/
-mkdir -p build
-cd build
-cmake ..
-make
-
-# builds reroaring
-popd
+```bash
 mkdir -p build
 cd build
 cmake ..
