@@ -25,3 +25,13 @@ cd build
 cmake ..
 make
 ```
+
+## Tests
+
+`TODO`
+
+## API
+
+Currently only `R.SETBIT` and `R.GETBIT` operations are supported as a proof-of-concept.
+
+More commands coming soon.
