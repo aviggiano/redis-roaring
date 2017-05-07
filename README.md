@@ -18,7 +18,7 @@ Otherwise, you can simply run the `./configure` script and it will compile the s
 
 This project can be built with `cmake`, or simply using the `build.sh` script
 
-```
+```bash
 # builds CRoaring
 pushd .
 cd deps/CRoaring/
