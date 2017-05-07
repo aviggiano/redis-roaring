@@ -1,5 +1,7 @@
 *.o
 *.so
+*.aof
+*.rdb
 build/
 .idea/
 Makefile
