@@ -1,86 +1,92 @@
 #include "redismodule.h"
 #include "roaring.h"
 
-#define BITMAP_ENCODING_VERSION 0
+#define BITMAP_ENCODING_VERSION 1
 
-static RedisModuleType *BitmapType;
+static RedisModuleType* BitmapType;
 
 /* === Internal data structure === */
-typedef struct bitmap {
-  uint32_t size;
-  char *array;
-} Bitmap;
+typedef roaring_bitmap_t Bitmap;
 
-Bitmap *bitmap_alloc() {
-  Bitmap *bitmap = RedisModule_Alloc(sizeof(*bitmap));
-  bitmap->size = 0;
-  bitmap->array = NULL;
-  return bitmap;
+Bitmap* bitmap_alloc() {
+  return roaring_bitmap_create();
 }
 
-void bitmap_free(Bitmap *bitmap) {
-  RedisModule_Free(bitmap->array);
-  RedisModule_Free(bitmap);
+void bitmap_free(Bitmap* bitmap) {
+  roaring_bitmap_free(bitmap);
 }
 
-void bitmap_setbit(Bitmap *bitmap, uint32_t offset, char value) {
-  if (offset >= bitmap->size) {
-    bitmap->size = offset * 2 + 1;
-    bitmap->array = RedisModule_Realloc(bitmap->array, bitmap->size);
-  }
-  bitmap->array[offset] = value != 0;
-}
-
-char bitmap_getbit(Bitmap *bitmap, uint32_t offset) {
-  if (offset >= bitmap->size) {
-    return 0;
+void bitmap_setbit(Bitmap* bitmap, uint32_t offset, char value) {
+  if (value == 0) {
+    roaring_bitmap_remove(bitmap, offset);
   }
   else {
-    return bitmap->array[offset];
+    roaring_bitmap_add(bitmap, offset);
   }
+}
+
+char bitmap_getbit(Bitmap* bitmap, uint32_t offset) {
+  return roaring_bitmap_contains(bitmap, offset) == true;
 }
 
 /* === Bitmap type methods === */
 
-void BitmapRdbSave(RedisModuleIO *rdb, void *value) {
-  Bitmap *bitmap = value;
-  RedisModule_SaveUnsigned(rdb, bitmap->size);
-  RedisModule_SaveStringBuffer(rdb, bitmap->array, bitmap->size);
+void BitmapRdbSave(RedisModuleIO* rdb, void* value) {
+  Bitmap* bitmap = value;
+  size_t serialized_size = roaring_bitmap_size_in_bytes(bitmap);
+  char* serialized_bitmap = RedisModule_Alloc(serialized_size);
+  size_t serialized_size_check = roaring_bitmap_serialize(bitmap, serialized_bitmap);
+
+  RedisModule_SaveStringBuffer(rdb, serialized_bitmap, serialized_size_check);
+
+  RedisModule_Free(serialized_bitmap);
 }
 
-void *BitmapRdbLoad(RedisModuleIO *rdb, int encver) {
+void* BitmapRdbLoad(RedisModuleIO* rdb, int encver) {
   if (encver != BITMAP_ENCODING_VERSION) {
     RedisModule_LogIOError(rdb, "warning", "Can't load data with version %d", encver);
     return NULL;
   }
-  Bitmap *bitmap = bitmap_alloc();
-  bitmap->size = (uint32_t) RedisModule_LoadUnsigned(rdb);
   size_t size;
-  bitmap->array = RedisModule_LoadStringBuffer(rdb, &size);
+  char* serialized_bitmap = RedisModule_LoadStringBuffer(rdb, &size);
+  Bitmap* bitmap = roaring_bitmap_deserialize(serialized_bitmap);
   return bitmap;
 }
 
-void BitmapAofRewrite(RedisModuleIO *aof, RedisModuleString *key, void *value) {
-  Bitmap *bitmap = value;
-  for (uint32_t i = 0; i < bitmap->size; i++) {
-    RedisModule_EmitAOF(aof, "R.SETBIT", "sll", key, i, bitmap->array[i]);
-  }
+typedef struct Bitmap_aof_rewrite_callback_params_s {
+  RedisModuleIO* aof;
+  RedisModuleString* key;
+} Bitmap_aof_rewrite_callback_params;
+
+bool BitmapAofRewriteCallback(uint32_t offset, void* param) {
+  Bitmap_aof_rewrite_callback_params* params = param;
+  RedisModule_EmitAOF(params->aof, "R.SETBIT", "sll", params->key, offset, 1);
+  return true;
 }
 
-size_t BitmapMemUsage(const void *value) {
-  const Bitmap *bitmap = value;
-  return sizeof(*bitmap) + bitmap->size * sizeof(*bitmap->array);
+void BitmapAofRewrite(RedisModuleIO* aof, RedisModuleString* key, void* value) {
+  Bitmap* bitmap = value;
+  Bitmap_aof_rewrite_callback_params params = {
+      aof: aof,
+      key: key
+  };
+  roaring_iterate(bitmap, BitmapAofRewriteCallback, &params);
 }
 
-void BitmapFree(void *value) {
+size_t BitmapMemUsage(const void* value) {
+  const Bitmap* bitmap = value;
+  return roaring_bitmap_size_in_bytes(bitmap);
+}
+
+void BitmapFree(void* value) {
   bitmap_free(value);
 }
 
 /* === Bitmap type commands === */
 
-Bitmap *BitmapUpget(RedisModuleKey *key, int type) {
+Bitmap* BitmapUpget(RedisModuleKey* key, int type) {
   /* Create an empty value object if the key is currently empty. */
-  Bitmap *bitmap;
+  Bitmap* bitmap;
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
     bitmap = bitmap_alloc();
     RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
@@ -93,19 +99,12 @@ Bitmap *BitmapUpget(RedisModuleKey *key, int type) {
 /**
  * R.SETBIT <key> <offset> <value>
  * */
-int RSetBitCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
-  roaring_bitmap_t *r1 = roaring_bitmap_create();
-  for (uint32_t i = 100; i < 1000; i++) roaring_bitmap_add(r1, i);
-  printf("cardinality = %d\n", (int) roaring_bitmap_get_cardinality(r1));
-  roaring_bitmap_free(r1);
-
-
-
+int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (argc != 4) {
     return RedisModule_WrongArity(ctx);
   }
   RedisModule_AutoMemory(ctx);
-  RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
   int type = RedisModule_KeyType(key);
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
@@ -120,7 +119,7 @@ int RSetBitCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be either 0 or 1");
   }
 
-  Bitmap *bitmap = BitmapUpget(key, type);
+  Bitmap* bitmap = BitmapUpget(key, type);
 
   /* Set bit with value */
   bitmap_setbit(bitmap, (uint32_t) offset, (char) value);
@@ -134,12 +133,12 @@ int RSetBitCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 /**
  * R.GETBIT <key> <offset>
  * */
-int RGetBitCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (argc != 3) {
     return RedisModule_WrongArity(ctx);
   }
   RedisModule_AutoMemory(ctx);
-  RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
   int type = RedisModule_KeyType(key);
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
@@ -150,7 +149,7 @@ int RGetBitCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be an unsigned 32 bit integer");
   }
 
-  Bitmap *bitmap = BitmapUpget(key, type);
+  Bitmap* bitmap = BitmapUpget(key, type);
 
   /* Get bit */
   char value = bitmap_getbit(bitmap, (uint32_t) offset);
@@ -160,7 +159,7 @@ int RGetBitCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
   return REDISMODULE_OK;
 }
 
-int RedisModule_OnLoad(RedisModuleCtx *ctx) {
+int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   // Register the module itself
   if (RedisModule_Init(ctx, "REROARING", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
