@@ -1,0 +1,3 @@
+[submodule "deps/CRoaring"]
+	path = deps/CRoaring
+	url = git@github.com:RoaringBitmap/CRoaring.git
