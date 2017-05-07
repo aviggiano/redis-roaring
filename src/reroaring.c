@@ -1,5 +1,5 @@
 #include "redismodule.h"
-#include <limits.h>
+#include "roaring.c"
 
 #define BITMAP_ENCODING_VERSION 0
 
