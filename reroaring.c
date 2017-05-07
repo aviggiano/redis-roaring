@@ -63,7 +63,7 @@ void *BitmapRdbLoad(RedisModuleIO *rdb, int encver) {
 void BitmapAofRewrite(RedisModuleIO *aof, RedisModuleString *key, void *value) {
   Bitmap *bitmap = value;
   for (uint32_t i = 0; i < bitmap->size; i++) {
-    RedisModule_EmitAOF(aof, "R.SETBIT", "sl", key, i, bitmap->array[i]);
+    RedisModule_EmitAOF(aof, "R.SETBIT", "sll", key, i, bitmap->array[i]);
   }
 }
 
