@@ -9,5 +9,4 @@ mkdir -p build
 cd build
 cmake ..
 make -DBUILD_STATIC=ON
-sudo make install
 
