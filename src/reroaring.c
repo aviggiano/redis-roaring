@@ -1,5 +1,5 @@
 #include "redismodule.h"
-#include "roaring.c"
+#include "roaring.h"
 
 #define BITMAP_ENCODING_VERSION 0
 
@@ -94,6 +94,13 @@ Bitmap *BitmapUpget(RedisModuleKey *key, int type) {
  * R.SETBIT <key> <offset> <value>
  * */
 int RSetBitCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+  roaring_bitmap_t *r1 = roaring_bitmap_create();
+  for (uint32_t i = 100; i < 1000; i++) roaring_bitmap_add(r1, i);
+  printf("cardinality = %d\n", (int) roaring_bitmap_get_cardinality(r1));
+  roaring_bitmap_free(r1);
+
+
+
   if (argc != 4) {
     return RedisModule_WrongArity(ctx);
   }
