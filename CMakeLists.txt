@@ -9,7 +9,6 @@ set(DEPS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/deps)
 set(CROARING_PATH ${DEPS_PATH}/CRoaring)
 
 include_directories(${CROARING_PATH})
-#add_subdirectory(${CROARING_PATH})
 
 set(SOURCE_FILES ${SRC_PATH}/reroaring.c)
 add_library(reroaring SHARED ${SOURCE_FILES})
