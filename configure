@@ -2,7 +2,6 @@
 
 git submodule init
 git submodule update
-cd deps/CRoaring/
 
 # https://github.com/RoaringBitmap/CRoaring#building-with-cmake-linux-and-macos-visual-studio-users-should-see-below
 mkdir -p build
