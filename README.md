@@ -12,7 +12,7 @@ Pull requests are welcome.
 
 Initialize and update the CRoaring git submodule and follow the build instructions on their repository.
 
-Otherwise, you can simply run the `./configure` script and it will compile the source code as a static library which will be linked to **reroaring** through `cmake`.
+Alternatively you can run the `./configure` script and it will compile the source code as a static library which will be linked to **reroaring** through `cmake`.
 
 ## Build
 
