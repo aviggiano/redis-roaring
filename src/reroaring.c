@@ -84,18 +84,6 @@ void BitmapFree(void* value) {
 
 /* === Bitmap type commands === */
 
-Bitmap* BitmapUpget(RedisModuleKey* key, int type) {
-  /* Create an empty value object if the key is currently empty. */
-  Bitmap* bitmap;
-  if (type == REDISMODULE_KEYTYPE_EMPTY) {
-    bitmap = bitmap_alloc();
-    RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
-  } else {
-    bitmap = RedisModule_ModuleTypeGetValue(key);
-  }
-  return bitmap;
-}
-
 /**
  * R.SETBIT <key> <offset> <value>
  * */
@@ -119,7 +107,14 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be either 0 or 1");
   }
 
-  Bitmap* bitmap = BitmapUpget(key, type);
+  /* Create an empty value object if the key is currently empty. */
+  Bitmap* bitmap;
+  if (type == REDISMODULE_KEYTYPE_EMPTY) {
+    bitmap = bitmap_alloc();
+    RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
+  } else {
+    bitmap = RedisModule_ModuleTypeGetValue(key);
+  }
 
   /* Set bit with value */
   bitmap_setbit(bitmap, (uint32_t) offset, (char) value);
@@ -149,10 +144,15 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be an unsigned 32 bit integer");
   }
 
-  Bitmap* bitmap = BitmapUpget(key, type);
-
-  /* Get bit */
-  char value = bitmap_getbit(bitmap, (uint32_t) offset);
+  char value;
+  if(type == REDISMODULE_KEYTYPE_EMPTY) {
+    value = 0;
+  }
+  else {
+    Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
+    /* Get bit */
+    value = bitmap_getbit(bitmap, (uint32_t) offset);
+  }
 
   RedisModule_ReplyWithLongLong(ctx, value);
 
