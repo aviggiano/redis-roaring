@@ -1,5 +1,5 @@
-#ifndef REROARING_TYPE_H
-#define REROARING_TYPE_H
+#ifndef REROARING_DATA_STRUCTURE_H
+#define REROARING_DATA_STRUCTURE_H
 
 #include "roaring.h"
 

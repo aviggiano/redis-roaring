@@ -13,6 +13,6 @@ include_directories(${CROARING_PATH})
 
 link_directories(${CROARING_BUILD_PATH})
 set(SOURCE_FILES ${SRC_PATH}/reroaring.c
-        ${SRC_PATH}/type.c)
+        ${SRC_PATH}/data_structure.c)
 add_library(reroaring SHARED ${SOURCE_FILES})
 target_link_libraries(reroaring roaring)

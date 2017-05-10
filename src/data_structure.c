@@ -1,4 +1,4 @@
-#include "type.h"
+#include "data_structure.h"
 
 /* === Internal data structure === */
 
