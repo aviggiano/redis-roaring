@@ -1,36 +1,11 @@
 #include "redismodule.h"
-#include "roaring.h"
+#include "type.h"
 
 #define BITMAP_ENCODING_VERSION 1
 
 static RedisModuleType* BitmapType;
 
-/* === Internal data structure === */
-typedef roaring_bitmap_t Bitmap;
-
-Bitmap* bitmap_alloc() {
-  return roaring_bitmap_create();
-}
-
-void bitmap_free(Bitmap* bitmap) {
-  roaring_bitmap_free(bitmap);
-}
-
-void bitmap_setbit(Bitmap* bitmap, uint32_t offset, char value) {
-  if (value == 0) {
-    roaring_bitmap_remove(bitmap, offset);
-  }
-  else {
-    roaring_bitmap_add(bitmap, offset);
-  }
-}
-
-char bitmap_getbit(Bitmap* bitmap, uint32_t offset) {
-  return roaring_bitmap_contains(bitmap, offset) == true;
-}
-
 /* === Bitmap type methods === */
-
 void BitmapRdbSave(RedisModuleIO* rdb, void* value) {
   Bitmap* bitmap = value;
   size_t serialized_size = roaring_bitmap_size_in_bytes(bitmap);
@@ -145,7 +120,7 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   char value;
-  if(type == REDISMODULE_KEYTYPE_EMPTY) {
+  if (type == REDISMODULE_KEYTYPE_EMPTY) {
     value = 0;
   }
   else {
