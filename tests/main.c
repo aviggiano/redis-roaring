@@ -23,6 +23,28 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  {
+    printf("Should perform an OR between two bitmaps\n");
+    Bitmap* four = bitmap_alloc();
+    bitmap_setbit(four, 2, 1);
+    Bitmap* nine = bitmap_alloc();
+    bitmap_setbit(nine, 0, 1);
+    bitmap_setbit(nine, 3, 1);
+
+    Bitmap* bitmaps[] = {four, nine};
+    Bitmap* or = bitmap_or(2, (const Bitmap**) bitmaps);
+    roaring_uint32_iterator_t* iterator = roaring_create_iterator(or);
+    int expected[] = {0, 2, 3};
+    for (int i = 0; iterator->has_value; i++) {
+      assert(iterator->current_value == expected[i]);
+      roaring_advance_uint32_iterator(iterator);
+    }
+    roaring_free_uint32_iterator(iterator);
+
+    bitmap_free(nine);
+    bitmap_free(four);
+  }
+
   printf("All tests passed\n");
   return 0;
 }
