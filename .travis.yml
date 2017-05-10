@@ -5,10 +5,10 @@ dist: trusty
 before_install:
   - git submodule init
   - git submodule update
-  - ./configure
+  - ./configure.sh
 
 script:
-  - ./test
+  - ./test.sh
 
 notifications:
   email:

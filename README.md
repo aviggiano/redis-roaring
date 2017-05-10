@@ -12,11 +12,11 @@ Pull requests are welcome.
 
 Initialize and update the CRoaring git submodule and follow the build instructions on their repository.
 
-Alternatively you can run the `./configure` script and it will compile the source code as a static library which will be linked to **reroaring** through `cmake`.
+Alternatively you can run the `configure.sh` script and it will compile the source code as a static library which will be linked to **reroaring** through `cmake`.
 
 ## Build
 
-This project can be built with `cmake`:
+This project can be built with the `build.sh` script, or more specifically:
 
 ```bash
 mkdir -p build
@@ -26,6 +26,8 @@ make
 ```
 
 ## Tests
+
+Just run the `test.sh` script, or by hand:
 
 ```bash
 mkdir -p build
