@@ -1,5 +1,6 @@
-dist: precise
-language: c
+language: cpp
+compiler: gcc
+dist: trusty
 
 before_install:
   - git submodule init
