@@ -1,0 +1,8 @@
+dist: precise
+language: c
+
+before_install:
+  - ./configure
+
+script:
+  - ./test
