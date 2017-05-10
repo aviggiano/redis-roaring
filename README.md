@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/aviggiano/reroaring.svg?branch=master)](https://travis-ci.org/aviggiano/reroaring)
+
 reroaring
 =========
 Roaring Bitmaps for Redis
