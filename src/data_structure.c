@@ -22,3 +22,7 @@ void bitmap_setbit(Bitmap* bitmap, uint32_t offset, char value) {
 char bitmap_getbit(Bitmap* bitmap, uint32_t offset) {
   return roaring_bitmap_contains(bitmap, offset) == true;
 }
+
+Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps) {
+  return roaring_bitmap_or_many_heap(n, bitmaps);
+}
