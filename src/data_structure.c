@@ -26,3 +26,11 @@ char bitmap_getbit(Bitmap* bitmap, uint32_t offset) {
 Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps) {
   return roaring_bitmap_or_many_heap(n, bitmaps);
 }
+
+Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps) {
+  Bitmap* result = roaring_bitmap_copy(bitmaps[0]);
+  for (uint32_t i = 1; i < n; i++) {
+    roaring_bitmap_and_inplace(result, bitmaps[i]);
+  }
+  return result;
+}

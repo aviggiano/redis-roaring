@@ -81,7 +81,7 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   return REDISMODULE_OK;
 }
 
-int RBitOpOR(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+int RBitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, Bitmap* (* operation)(uint32_t, const Bitmap**)) {
   // open destkey for writing
   RedisModuleKey* destkey = RedisModule_OpenKey(ctx, argv[2], REDISMODULE_READ | REDISMODULE_WRITE);
   int desttype = RedisModule_KeyType(destkey);
@@ -120,14 +120,14 @@ int RBitOpOR(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   // calculate destkey bitmap
-  Bitmap* or;
+  Bitmap* result;
   if (desttype != REDISMODULE_KEYTYPE_EMPTY) {
-    or = RedisModule_ModuleTypeGetValue(destkey);
+    result = RedisModule_ModuleTypeGetValue(destkey);
     // "The result of the operation is always stored at destkey", so we need to free old keys
-    bitmap_free(or);
+    bitmap_free(result);
   }
-  or = bitmap_or(n, (const Bitmap**) bitmaps);
-  RedisModule_ModuleTypeSetValue(destkey, BitmapType, or);
+  result = operation(n, (const Bitmap**) bitmaps);
+  RedisModule_ModuleTypeSetValue(destkey, BitmapType, result);
 
   for (uint32_t i = 0; i < n; i++) {
     if (should_free[i]) {
@@ -164,10 +164,11 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
   else if (strcmp(operation, "AND") == 0) {
     if (argc == 4) return RedisModule_WrongArity(ctx);
+    else return RBitOp(ctx, argv, argc, bitmap_and);
   }
   else if (strcmp(operation, "OR") == 0) {
     if (argc == 4) return RedisModule_WrongArity(ctx);
-    else return RBitOpOR(ctx, argv, argc);
+    else return RBitOp(ctx, argv, argc, bitmap_or);
   }
   else if (strcmp(operation, "XOR") == 0) {
     if (argc == 4) return RedisModule_WrongArity(ctx);
