@@ -10,8 +10,9 @@ Pull requests are welcome.
 
 ## Dependencies
 
-- CRoaring
-- cmake
+- CRoaring (redis module)
+- cmake (build)
+- redis (tests)
 
 Run the `configure.sh` script and it will compile the source code as a static library which will be linked to **reroaring**. Alternatively initialize and update the CRoaring git submodule and follow the build instructions on their repository. 
 
