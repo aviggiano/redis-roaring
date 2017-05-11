@@ -2,8 +2,9 @@
 
 set -eu
 
-function rsetbit_rgetbit()
+function test_rsetbit_rgetbit()
 {
+  echo "test_rsetbit_rgetbit"
   EXPECTED=0
   FOUND=$(echo "R.SETBIT key 0 1" | redis-cli)
   [ $FOUND -eq $EXPECTED ]
@@ -11,5 +12,10 @@ function rsetbit_rgetbit()
   FOUND=$(echo "R.GETBIT key 0" | redis-cli)
   [ $FOUND -eq $EXPECTED ]
 }
+function test_done()
+{
+  echo "All integration tests passed"
+}
 
-rsetbit_rgetbit
+test_rsetbit_rgetbit
+test_done
