@@ -140,7 +140,11 @@ int RBitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, Bitmap* (* o
   RedisModule_Free(bitmaps);
 
   RedisModule_ReplicateVerbatim(ctx);
-  RedisModule_ReplyWithSimpleString(ctx, "OK - TODO: check response");
+
+  // Integer reply: The size of the string stored in the destination key
+  // (adapted to cardinality)
+  uint64_t cardinality = roaring_bitmap_get_cardinality(result);
+  RedisModule_ReplyWithLongLong(ctx, (long long) cardinality);
 
   return REDISMODULE_OK;
 }
