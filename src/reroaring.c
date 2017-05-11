@@ -174,7 +174,7 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     if (argc == 4) return RedisModule_WrongArity(ctx);
   }
   else {
-    RedisModule_ReplyWithSimpleString(ctx, "OK - TODO: check response");
+    RedisModule_ReplyWithSimpleString(ctx, "NOK - TODO: check response");
     return REDISMODULE_ERR;
   }
 
