@@ -222,7 +222,7 @@ int RBitCountCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R.BITPOS <key>
  * */
 int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
-  if (argc != 2 && argc != 4) {
+  if (argc != 2) {
     return RedisModule_WrongArity(ctx);
   }
   RedisModule_AutoMemory(ctx);

@@ -45,5 +45,6 @@ Currently only the following operations are supported
 - `R.GETBIT` (same as [GETBIT](https://redis.io/commands/getbit))
 - `R.BITOP` (same as [BITOP](https://redis.io/commands/bitop))
 - `R.BITCOUNT` (same as [BITCOUNT](https://redis.io/commands/bitcount) without `start` and `end` parameters)
+- `R.BITPOS` (same as [BITPOS](https://redis.io/commands/bitpos) without `start` and `end` parameters)
 
 More commands coming soon.
