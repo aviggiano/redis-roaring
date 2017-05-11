@@ -182,7 +182,7 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     else return RBitOp(ctx, argv, argc, bitmap_xor);
   }
   else {
-    RedisModule_ReplyWithSimpleString(ctx, "NOK - TODO: check response");
+    RedisModule_ReplyWithSimpleString(ctx, "ERR syntax error");
     return REDISMODULE_ERR;
   }
 
