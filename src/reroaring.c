@@ -189,6 +189,34 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   return REDISMODULE_OK;
 }
 
+/**
+ * R.BITCOUNT <key>
+ * */
+int RBitCountCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2 && argc != 4) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+  int type = RedisModule_KeyType(key);
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  uint64_t count;
+  if (type == REDISMODULE_KEYTYPE_EMPTY) {
+    count = 0;
+  }
+  else {
+    Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
+    count = roaring_bitmap_get_cardinality(bitmap);
+  }
+
+  RedisModule_ReplyWithLongLong(ctx, (long long) count);
+
+  return REDISMODULE_OK;
+}
+
 int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   // Register the module itself
   if (RedisModule_Init(ctx, "REROARING", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
@@ -215,6 +243,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R.BITOP", RBitOpCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R.BITCOUNT", RBitCountCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
 
