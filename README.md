@@ -10,9 +10,10 @@ Pull requests are welcome.
 
 ## Dependencies
 
-Initialize and update the CRoaring git submodule and follow the build instructions on their repository.
+- CRoaring
+- cmake
 
-Alternatively you can run the `configure.sh` script and it will compile the source code as a static library which will be linked to **reroaring** through `cmake`.
+Run the `configure.sh` script and it will compile the source code as a static library which will be linked to **reroaring**. Alternatively initialize and update the CRoaring git submodule and follow the build instructions on their repository. 
 
 ## Build
 
