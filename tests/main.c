@@ -102,6 +102,40 @@ int main(int argc, char* argv[]) {
     bitmap_free(twelve);
   }
 
+  {
+    printf("Should perform a NOT using two different methods\n");
+    Bitmap* twelve = bitmap_alloc();
+    bitmap_setbit(twelve, 2, 1);
+    bitmap_setbit(twelve, 3, 1);
+
+    Bitmap* bitmaps[] = {twelve};
+    Bitmap* not_array = bitmap_not_array(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
+    Bitmap* not = bitmap_not(bitmaps[0]);
+    int expected[] = {0, 1};
+
+    {
+      roaring_uint32_iterator_t* iterator = roaring_create_iterator(not_array);
+      for (int i = 0; iterator->has_value; i++) {
+        assert(iterator->current_value == expected[i]);
+        roaring_advance_uint32_iterator(iterator);
+      }
+      roaring_free_uint32_iterator(iterator);
+    }
+    {
+      roaring_uint32_iterator_t* iterator = roaring_create_iterator(not);
+      for (int i = 0; iterator->has_value; i++) {
+        assert(iterator->current_value == expected[i]);
+        roaring_advance_uint32_iterator(iterator);
+      }
+      roaring_free_uint32_iterator(iterator);
+    }
+
+    bitmap_free(not);
+    bitmap_free(not_array);
+
+    bitmap_free(twelve);
+  }
+
   printf("All tests passed\n");
   return 0;
 }

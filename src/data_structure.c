@@ -38,3 +38,14 @@ Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps) {
 Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps) {
   return roaring_bitmap_xor_many(n, bitmaps);
 }
+
+Bitmap* bitmap_not_array(uint32_t unused, const Bitmap** bitmaps) {
+  (void) (unused);
+  uint32_t last = roaring_bitmap_maximum(bitmaps[0]);
+  return roaring_bitmap_flip(bitmaps[0], 0, last + 1);
+}
+
+Bitmap* bitmap_not(const Bitmap* bitmap) {
+  const Bitmap* bitmaps[] = {bitmap};
+  return bitmap_not_array(1, bitmaps);
+}

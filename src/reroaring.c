@@ -161,6 +161,7 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 
   if (strcmp(operation, "NOT") == 0) {
     if (argc != 4) return RedisModule_WrongArity(ctx);
+    else return RBitOp(ctx, argv, argc, bitmap_not_array);
   }
   else if (strcmp(operation, "AND") == 0) {
     if (argc == 4) return RedisModule_WrongArity(ctx);
