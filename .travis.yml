@@ -9,6 +9,7 @@ before_install:
 
 script:
   - ./test.sh
+  - ./test_valgrind.sh
 
 notifications:
   email:
