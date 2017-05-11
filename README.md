@@ -41,11 +41,9 @@ make
 
 Currently only the following operations are supported
 
-- `R.SETBIT`
-- `R.GETBIT`
-- `R.BITOP`
-
-They have the same the same semantycs as redis' [SETBIT](https://redis.io/commands/setbit),
-[GETBIT](https://redis.io/commands/getbit) and [BITOP](https://redis.io/commands/bitop).
+- `R.SETBIT` (same as [SETBIT](https://redis.io/commands/setbit))
+- `R.GETBIT` (same as [GETBIT](https://redis.io/commands/getbit))
+- `R.BITOP` (same as [BITOP](https://redis.io/commands/bitop))
+- `R.BITCOUNT` (same as [BITCOUNT](https://redis.io/commands/bitcount) without `start` and `end` parameters)
 
 More commands coming soon.
