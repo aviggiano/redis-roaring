@@ -39,10 +39,12 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   /* Set bit with value */
+  char old_value = bitmap_getbit(bitmap, (uint32_t) offset);
   bitmap_setbit(bitmap, (uint32_t) offset, (char) value);
 
   RedisModule_ReplicateVerbatim(ctx);
-  RedisModule_ReplyWithSimpleString(ctx, "OK - TODO: check response");
+  // Integer reply: the original bit value stored at offset.
+  RedisModule_ReplyWithLongLong(ctx, old_value);
 
   return REDISMODULE_OK;
 }
