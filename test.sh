@@ -9,14 +9,6 @@ make && \
 valgrind --leak-check=full --error-exitcode=1 ./test_reroaring &&
 cd -
 }
-function build_redis()
-{
-  cd deps/redis
-  if [ ! -f src/redis-server ]; then
-    make
-  fi
-  cd -
-}
 function build_redis_module()
 {
   ./build.sh
@@ -32,7 +24,6 @@ function run_tests()
 }
 function integration()
 {
-  build_redis
   build_redis_module
   start_redis
   run_tests
