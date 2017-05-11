@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO use set -eux
+
 function unit()
 {
   mkdir -p build && \
