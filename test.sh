@@ -11,8 +11,8 @@ cd -
 }
 function build_redis_module()
 {
-  ./build.sh
   rm build/CMakeCache.txt # FIXME this shouldn't be necessary
+  ./build.sh
 }
 function start_redis()
 {
