@@ -12,7 +12,6 @@ install:
 
 compiler:
   - gcc
-  - clang
 
 script:
   - ./test.sh

@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 
-# TODO use set -eux
+set -eu
+
+# FIXME rm build/CMakeCache.txt
 
 function unit()
 {
   mkdir -p build && \
+(rm build/CMakeCache.txt 2>/dev/null || true) && \
 cd build && \
 cmake -DCOMPILE_MODE:STRING="test" .. && \
 make && \
@@ -13,11 +16,13 @@ cd -
 }
 function build_redis_module()
 {
-  rm build/CMakeCache.txt 2>/dev/null && \ # FIXME this shouldn't be necessary
+  (rm build/CMakeCache.txt 2>/dev/null || true) && \
 ./build.sh
 }
 function start_redis()
 {
+  pkill -f redis
+  sleep 1
   ./deps/redis/src/redis-server --loadmodule ./build/libreroaring.so &
 }
 function run_tests()
