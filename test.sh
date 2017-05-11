@@ -17,6 +17,11 @@ function build_redis()
   fi
   cd -
 }
+function build_redis_module()
+{
+  ./build.sh
+  rm build/CMakeCache.txt # FIXME this shouldn't be necessary
+}
 function start_redis()
 {
   ./deps/redis/src/redis-server --loadmodule ./build/libreroaring.so &
@@ -28,6 +33,7 @@ function run_tests()
 function integration()
 {
   build_redis
+  build_redis_module
   start_redis
   run_tests
 }
