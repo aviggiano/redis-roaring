@@ -24,17 +24,19 @@ int main(int argc, char* argv[]) {
   }
 
   {
-    printf("Should perform an OR between two bitmaps\n");
+    printf("Should perform an OR between three bitmaps\n");
+    Bitmap* sixteen = bitmap_alloc();
+    bitmap_setbit(sixteen, 4, 1);
     Bitmap* four = bitmap_alloc();
     bitmap_setbit(four, 2, 1);
     Bitmap* nine = bitmap_alloc();
     bitmap_setbit(nine, 0, 1);
     bitmap_setbit(nine, 3, 1);
 
-    Bitmap* bitmaps[] = {four, nine};
-    Bitmap* or = bitmap_or(2, (const Bitmap**) bitmaps);
+    Bitmap* bitmaps[] = {sixteen, four, nine};
+    Bitmap* or = bitmap_or(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
     roaring_uint32_iterator_t* iterator = roaring_create_iterator(or);
-    int expected[] = {0, 2, 3};
+    int expected[] = {0, 2, 3, 4};
     for (int i = 0; iterator->has_value; i++) {
       assert(iterator->current_value == expected[i]);
       roaring_advance_uint32_iterator(iterator);
@@ -43,6 +45,7 @@ int main(int argc, char* argv[]) {
 
     bitmap_free(nine);
     bitmap_free(four);
+    bitmap_free(sixteen);
   }
 
   printf("All tests passed\n");
