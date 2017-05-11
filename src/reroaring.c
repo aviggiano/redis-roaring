@@ -25,7 +25,7 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be an unsigned 32 bit integer");
   }
   long long value;
-  if ((RedisModule_StringToLongLong(argv[2], &value) != REDISMODULE_OK)) {
+  if ((RedisModule_StringToLongLong(argv[3], &value) != REDISMODULE_OK)) {
     return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be either 0 or 1");
   }
 
