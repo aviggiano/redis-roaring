@@ -11,8 +11,8 @@ cd -
 }
 function build_redis_module()
 {
-  rm build/CMakeCache.txt # FIXME this shouldn't be necessary
-  ./build.sh
+  rm build/CMakeCache.txt 2>/dev/null && \ # FIXME this shouldn't be necessary
+./build.sh
 }
 function start_redis()
 {
@@ -24,10 +24,9 @@ function run_tests()
 }
 function integration()
 {
-  build_redis_module
-  start_redis
-  run_tests
+  build_redis_module && \
+start_redis &&
+run_tests
 }
 
-unit
-integration
+unit && integration
