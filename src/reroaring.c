@@ -172,6 +172,7 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
   else if (strcmp(operation, "XOR") == 0) {
     if (argc == 4) return RedisModule_WrongArity(ctx);
+    else return RBitOp(ctx, argv, argc, bitmap_xor);
   }
   else {
     RedisModule_ReplyWithSimpleString(ctx, "NOK - TODO: check response");

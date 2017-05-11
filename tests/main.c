@@ -75,6 +75,33 @@ int main(int argc, char* argv[]) {
     bitmap_free(twelve);
   }
 
+
+  {
+    printf("Should perform a XOR between three bitmaps\n");
+    Bitmap* twelve = bitmap_alloc();
+    bitmap_setbit(twelve, 2, 1);
+    bitmap_setbit(twelve, 3, 1);
+    Bitmap* four = bitmap_alloc();
+    bitmap_setbit(four, 2, 1);
+    Bitmap* six = bitmap_alloc();
+    bitmap_setbit(six, 1, 1);
+    bitmap_setbit(six, 2, 1);
+
+    Bitmap* bitmaps[] = {twelve, four, six};
+    Bitmap* xor = bitmap_xor(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
+    roaring_uint32_iterator_t* iterator = roaring_create_iterator(xor);
+    int expected[] = {1, 2, 3};
+    for (int i = 0; iterator->has_value; i++) {
+      assert(iterator->current_value == expected[i]);
+      roaring_advance_uint32_iterator(iterator);
+    }
+    roaring_free_uint32_iterator(iterator);
+
+    bitmap_free(six);
+    bitmap_free(four);
+    bitmap_free(twelve);
+  }
+
   printf("All tests passed\n");
   return 0;
 }

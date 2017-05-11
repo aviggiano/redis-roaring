@@ -11,5 +11,6 @@ void bitmap_setbit(Bitmap* bitmap, uint32_t offset, char value);
 char bitmap_getbit(Bitmap* bitmap, uint32_t offset);
 Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps);
 Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps);
+Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps);
 
 #endif

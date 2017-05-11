@@ -34,3 +34,7 @@ Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps) {
   }
   return result;
 }
+
+Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps) {
+  return roaring_bitmap_xor_many(n, bitmaps);
+}
