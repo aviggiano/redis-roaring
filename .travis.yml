@@ -12,11 +12,9 @@ install:
 
 compiler:
   - gcc
-  - clang
 
 script:
   - ./test.sh
-  - ./test_valgrind.sh
 
 notifications:
   email:
