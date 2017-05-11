@@ -43,6 +43,8 @@ int main(int argc, char* argv[]) {
     }
     roaring_free_uint32_iterator(iterator);
 
+    bitmap_free(or);
+
     bitmap_free(nine);
     bitmap_free(four);
     bitmap_free(sixteen);
@@ -70,6 +72,8 @@ int main(int argc, char* argv[]) {
     }
     roaring_free_uint32_iterator(iterator);
 
+    bitmap_free(and);
+
     bitmap_free(six);
     bitmap_free(four);
     bitmap_free(twelve);
@@ -96,6 +100,8 @@ int main(int argc, char* argv[]) {
       roaring_advance_uint32_iterator(iterator);
     }
     roaring_free_uint32_iterator(iterator);
+
+    bitmap_free(xor);
 
     bitmap_free(six);
     bitmap_free(four);

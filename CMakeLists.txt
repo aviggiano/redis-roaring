@@ -22,6 +22,8 @@ if (COMPILE_MODE STREQUAL "test")
             ${SRC_PATH}/data_structure.c
             ${TEST_PATH}/main.c)
 
+    set(CMAKE_BUILD_TYPE Debug)
+
     add_executable(test_reroaring ${TEST_FILES})
     target_link_libraries(test_reroaring roaring)
     add_test(NAME basic_tests COMMAND test_reroaring)
