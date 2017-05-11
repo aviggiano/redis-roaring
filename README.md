@@ -39,7 +39,7 @@ make
 
 ## API
 
-Currently only the following operations are supported
+Currently the following operations are supported
 
 - `R.SETBIT` (same as [SETBIT](https://redis.io/commands/setbit))
 - `R.GETBIT` (same as [GETBIT](https://redis.io/commands/getbit))
@@ -47,4 +47,10 @@ Currently only the following operations are supported
 - `R.BITCOUNT` (same as [BITCOUNT](https://redis.io/commands/bitcount) without `start` and `end` parameters)
 - `R.BITPOS` (same as [BITPOS](https://redis.io/commands/bitpos) without `start` and `end` parameters)
 
-More commands coming soon.
+More commands coming soon:
+
+- `R.BITFIELD` (same as [BITFIELD](https://redis.io/commands/bitfield))
+- `R.SETBITMAP` (create a roaring bitmap from an uncompressed bitmap)
+- `R.GETBITMAP` (get an uncompressed bitmap from an roaring bitmap)
+- `R.SETARRAY` (create a roaring bitmap from an integer array)
+- `R.GETARRAY` (get an integer array from an roaring bitmap)
