@@ -1,11 +1,18 @@
 language: cpp
-compiler: gcc
 dist: trusty
 
 before_install:
   - git submodule init
   - git submodule update
   - ./configure.sh
+
+install:
+  - sudo apt-get update
+  - sudo apt-get install -y valgrind
+
+compiler:
+  - gcc
+  - clang
 
 script:
   - ./test.sh
