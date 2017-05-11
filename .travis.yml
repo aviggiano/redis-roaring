@@ -16,7 +16,6 @@ compiler:
 
 script:
   - ./test.sh
-  - ./test_valgrind.sh
 
 notifications:
   email:
