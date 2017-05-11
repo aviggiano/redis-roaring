@@ -12,8 +12,7 @@ set(CROARING_BUILD_PATH ${DEPS_PATH}/CRoaring/build/src)
 link_directories(${CROARING_BUILD_PATH})
 include_directories(${CROARING_PATH})
 
-# TODO consecutive runs of COMPILE_MODE are not recompiling the correct lib
-if (COMPILE_MODE STREQUAL "test")
+if($ENV{TEST})
     set(CMAKE_C_FLAGS_RELEASE "") # removes -NDEBUG
 
     include_directories(${SRC_PATH})

@@ -9,7 +9,7 @@ function unit()
   mkdir -p build && \
 (rm build/CMakeCache.txt 2>/dev/null || true) && \
 cd build && \
-cmake -DCOMPILE_MODE:STRING="test" .. && \
+TEST=1 cmake .. && \
 make && \
 valgrind --leak-check=full --error-exitcode=1 ./test_reroaring &&
 cd -
