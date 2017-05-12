@@ -18,8 +18,13 @@ function build_redis_module()
 function start_redis()
 {
   pkill -f redis
-  sleep 1
+  while [ $(ps aux | grep redis | grep -v grep | wc -l) -ne 0 ]; do
+    sleep 0.1
+  done
   ./deps/redis/src/redis-server --loadmodule ./build/libreroaring.so &
+  while [ "$(./deps/redis/src/redis-cli PING)" != "PONG" ]; do
+    sleep 0.1
+  done
 }
 function run_tests()
 {
