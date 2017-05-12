@@ -1,4 +1,4 @@
-reroaring [![Build Status](https://travis-ci.org/aviggiano/reroaring.svg?branch=master)](https://travis-ci.org/aviggiano/reroaring)
+redis-roaring [![Build Status](https://travis-ci.org/aviggiano/redis-roaring.svg?branch=master)](https://travis-ci.org/aviggiano/redis-roaring)
 ===========
 Roaring Bitmaps for Redis
 
@@ -14,7 +14,7 @@ Pull requests are welcome.
 - cmake (build)
 - redis (tests)
 
-Run the `configure.sh` script and it will compile the source code as a static library which will be linked to **reroaring**. Alternatively initialize and update the CRoaring git submodule and follow the build instructions on their repository. 
+Run the `configure.sh` script and it will compile the source code as a static library which will be linked to **redis-roaring**. Alternatively initialize and update the CRoaring git submodule and follow the build instructions on their repository. 
 
 ## Build
 
@@ -36,7 +36,7 @@ mkdir -p build
 cd build
 TEST=1 cmake ..
 make
-./test_reroaring
+./test_redis-roaring
 ```
 
 ## API

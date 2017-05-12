@@ -8,7 +8,7 @@ function unit()
   cd build
   TEST=1 cmake ..
   make
-  valgrind --leak-check=full --error-exitcode=1 ./test_reroaring
+  valgrind --leak-check=full --error-exitcode=1 ./test_redis-roaring
   cd -
 }
 function build_redis_module()
@@ -21,7 +21,7 @@ function start_redis()
   while [ $(ps aux | grep redis | grep -v grep | wc -l) -ne 0 ]; do
     sleep 0.1
   done
-  ./deps/redis/src/redis-server --loadmodule ./build/libreroaring.so &
+  ./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
   while [ "$(./deps/redis/src/redis-cli PING)" != "PONG" ]; do
     sleep 0.1
   done

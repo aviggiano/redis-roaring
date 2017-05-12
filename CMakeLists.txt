@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.2)
-project(reroaring)
+project(redis-roaring)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Werror")
@@ -19,18 +19,18 @@ if($ENV{TEST})
     include_directories(${SRC_PATH})
     enable_testing()
     set(TEST_FILES
-            ${SRC_PATH}/data_structure.c
+            ${SRC_PATH}/data-structure.c
             ${TEST_PATH}/main.c)
 
-    add_executable(test_reroaring ${TEST_FILES})
-    target_link_libraries(test_reroaring roaring)
-    add_test(NAME basic_tests COMMAND test_reroaring)
+    add_executable(test_redis-roaring ${TEST_FILES})
+    target_link_libraries(test_redis-roaring roaring)
+    add_test(NAME basic_tests COMMAND test_redis-roaring)
 else ()
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-    set(SOURCE_FILES ${SRC_PATH}/reroaring.c
+    set(SOURCE_FILES ${SRC_PATH}/redis-roaring.c
             ${SRC_PATH}/type.c
-            ${SRC_PATH}/data_structure.c)
-    add_library(reroaring SHARED ${SOURCE_FILES})
-    target_link_libraries(reroaring roaring)
+            ${SRC_PATH}/data-structure.c)
+    add_library(redis-roaring SHARED ${SOURCE_FILES})
+    target_link_libraries(redis-roaring roaring)
 endif ()
