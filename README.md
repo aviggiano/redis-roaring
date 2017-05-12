@@ -34,7 +34,7 @@ Just run the `test.sh` script, or by hand:
 ```bash
 mkdir -p build
 cd build
-cmake -DCOMPILE_MODE:STRING="test" ..
+TEST=1 cmake ..
 make
 ./test_reroaring
 ```
