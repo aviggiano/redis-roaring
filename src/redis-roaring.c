@@ -124,7 +124,6 @@ int RBitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, Bitmap* (* o
   // calculate destkey bitmap
   Bitmap* result = operation(n, (const Bitmap**) bitmaps);
   RedisModule_ModuleTypeSetValue(destkey, BitmapType, result);
-  roaring_bitmap_printf(result);
 
   for (uint32_t i = 0; i < n; i++) {
     if (should_free[i]) {
