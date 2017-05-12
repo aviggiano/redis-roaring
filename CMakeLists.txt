@@ -11,6 +11,7 @@ set(CROARING_BUILD_PATH ${DEPS_PATH}/CRoaring/build/src)
 
 link_directories(${CROARING_BUILD_PATH})
 include_directories(${CROARING_PATH})
+set(CMAKE_BUILD_TYPE Debug)
 
 if($ENV{TEST})
     set(CMAKE_C_FLAGS_RELEASE "") # removes -NDEBUG
@@ -20,8 +21,6 @@ if($ENV{TEST})
     set(TEST_FILES
             ${SRC_PATH}/data_structure.c
             ${TEST_PATH}/main.c)
-
-    set(CMAKE_BUILD_TYPE Debug)
 
     add_executable(test_reroaring ${TEST_FILES})
     target_link_libraries(test_reroaring roaring)

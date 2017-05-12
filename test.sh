@@ -4,12 +4,12 @@ set -eu
 
 function unit()
 {
-  mkdir -p build && \
-cd build && \
-TEST=1 cmake .. && \
-make && \
-valgrind --leak-check=full --error-exitcode=1 ./test_reroaring &&
-cd -
+  mkdir -p build
+  cd build
+  TEST=1 cmake ..
+  make
+  valgrind --leak-check=full --error-exitcode=1 ./test_reroaring
+  cd -
 }
 function build_redis_module()
 {
@@ -17,7 +17,7 @@ function build_redis_module()
 }
 function start_redis()
 {
-  pkill -f redis
+  pkill -f redis || true
   while [ $(ps aux | grep redis | grep -v grep | wc -l) -ne 0 ]; do
     sleep 0.1
   done
@@ -32,9 +32,10 @@ function run_tests()
 }
 function integration()
 {
-  build_redis_module && \
-start_redis &&
-run_tests
+  build_redis_module
+  start_redis
+  run_tests
 }
 
-unit && integration
+unit
+integration
