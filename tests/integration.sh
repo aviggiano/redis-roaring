@@ -28,7 +28,7 @@ function test_rbitop()
   function wrong_arity()
   {
     EXPECTED="ERR syntax error"
-    FOUND=$(echo "R.BITOP test_rsetbit_rgetbit_wrong_arity NOOP srckey1 srckey2" | redis-cli)
+    FOUND=$(echo "R.BITOP test_rbitop_wrong_arity NOOP srckey1 srckey2" | redis-cli)
     [ "$FOUND" == "$EXPECTED" ]
   }
   function setup()
@@ -86,8 +86,8 @@ function test_rbitop()
 
   function collision()
   {
-    FOUND=$(echo "R.BITOP AND collision test_rbitop_4 test_rbitop_2" | redis-cli)
-    FOUND=$(echo "R.BITOP OR collision test_rbitop_4 test_rbitop_2" | redis-cli)
+    FOUND=$(echo "R.BITOP AND test_rbitop_collision test_rbitop_4 test_rbitop_2" | redis-cli)
+    FOUND=$(echo "R.BITOP OR test_rbitop_collision test_rbitop_4 test_rbitop_2" | redis-cli)
   }
 
   setup
