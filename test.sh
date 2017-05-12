@@ -2,12 +2,9 @@
 
 set -eu
 
-# FIXME rm build/CMakeCache.txt
-
 function unit()
 {
   mkdir -p build && \
-(rm build/CMakeCache.txt 2>/dev/null || true) && \
 cd build && \
 TEST=1 cmake .. && \
 make && \
@@ -16,8 +13,7 @@ cd -
 }
 function build_redis_module()
 {
-  (rm build/CMakeCache.txt 2>/dev/null || true) && \
-./build.sh
+  ./build.sh
 }
 function start_redis()
 {
