@@ -98,6 +98,20 @@ function test_rbitop()
   and
   collision
 }
+function test_bitcount()
+{
+  echo "test_bitcount"
+  FOUND=$(echo "R.SETBIT test_bitcount 1 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitcount 1 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitcount 2 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitcount 3 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitcount 5 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitcount 8 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitcount 13 1" | redis-cli)
+  FOUND=$(echo "R.BITCOUNT test_bitcount" | redis-cli)
+  EXPECTED="6"
+  [ "$FOUND" == "$EXPECTED" ]
+}
 function test_done()
 {
   echo "All integration tests passed"
@@ -106,4 +120,5 @@ function test_done()
 test_rsetbit_rgetbit
 test_rsetbit_rgetbit_wrong_arity
 test_rbitop
+test_bitcount
 test_done
