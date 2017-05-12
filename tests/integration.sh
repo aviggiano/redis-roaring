@@ -112,6 +112,18 @@ function test_bitcount()
   EXPECTED="6"
   [ "$FOUND" == "$EXPECTED" ]
 }
+function test_bitpos()
+{
+  echo "test_bitpos"
+  FOUND=$(echo "R.SETBIT test_bitpos 3 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitpos 6 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitpos 4 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitpos 12 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitpos 10 1" | redis-cli)
+  FOUND=$(echo "R.BITPOS test_bitpos" | redis-cli)
+  EXPECTED="3"
+  [ "$FOUND" == "$EXPECTED" ]
+}
 function test_done()
 {
   echo "All integration tests passed"
@@ -121,4 +133,5 @@ test_rsetbit_rgetbit
 test_rsetbit_rgetbit_wrong_arity
 test_rbitop
 test_bitcount
+test_bitpos
 test_done
