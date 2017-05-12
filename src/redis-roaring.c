@@ -1,5 +1,5 @@
 #include "redismodule.h"
-#include "data_structure.h"
+#include "data-structure.h"
 #include "type.h"
 
 static RedisModuleType* BitmapType;
@@ -246,7 +246,7 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 
 int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   // Register the module itself
-  if (RedisModule_Init(ctx, "REROARING", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
+  if (RedisModule_Init(ctx, "REDIS-ROARING", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
 

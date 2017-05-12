@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <assert.h>
-#include "data_structure.h"
+#include "data-structure.h"
 
 int main(int argc, char* argv[]) {
   {

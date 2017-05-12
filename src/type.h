@@ -1,5 +1,5 @@
-#ifndef REROARING_TYPE_H
-#define REROARING_TYPE_H
+#ifndef REDIS_ROARING_TYPE_H
+#define REDIS_ROARING_TYPE_H
 
 void BitmapRdbSave(RedisModuleIO* rdb, void* value);
 void* BitmapRdbLoad(RedisModuleIO* rdb, int encver);

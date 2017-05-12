@@ -1,5 +1,5 @@
 #include "redismodule.h"
-#include "data_structure.h"
+#include "data-structure.h"
 #include "type.h"
 
 #define BITMAP_ENCODING_VERSION 1
