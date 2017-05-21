@@ -10,6 +10,10 @@ void bitmap_free(Bitmap* bitmap) {
   roaring_bitmap_free(bitmap);
 }
 
+uint64_t bitmap_get_cardinality(Bitmap* bitmap) {
+  return roaring_bitmap_get_cardinality(bitmap);
+}
+
 void bitmap_setbit(Bitmap* bitmap, uint32_t offset, char value) {
   if (value == 0) {
     roaring_bitmap_remove(bitmap, offset);
@@ -21,6 +25,20 @@ void bitmap_setbit(Bitmap* bitmap, uint32_t offset, char value) {
 
 char bitmap_getbit(Bitmap* bitmap, uint32_t offset) {
   return roaring_bitmap_contains(bitmap, offset) == true;
+}
+
+int64_t bitmap_get_nth_element(Bitmap* bitmap, uint64_t n) {
+  roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
+  int64_t element = -1;
+  for (uint64_t i = 1; iterator->has_value; i++) {
+    if (i == n) {
+      element = iterator->current_value;
+      break;
+    }
+    roaring_advance_uint32_iterator(iterator);
+  }
+  roaring_free_uint32_iterator(iterator);
+  return element;
 }
 
 Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps) {
