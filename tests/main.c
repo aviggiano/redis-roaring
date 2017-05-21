@@ -50,7 +50,6 @@ int main(int argc, char* argv[]) {
     bitmap_free(sixteen);
   }
 
-
   {
     printf("Should perform an AND between three bitmaps\n");
     Bitmap* twelve = bitmap_alloc();
@@ -78,7 +77,6 @@ int main(int argc, char* argv[]) {
     bitmap_free(four);
     bitmap_free(twelve);
   }
-
 
   {
     printf("Should perform a XOR between three bitmaps\n");
@@ -142,6 +140,5 @@ int main(int argc, char* argv[]) {
     bitmap_free(twelve);
   }
 
-  printf("All tests passed\n");
   return 0;
 }

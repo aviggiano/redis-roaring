@@ -124,14 +124,9 @@ function test_bitpos()
   EXPECTED="3"
   [ "$FOUND" == "$EXPECTED" ]
 }
-function test_done()
-{
-  echo "All integration tests passed"
-}
 
 test_rsetbit_rgetbit
 test_rsetbit_rgetbit_wrong_arity
 test_rbitop
 test_bitcount
 test_bitpos
-test_done
