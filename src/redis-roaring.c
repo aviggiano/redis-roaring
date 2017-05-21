@@ -26,7 +26,7 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
   long long value;
   if ((RedisModule_StringToLongLong(argv[3], &value) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be either 0 or 1");
+    return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be either 0 or 1");
   }
 
   /* Create an empty value object if the key is currently empty. */
@@ -79,6 +79,43 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   RedisModule_ReplyWithLongLong(ctx, value);
+
+  return REDISMODULE_OK;
+}
+
+/**
+ * R.SETARRAY <key> <value1> [<value2> <value3> ... <valueN>]
+ * */
+int RSetArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+  int type = RedisModule_KeyType(key);
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  size_t length = (size_t) (argc - 2);
+  uint32_t* values = RedisModule_Alloc(sizeof(*values) * length);
+  for (int i = 0; i < length; i++) {
+    long long value;
+    if ((RedisModule_StringToLongLong(argv[2 + i], &value) != REDISMODULE_OK)) {
+      RedisModule_Free(values);
+      return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be an unsigned 32 bit integer");
+    }
+    values[i] = (uint32_t) value;
+  }
+
+  Bitmap* bitmap = bitmap_from_int_array(length, values);
+  RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
+
+  RedisModule_Free(values);
+
+  RedisModule_ReplicateVerbatim(ctx);
+  RedisModule_ReplyWithSimpleString(ctx, "OK");
+
 
   return REDISMODULE_OK;
 }
@@ -265,6 +302,12 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   if (RedisModule_CreateCommand(ctx, "R.GETBIT", RGetBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
+  if (RedisModule_CreateCommand(ctx, "R.SETARRAY", RSetArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+//  if (RedisModule_CreateCommand(ctx, "R.GETARRAY", RGetArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+//    return REDISMODULE_ERR;
+//  }
   if (RedisModule_CreateCommand(ctx, "R.BITOP", RBitOpCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
