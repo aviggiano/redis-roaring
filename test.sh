@@ -28,7 +28,7 @@ function start_redis()
   done
   valgrind --leak-check=yes --show-leak-kinds=definite,indirect --error-exitcode=1 --log-file="$LOG_FILE" \
 ./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
-  while [ "$(./deps/redis/src/redis-cli PING)" != "PONG" ]; do
+  while [ "$(./deps/redis/src/redis-cli PING 2>/dev/null)" != "PONG" ]; do
     sleep 0.1
   done
 }
