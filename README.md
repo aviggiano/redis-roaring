@@ -14,11 +14,11 @@ Pull requests are welcome.
 - cmake (build)
 - redis (tests)
 
-Run the `configure.sh` script and it will compile the source code as a static library which will be linked to **redis-roaring**. Alternatively initialize and update the CRoaring git submodule and follow the build instructions on their repository. 
-
 ## Build
 
-This project can be built with cmake:
+Run the `configure.sh` script and it will compile the source code as a static library which will be linked to **redis-roaring**. Alternatively initialize and update the CRoaring git submodule and follow the build instructions on their repository.
+
+Then build the project with cmake and it will generate the Redis Module shared library.
 
 ```bash
 mkdir -p build
@@ -29,7 +29,7 @@ make
 
 ## Tests
 
-Run the `test.sh` script for unit tests and integration tests:
+Run the `test.sh` script for unit tests and integration tests.
 
 ## API
 
