@@ -71,3 +71,14 @@ Bitmap* bitmap_not(const Bitmap* bitmap) {
 Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array) {
   return roaring_bitmap_of_ptr(n, array);
 }
+
+uint32_t* bitmap_get_int_array(Bitmap* bitmap, size_t* n) {
+  *n = roaring_bitmap_get_cardinality(bitmap);
+  uint32_t* ans = malloc(sizeof(*ans) * (*n));
+  roaring_bitmap_to_uint32_array(bitmap, ans);
+  return ans;
+}
+
+void bitmap_free_int_array(uint32_t* array) {
+  free(array);
+}
