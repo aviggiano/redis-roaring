@@ -232,10 +232,7 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
   else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-    roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
-    if (iterator->has_value) pos = iterator->current_value;
-    else pos = -1;
-    roaring_free_uint32_iterator(iterator);
+    pos = bitmap_get_nth_element(bitmap, 1);
   }
 
   RedisModule_ReplyWithLongLong(ctx, (long long) pos);

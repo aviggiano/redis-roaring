@@ -27,6 +27,19 @@ char bitmap_getbit(Bitmap* bitmap, uint32_t offset) {
   return roaring_bitmap_contains(bitmap, offset) == true;
 }
 
+int64_t bitmap_get_nth_element(Bitmap* bitmap, uint64_t n) {
+  roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
+  int64_t element = -1;
+  for (uint64_t i = 0; iterator->has_value; i++) {
+    if (i == n) {
+      element = iterator->current_value;
+      break;
+    }
+  }
+  roaring_free_uint32_iterator(iterator);
+  return element;
+}
+
 Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps) {
   return roaring_bitmap_or_many_heap(n, bitmaps);
 }
