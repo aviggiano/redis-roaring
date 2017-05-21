@@ -18,6 +18,7 @@ function build_redis_module()
   cd build
   cmake ..
   make
+  cd -
 }
 function start_redis()
 {
