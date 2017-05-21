@@ -67,3 +67,7 @@ Bitmap* bitmap_not(const Bitmap* bitmap) {
   const Bitmap* bitmaps[] = {bitmap};
   return bitmap_not_array(1, bitmaps);
 }
+
+Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array) {
+  return roaring_bitmap_of_ptr(n, array);
+}

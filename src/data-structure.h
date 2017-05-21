@@ -36,5 +36,6 @@ Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps);
  */
 Bitmap* bitmap_not_array(uint32_t unused, const Bitmap** bitmaps);
 Bitmap* bitmap_not(const Bitmap* bitmap);
+Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array);
 
 #endif
