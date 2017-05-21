@@ -124,9 +124,39 @@ function test_bitpos()
   EXPECTED="3"
   [ "$FOUND" == "$EXPECTED" ]
 }
+function test_getarray_setarray()
+{
+  echo "test_getarray_setarray"
+
+  FOUND=$(echo "R.SETARRAY test_getarray_setarray 0" | redis-cli)
+  EXPECTED="OK"
+  [ "$FOUND" == "$EXPECTED" ]
+  FOUND=$(echo "R.GETARRAY test_getarray_setarray" | redis-cli)
+  EXPECTED="0"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.SETARRAY test_getarray_setarray 1 10 100 1000 10000 100000" | redis-cli)
+  EXPECTED="OK"
+  [ "$FOUND" == "$EXPECTED" ]
+  FOUND=$(echo "R.GETARRAY test_getarray_setarray" | redis-cli)
+  EXPECTED=$(echo -e "1\n10\n100\n1000\n10000\n100000")
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.SETARRAY test_getarray_setarray 2 4 8 16 32 64 128" | redis-cli)
+  EXPECTED="OK"
+  [ "$FOUND" == "$EXPECTED" ]
+  FOUND=$(echo "R.GETARRAY test_getarray_setarray" | redis-cli)
+  EXPECTED=$(echo -e "2\n4\n8\n16\n32\n64\n128")
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.GETARRAY test_getarray_setarray_empty_key" | redis-cli)
+  EXPECTED=""
+  [ "$FOUND" == "$EXPECTED" ]
+}
 
 test_rsetbit_rgetbit
 test_rsetbit_rgetbit_wrong_arity
 test_rbitop
 test_bitcount
 test_bitpos
+test_getarray_setarray
