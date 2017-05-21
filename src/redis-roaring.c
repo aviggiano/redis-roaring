@@ -137,7 +137,7 @@ int RBitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, Bitmap* (* o
 
   // Integer reply: The size of the string stored in the destination key
   // (adapted to cardinality)
-  uint64_t cardinality = roaring_bitmap_get_cardinality(result);
+  uint64_t cardinality = bitmap_get_cardinality(result);
   RedisModule_ReplyWithLongLong(ctx, (long long) cardinality);
 
   return REDISMODULE_OK;
@@ -203,7 +203,7 @@ int RBitCountCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
   else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-    count = roaring_bitmap_get_cardinality(bitmap);
+    count = bitmap_get_cardinality(bitmap);
   }
 
   RedisModule_ReplyWithLongLong(ctx, (long long) count);

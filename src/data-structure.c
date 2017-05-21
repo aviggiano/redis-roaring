@@ -10,6 +10,10 @@ void bitmap_free(Bitmap* bitmap) {
   roaring_bitmap_free(bitmap);
 }
 
+uint64_t bitmap_get_cardinality(Bitmap* bitmap) {
+  return roaring_bitmap_get_cardinality(bitmap);
+}
+
 void bitmap_setbit(Bitmap* bitmap, uint32_t offset, char value) {
   if (value == 0) {
     roaring_bitmap_remove(bitmap, offset);

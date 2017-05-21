@@ -7,6 +7,7 @@ typedef roaring_bitmap_t Bitmap;
 
 Bitmap* bitmap_alloc();
 void bitmap_free(Bitmap* bitmap);
+uint64_t bitmap_get_cardinality(Bitmap* bitmap);
 void bitmap_setbit(Bitmap* bitmap, uint32_t offset, char value);
 char bitmap_getbit(Bitmap* bitmap, uint32_t offset);
 Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps);
