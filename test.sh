@@ -14,7 +14,10 @@ function unit()
 }
 function build_redis_module()
 {
-  ./build.sh
+  mkdir -p build
+  cd build
+  cmake ..
+  make
 }
 function start_redis()
 {

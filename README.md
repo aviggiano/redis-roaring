@@ -18,7 +18,7 @@ Run the `configure.sh` script and it will compile the source code as a static li
 
 ## Build
 
-This project can be built with the `build.sh` script, or more specifically:
+This project can be built with cmake:
 
 ```bash
 mkdir -p build
@@ -29,15 +29,7 @@ make
 
 ## Tests
 
-Just run the `test.sh` script, or by hand:
-
-```bash
-mkdir -p build
-cd build
-TEST=1 cmake ..
-make
-./test_redis-roaring
-```
+Run the `test.sh` script for unit tests and integration tests:
 
 ## API
 
