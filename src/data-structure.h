@@ -10,16 +10,27 @@ void bitmap_free(Bitmap* bitmap);
 uint64_t bitmap_get_cardinality(Bitmap* bitmap);
 void bitmap_setbit(Bitmap* bitmap, uint32_t offset, char value);
 char bitmap_getbit(Bitmap* bitmap, uint32_t offset);
+/**
+ * Gets the n-th element of the set.
+ *
+ * @param bitmap - the bitmap set
+ * @param n - the position of the element on the set
+ *
+ * @return the n-th element of the bitmap set
+ *
+ * @example set {1, 10, 100, 1000} and n=1 returns 1, n=3 returns 100, n=0 returns -1, n=5 returns -1
+ */
 int64_t bitmap_get_nth_element(Bitmap* bitmap, uint64_t n);
 Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps);
 Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps);
 Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps);
 /**
+ * Returns a bitmap equals to the inverted set of first bitmap of the `bitmaps` array,
+ * ignoring the first parameter of the function.  * The purpose of this function is to
+ * avoid code repetition on the redis module.
+ *
  * @param n - unused parameter
  * @param bitmaps - array containing a bitmap to be flipped
- *
- * Ignores the first parameter and inverts the first bitmap of the `bitmaps` array
- * The purpose of this function is to avoid code repetition on the redis module
  *
  * @return a NOT of bitmaps[0]
  */
