@@ -39,8 +39,20 @@ Bitmap* bitmap_not(const Bitmap* bitmap);
 Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array);
 uint32_t* bitmap_get_int_array(Bitmap* bitmap, size_t* n);
 void bitmap_free_int_array(uint32_t* array);
-Bitmap* bitmap_from_bit_array(size_t n, const char* array);
-char* bitmap_get_bit_array(Bitmap* bitmap, size_t* n);
+/**
+ * Creates a Bitmap from a nul-terminated C string composed from ASCII '0's and '1's
+ *
+ * @param array - the C string bit array
+ * @return a Bitmap corresponding to the bit array
+ */
+Bitmap* bitmap_from_bit_array(const char* array);
+/**
+ * Creates a nul-terminated C string composed from ASCII '0's and '1's from a Bitmap
+ *
+ * @param bitmap - to be converted to a C string
+ * @return the C string bit array
+ */
+char* bitmap_get_bit_array(Bitmap* bitmap);
 void bitmap_free_bit_array(char* array);
 
 #endif
