@@ -41,10 +41,10 @@ Currently the following operations are supported
 - `R.BITCOUNT` (same as [BITCOUNT](https://redis.io/commands/bitcount) without `start` and `end` parameters)
 - `R.BITPOS` (same as [BITPOS](https://redis.io/commands/bitpos) without `start` and `end` parameters)
 - `R.SETARRAY` (create a roaring bitmap from an integer array)
-- `R.GETARRAY` (get an integer array from an roaring bitmap)
+- `R.GETARRAY` (get an integer array from a roaring bitmap)
+- `R.SETBITARRAY` (create a roaring bitmap from an bit array string)
+- `R.GETBITARRAY` (get a bit array string from a roaring bitmap)
 
 More commands coming soon:
 
-- `R.SETBITMAP` (create a roaring bitmap from an uncompressed bitmap)
-- `R.GETBITMAP` (get an uncompressed bitmap from an roaring bitmap)
 - `R.BITFIELD` (same as [BITFIELD](https://redis.io/commands/bitfield))
