@@ -84,9 +84,9 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 }
 
 /**
- * R.SETARRAY <key> <value1> [<value2> <value3> ... <valueN>]
+ * R.SETINTARRAY <key> <value1> [<value2> <value3> ... <valueN>]
  * */
-int RSetArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+int RSetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (argc < 3) {
     return RedisModule_WrongArity(ctx);
   }
@@ -121,9 +121,9 @@ int RSetArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 }
 
 /**
- * R.GETARRAY <key>
+ * R.GETINTARRAY <key>
  * */
-int RGetArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+int RGetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (argc != 2) {
     return RedisModule_WrongArity(ctx);
   }
@@ -388,10 +388,10 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   if (RedisModule_CreateCommand(ctx, "R.GETBIT", RGetBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
-  if (RedisModule_CreateCommand(ctx, "R.SETARRAY", RSetArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+  if (RedisModule_CreateCommand(ctx, "R.SETINTARRAY", RSetIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
-  if (RedisModule_CreateCommand(ctx, "R.GETARRAY", RGetArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+  if (RedisModule_CreateCommand(ctx, "R.GETINTARRAY", RGetIntArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R.SETBITARRAY", RSetBitArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
