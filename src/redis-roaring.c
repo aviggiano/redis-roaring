@@ -167,7 +167,7 @@ int RSetBitArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
 
   size_t len;
   const char* array = RedisModule_StringPtrLen(argv[2], &len);
-  Bitmap* bitmap = bitmap_from_bit_array(array);
+  Bitmap* bitmap = bitmap_from_bit_array(len, array);
   RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
 
   RedisModule_ReplicateVerbatim(ctx);
@@ -192,9 +192,9 @@ int RGetBitArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
 
   if (type != REDISMODULE_KEYTYPE_EMPTY) {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-    char* array = bitmap_get_bit_array(bitmap);
-
-    RedisModule_ReplyWithStringBuffer(ctx, array, strlen(array));
+    size_t size;
+    char* array = bitmap_get_bit_array(bitmap, &size);
+    RedisModule_ReplyWithStringBuffer(ctx, array, size);
 
     bitmap_free_bit_array(array);
   }

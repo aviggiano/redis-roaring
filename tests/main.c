@@ -192,12 +192,12 @@ int main(int argc, char* argv[]) {
     printf("Should create a bitmap from a bit array and get the bit from the bitmap\n");
     char array[] = "010101010010010010100110100111010010101010100101010101111101001001010100";
     size_t array_len = sizeof(array) / sizeof(*array) - 1;
-    Bitmap* bitmap = bitmap_from_bit_array(array);
+    Bitmap* bitmap = bitmap_from_bit_array(array_len, array);
 
-    size_t n = 0;
-    char* found = bitmap_get_bit_array(bitmap);
-    for (; found[n]; n++) {
-      assert(found[n] == array[n]);
+    size_t n;
+    char* found = bitmap_get_bit_array(bitmap, &n);
+    for (size_t i = 0; found[i]; i++) {
+      assert(found[i] == array[i]);
     }
     assert(n == array_len - 2);
 

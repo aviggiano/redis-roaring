@@ -83,9 +83,9 @@ void bitmap_free_int_array(uint32_t* array) {
   free(array);
 }
 
-Bitmap* bitmap_from_bit_array(const char* array) {
+Bitmap* bitmap_from_bit_array(size_t size, const char* array) {
   Bitmap* bitmap = bitmap_alloc();
-  for (size_t i = 0; array[i]; i++) {
+  for (size_t i = 0; i < size; i++) {
     if (array[i] == '1') {
       roaring_bitmap_add(bitmap, (int32_t) i);
     }
@@ -93,11 +93,11 @@ Bitmap* bitmap_from_bit_array(const char* array) {
   return bitmap;
 }
 
-char* bitmap_get_bit_array(Bitmap* bitmap) {
-  uint32_t n = roaring_bitmap_maximum(bitmap) + 1;
-  char* ans = malloc(n + 1);
-  memset(ans, '0', n);
-  ans[n] = '\0';
+char* bitmap_get_bit_array(Bitmap* bitmap, size_t* size) {
+  *size = roaring_bitmap_maximum(bitmap) + 1;
+  char* ans = malloc(*size + 1);
+  memset(ans, '0', *size);
+  ans[*size] = '\0';
 
   roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
   while (iterator->has_value) {

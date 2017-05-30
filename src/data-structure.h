@@ -40,19 +40,21 @@ Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array);
 uint32_t* bitmap_get_int_array(Bitmap* bitmap, size_t* n);
 void bitmap_free_int_array(uint32_t* array);
 /**
- * Creates a Bitmap from a nul-terminated C string composed from ASCII '0's and '1's
+ * Creates a Bitmap from a buffer composed from ASCII '0's and '1's
  *
- * @param array - the C string bit array
+ * @param size - the buffer size
+ * @param array - the buffer bit array
  * @return a Bitmap corresponding to the bit array
  */
-Bitmap* bitmap_from_bit_array(const char* array);
+Bitmap* bitmap_from_bit_array(size_t size, const char* array);
 /**
- * Creates a nul-terminated C string composed from ASCII '0's and '1's from a Bitmap
+ * Creates a buffer string composed from ASCII '0's and '1's from a Bitmap
  *
- * @param bitmap - to be converted to a C string
- * @return the C string bit array
+ * @param bitmap - to be converted to a buffer string
+ * @param size - the buffer size
+ * @return the buffer bit array
  */
-char* bitmap_get_bit_array(Bitmap* bitmap);
+char* bitmap_get_bit_array(Bitmap* bitmap, size_t* size);
 void bitmap_free_bit_array(char* array);
 
 #endif
