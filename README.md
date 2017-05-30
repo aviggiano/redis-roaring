@@ -40,8 +40,8 @@ Currently the following operations are supported
 - `R.BITOP` (same as [BITOP](https://redis.io/commands/bitop))
 - `R.BITCOUNT` (same as [BITCOUNT](https://redis.io/commands/bitcount) without `start` and `end` parameters)
 - `R.BITPOS` (same as [BITPOS](https://redis.io/commands/bitpos) without `start` and `end` parameters)
-- `R.SETARRAY` (create a roaring bitmap from an integer array)
-- `R.GETARRAY` (get an integer array from a roaring bitmap)
+- `R.SETINTARRAY` (create a roaring bitmap from an integer array)
+- `R.GETINTARRAY` (get an integer array from a roaring bitmap)
 - `R.SETBITARRAY` (create a roaring bitmap from an bit array string)
 - `R.GETBITARRAY` (get a bit array string from a roaring bitmap)
 
