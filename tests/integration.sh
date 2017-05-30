@@ -166,7 +166,7 @@ function test_getbitarray_setbitarray()
   EXPECTED="OK"
   [ "$FOUND" == "$EXPECTED" ]
   FOUND=$(echo "R.GETBITARRAY test_getbitarray_setbitarray" | redis-cli)
-  EXPECTED="0110100100010010011001000"
+  EXPECTED="0110100100010010011001"
   [ "$FOUND" == "$EXPECTED" ]
   FOUND=$(echo "R.GETBIT test_getbitarray_setbitarray 0" | redis-cli)
   EXPECTED="0"
