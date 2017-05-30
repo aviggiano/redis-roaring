@@ -39,5 +39,22 @@ Bitmap* bitmap_not(const Bitmap* bitmap);
 Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array);
 uint32_t* bitmap_get_int_array(Bitmap* bitmap, size_t* n);
 void bitmap_free_int_array(uint32_t* array);
+/**
+ * Creates a Bitmap from a buffer composed from ASCII '0's and '1's
+ *
+ * @param size - the buffer size
+ * @param array - the buffer bit array
+ * @return a Bitmap corresponding to the bit array
+ */
+Bitmap* bitmap_from_bit_array(size_t size, const char* array);
+/**
+ * Creates a buffer string composed from ASCII '0's and '1's from a Bitmap
+ *
+ * @param bitmap - to be converted to a buffer string
+ * @param size - the buffer size
+ * @return the buffer bit array
+ */
+char* bitmap_get_bit_array(Bitmap* bitmap, size_t* size);
+void bitmap_free_bit_array(char* array);
 
 #endif

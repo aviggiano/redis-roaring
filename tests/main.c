@@ -188,5 +188,22 @@ int main(int argc, char* argv[]) {
     bitmap_free(bitmap);
   }
 
+  {
+    printf("Should create a bitmap from a bit array and get the bit from the bitmap\n");
+    char array[] = "010101010010010010100110100111010010101010100101010101111101001001010100";
+    size_t array_len = sizeof(array) / sizeof(*array) - 1;
+    Bitmap* bitmap = bitmap_from_bit_array(array_len, array);
+
+    size_t n;
+    char* found = bitmap_get_bit_array(bitmap, &n);
+    for (size_t i = 0; found[i]; i++) {
+      assert(found[i] == array[i]);
+    }
+    assert(n == array_len - 2);
+
+    bitmap_free_bit_array(found);
+    bitmap_free(bitmap);
+  }
+
   return 0;
 }

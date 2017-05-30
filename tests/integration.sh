@@ -151,9 +151,44 @@ function test_getarray_setarray()
   EXPECTED=""
   [ "$FOUND" == "$EXPECTED" ]
 }
+function test_getbitarray_setbitarray()
+{
+  echo "test_getbitarray_setbitarray"
+
+  FOUND=$(echo "R.SETBITARRAY test_getbitarray_setbitarray 0" | redis-cli)
+  EXPECTED="OK"
+  [ "$FOUND" == "$EXPECTED" ]
+  FOUND=$(echo "R.GETBITARRAY test_getbitarray_setbitarray" | redis-cli)
+  EXPECTED="0"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.SETBITARRAY test_getbitarray_setbitarray 0110100100010010011001000" | redis-cli)
+  EXPECTED="OK"
+  [ "$FOUND" == "$EXPECTED" ]
+  FOUND=$(echo "R.GETBITARRAY test_getbitarray_setbitarray" | redis-cli)
+  EXPECTED="0110100100010010011001"
+  [ "$FOUND" == "$EXPECTED" ]
+  FOUND=$(echo "R.GETBIT test_getbitarray_setbitarray 0" | redis-cli)
+  EXPECTED="0"
+  [ "$FOUND" == "$EXPECTED" ]
+  FOUND=$(echo "R.GETBIT test_getbitarray_setbitarray 1" | redis-cli)
+  EXPECTED="1"
+  [ "$FOUND" == "$EXPECTED" ]
+  FOUND=$(echo "R.GETBIT test_getbitarray_setbitarray 24" | redis-cli)
+  EXPECTED="0"
+  [ "$FOUND" == "$EXPECTED" ]
+  FOUND=$(echo "R.GETBIT test_getbitarray_setbitarray 21" | redis-cli)
+  EXPECTED="1"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.GETBITARRAY test_getbitarray_setbitarray_empty_key" | redis-cli)
+  EXPECTED=""
+  [ "$FOUND" == "$EXPECTED" ]
+}
 
 test_setbit_getbit
 test_bitop
 test_bitcount
 test_bitpos
 test_getarray_setarray
+test_getbitarray_setbitarray
