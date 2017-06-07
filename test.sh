@@ -7,7 +7,7 @@ function unit()
 {
   mkdir -p build
   cd build
-  TEST=1 cmake ..
+  cmake ..
   make
   valgrind --leak-check=full --error-exitcode=1 ./test_redis-roaring
   cd -
