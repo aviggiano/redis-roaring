@@ -12,7 +12,8 @@ Pull requests are welcome.
 
 - CRoaring (redis module)
 - cmake (build)
-- redis (tests)
+- redis (integration tests)
+- hiredis (performance tests)
 
 ## Build
 
