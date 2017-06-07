@@ -21,15 +21,11 @@ include_directories(${SRC_PATH})
 enable_testing()
 set(TEST_FILES
         ${SRC_PATH}/data-structure.c
-        ${TEST_PATH}/main.c)
+        ${TEST_PATH}/unit.c)
 
-add_executable(test_redis-roaring ${TEST_FILES})
-target_link_libraries(test_redis-roaring roaring)
-add_test(NAME basic_tests COMMAND test_redis-roaring)
-
-add_custom_command(TARGET test_redis-roaring POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --cyan
-        "Message after yourtarget has been built.")
+add_executable(unit ${TEST_FILES})
+target_link_libraries(unit roaring)
+add_test(NAME basic_tests COMMAND unit)
 
 ####### redis module #######
 message(STATUS "Compiling redis module")

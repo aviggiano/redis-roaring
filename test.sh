@@ -9,7 +9,7 @@ function unit()
   cd build
   cmake ..
   make
-  valgrind --leak-check=full --error-exitcode=1 ./test_redis-roaring
+  valgrind --leak-check=full --error-exitcode=1 ./unit
   cd -
 }
 function build_redis_module()
