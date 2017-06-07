@@ -3,22 +3,19 @@
 set -eu
 
 LOG_FILE=$(mktemp)
+function setup()
+{
+  mkdir -p build
+  cd build
+  cmake ..
+  make
+  cd -
+  start_redis
+}
 function unit()
 {
-  mkdir -p build
-  cd build
-  cmake ..
-  make
-  valgrind --leak-check=full --error-exitcode=1 ./unit
-  cd -
-}
-function build_redis_module()
-{
-  mkdir -p build
-  cd build
-  cmake ..
-  make
-  cd -
+  valgrind --leak-check=full --error-exitcode=1 ./build/unit
+  echo "All unit tests passed"
 }
 function start_redis()
 {
@@ -32,10 +29,6 @@ function start_redis()
     sleep 0.1
   done
 }
-function run_integration_tests()
-{
-  ./tests/integration.sh
-}
 function stop_redis()
 {
   pkill -f redis
@@ -46,13 +39,31 @@ function stop_redis()
 }
 function integration()
 {
-  build_redis_module
+  ./tests/integration.sh
+  echo "All integration tests passed"
+}
+function performance()
+{
   start_redis
-  run_integration_tests
+  ./build/performance
+  echo "All performance tests passed"
+}
+function teardown()
+{
   stop_redis
 }
+function end()
+{
+  echo ""
+  echo "************************"
+  echo "*** ALL TESTS PASSED ***"
+  echo "************************"
+  echo ""
+}
 
+setup
 unit
-echo "All unit tests passed"
 integration
-echo "All integration tests passed"
+performance
+teardown
+end
