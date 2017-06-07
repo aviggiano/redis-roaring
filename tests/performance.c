@@ -27,11 +27,15 @@ int main(int argc, char* argv[]) {
   redisContext* c = create_context();
   const char* ops[] = {
       "R.SETBIT",
-      "SETBIT"
+      "SETBIT",
+      "R.BITPOS",
+      "BITPOS",
+      "R.BITCOUNT",
+      "BITCOUNT"
   };
 
   size_t N = 10000;
-  for (int op = 0; op < 2; op++) {
+  for (int op = 0; op < sizeof(ops)/sizeof(*ops); op++) {
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (size_t i = 0; i < N; i++) {
@@ -43,7 +47,6 @@ int main(int argc, char* argv[]) {
     unsigned long ns = (end.tv_sec - start.tv_sec) * 1000000000UL + (end.tv_nsec - start.tv_nsec);
     unsigned long us = ns / 1000;
     unsigned long us_per_op = us / N;
-    printf("\n");
     printf("Operation: %s\n", ops[op]);
     printf("Total time: %lu us\n", us);
     printf("Time/op: %lu us\n", us_per_op);
