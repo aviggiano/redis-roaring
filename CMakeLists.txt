@@ -13,24 +13,26 @@ link_directories(${CROARING_BUILD_PATH})
 include_directories(${CROARING_PATH})
 set(CMAKE_BUILD_TYPE Debug)
 
-if($ENV{TEST})
-    set(CMAKE_C_FLAGS_RELEASE "") # removes -NDEBUG
+####### unit tests #######
+message(STATUS "Compiling unit tests")
+set(CMAKE_C_FLAGS_RELEASE "") # removes -NDEBUG
 
-    include_directories(${SRC_PATH})
-    enable_testing()
-    set(TEST_FILES
-            ${SRC_PATH}/data-structure.c
-            ${TEST_PATH}/main.c)
+include_directories(${SRC_PATH})
+enable_testing()
+set(TEST_FILES
+        ${SRC_PATH}/data-structure.c
+        ${TEST_PATH}/unit.c)
 
-    add_executable(test_redis-roaring ${TEST_FILES})
-    target_link_libraries(test_redis-roaring roaring)
-    add_test(NAME basic_tests COMMAND test_redis-roaring)
-else ()
-    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+add_executable(unit ${TEST_FILES})
+target_link_libraries(unit roaring)
+add_test(NAME basic_tests COMMAND unit)
 
-    set(SOURCE_FILES ${SRC_PATH}/redis-roaring.c
-            ${SRC_PATH}/type.c
-            ${SRC_PATH}/data-structure.c)
-    add_library(redis-roaring SHARED ${SOURCE_FILES})
-    target_link_libraries(redis-roaring roaring)
-endif ()
+####### redis module #######
+message(STATUS "Compiling redis module")
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+set(SOURCE_FILES ${SRC_PATH}/redis-roaring.c
+        ${SRC_PATH}/type.c
+        ${SRC_PATH}/data-structure.c)
+add_library(redis-roaring SHARED ${SOURCE_FILES})
+target_link_libraries(redis-roaring roaring)
