@@ -46,6 +46,14 @@ Currently the following operations are supported
 - `R.SETBITARRAY` (create a roaring bitmap from an bit array string)
 - `R.GETBITARRAY` (get a bit array string from a roaring bitmap)
 
-More commands coming soon:
+Missing commands:
 
 - `R.BITFIELD` (same as [BITFIELD](https://redis.io/commands/bitfield))
+
+## Performance
+
+Tested using CRoaring's `census1881` dataset on a Dell Inspiron 7559 - Intel(R) Core(TM) i5-6300HQ CPU @ 2.30GHz
+
+| SETBIT | R.SETBIT |
+| ------ | -------- |
+| 12 us  | 13 us    |
