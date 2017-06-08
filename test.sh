@@ -10,7 +10,6 @@ function setup()
   cmake ..
   make
   cd -
-  start_redis
 }
 function unit()
 {
@@ -19,38 +18,41 @@ function unit()
 }
 function start_redis()
 {
-  pkill -f redis || true
-  while [ $(ps aux | grep redis | grep -v grep | wc -l) -ne 0 ]; do
-    sleep 0.1
-  done
-  valgrind --leak-check=yes --show-leak-kinds=definite,indirect --error-exitcode=1 --log-file="$LOG_FILE" \
-./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
+  local USE_VALGRIND="$1"
+  if [ "$USE_VALGRIND" == "yes" ]; then
+    ./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
+  else
+    valgrind --leak-check=yes --show-leak-kinds=definite,indirect --error-exitcode=1 --log-file=$LOG_FILE ./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
+  fi
   while [ "$(./deps/redis/src/redis-cli PING 2>/dev/null)" != "PONG" ]; do
     sleep 0.1
   done
 }
 function stop_redis()
 {
-  pkill -f redis
-  sleep 2
+  pkill -f redis || true
+  while [ $(ps aux | grep redis | grep -v grep | wc -l) -ne 0 ]; do
+    sleep 0.1
+  done
   cat "$LOG_FILE"
   local VALGRIND_ERRORS=$(cat "$LOG_FILE" | grep --color=no "indirectly lost\|definitely lost\|Invalid write\|Invalid read\|uninitialised\|Invalid free\|a block of size" | grep --color=no -v ": 0 bytes in 0 blocks")
   [ "$VALGRIND_ERRORS" == "" ]
 }
 function integration()
 {
+  stop_redis
+  start_redis "yes"
   ./tests/integration.sh
+  stop_redis
   echo "All integration tests passed"
 }
 function performance()
 {
-  start_redis
-  ./build/performance
-  echo "All performance tests passed"
-}
-function teardown()
-{
   stop_redis
+  start_redis "no"
+  ./build/performance
+  stop_redis
+  echo "All performance tests passed"
 }
 function end()
 {
@@ -65,5 +67,4 @@ setup
 unit
 integration
 performance
-teardown
 end
