@@ -31,8 +31,6 @@ int main(int argc, char* argv[]) {
                                               ".txt", &howmany, &count);
   assert(numbers != NULL);
 
-  count = 20;
-
   printf("Constructing %d bitmaps\n\n", (int) count);
   redisContext* c = create_context();
 
