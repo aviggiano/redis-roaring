@@ -26,6 +26,13 @@ function configure_redis()
   make
   cd -
 }
+function configure_hiredis()
+{
+  cd deps/hiredis
+  make
+  cd -
+}
 
 configure_croaring
 configure_redis
+configure_hiredis
