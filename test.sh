@@ -20,9 +20,9 @@ function start_redis()
 {
   local USE_VALGRIND="$1"
   if [ "$USE_VALGRIND" == "yes" ]; then
-    ./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
-  else
     valgrind --leak-check=yes --show-leak-kinds=definite,indirect --error-exitcode=1 --log-file=$LOG_FILE ./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
+  else
+    ./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
   fi
   while [ "$(./deps/redis/src/redis-cli PING 2>/dev/null)" != "PONG" ]; do
     sleep 0.1
@@ -34,6 +34,7 @@ function stop_redis()
   while [ $(ps aux | grep redis | grep -v grep | wc -l) -ne 0 ]; do
     sleep 0.1
   done
+  sleep 2
   cat "$LOG_FILE"
   local VALGRIND_ERRORS=$(cat "$LOG_FILE" | grep --color=no "indirectly lost\|definitely lost\|Invalid write\|Invalid read\|uninitialised\|Invalid free\|a block of size" | grep --color=no -v ": 0 bytes in 0 blocks")
   [ "$VALGRIND_ERRORS" == "" ]
