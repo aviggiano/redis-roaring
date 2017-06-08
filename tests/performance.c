@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <assert.h>
 #include "hiredis.h"
+#include "benchmarks/numbersfromtextfiles.h"
 
 redisContext* create_context() {
   redisContext* c;
@@ -23,24 +25,32 @@ redisContext* create_context() {
 }
 
 int main(int argc, char* argv[]) {
+  size_t count;
+  size_t* howmany = NULL;
+  uint32_t** numbers = read_all_integer_files("./deps/CRoaring/benchmarks/realdata/census1881",
+                                              ".txt", &howmany, &count);
+  assert(numbers != NULL);
 
+  count = 20;
+
+  printf("Constructing %d bitmaps\n\n", (int) count);
   redisContext* c = create_context();
+
   const char* ops[] = {
       "R.SETBIT",
-      "SETBIT",
-      "R.BITPOS",
-      "BITPOS",
-      "R.BITCOUNT",
-      "BITCOUNT"
+      "SETBIT"
   };
 
-  size_t N = 10000;
-  for (int op = 0; op < sizeof(ops)/sizeof(*ops); op++) {
+  for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
+    size_t N = 0;
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
-    for (size_t i = 0; i < N; i++) {
-      redisReply* reply = redisCommand(c, "%s key%d %d", ops[op], op, i);
-      freeReplyObject(reply);
+    for (size_t i = 0; i < count; i++) {
+      for (size_t j = 0; j < howmany[i]; j++) {
+        redisReply* reply = redisCommand(c, "%s %d %d 1", ops[op], i, numbers[i][j]);
+        freeReplyObject(reply);
+      }
+      N += howmany[i];
     }
     clock_gettime(CLOCK_MONOTONIC, &end);
 
@@ -52,7 +62,7 @@ int main(int argc, char* argv[]) {
     printf("Time/op: %lu us\n", us_per_op);
     printf("\n");
   }
-  redisFree(c);
 
+  redisFree(c);
   return 0;
 }
