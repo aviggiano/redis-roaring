@@ -27,7 +27,7 @@ redisContext* create_context() {
   return c;
 }
 
-void print_header(){
+void print_header() {
   printf("%10s\t", "OP");
   printf("%s\t", "TIME");
   printf("%s\n", "TIME/OP");
@@ -152,6 +152,31 @@ int main(int argc, char* argv[]) {
         }
       }
       timer_ns(ops[op], N);
+    }
+  }
+
+  {
+    const char* ops[] = {
+      "R.BITOP",
+      "BITOP"
+    };
+
+    const char type[] = "NOT";
+
+    for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
+      size_t N = 0;
+      char operation[256];
+      snprintf(operation, sizeof(operation), "%s %s", ops[op], type);
+      timer_ns(operation, N);
+      for (size_t i = 0; i < count; i++) {
+        for (size_t j = 0; j < howmany[i]; j++) {
+          redisReply* reply = redisCommand(c, "%s %s dest-%d-%d %d-%d", ops[op], type, op, i, op, i);
+          log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
+          freeReplyObject(reply);
+        }
+        N += howmany[i];
+      }
+      timer_ns(operation, N);
     }
   }
 
