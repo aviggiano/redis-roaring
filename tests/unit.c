@@ -143,9 +143,9 @@ int main(int argc, char* argv[]) {
   {
     printf("Should get n-th element of a bitmap for n=1..cardinality\n");
     Bitmap* bitmap = bitmap_alloc();
-    int array[] = {0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233,
-                   377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711,
-                   28657, 46368, 75025, 121393, 196418, 317811};
+    uint32_t array[] = {0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233,
+                        377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711,
+                        28657, 46368, 75025, 121393, 196418, 317811};
     size_t array_len = sizeof(array) / sizeof(*array);
     for (size_t i = 0; i < array_len; i++) {
       bitmap_setbit(bitmap, array[i], 1);
@@ -172,9 +172,11 @@ int main(int argc, char* argv[]) {
 
   {
     printf("Should create a bitmap from an int array and get the array from the bitmap\n");
-    uint32_t array[] = {0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233,
-                        377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711,
-                        28657, 46368, 75025, 121393, 196418, 317811};
+    uint32_t array[] = {
+      0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233,
+      377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711,
+      28657, 46368, 75025, 121393, 196418, 317811
+    };
     size_t array_len = sizeof(array) / sizeof(*array);
     Bitmap* bitmap = bitmap_from_int_array(array_len, array);
 
