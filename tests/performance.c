@@ -27,6 +27,12 @@ redisContext* create_context() {
   return c;
 }
 
+void print_header(){
+  printf("%10s\t", "OP");
+  printf("%s\t", "TIME");
+  printf("%s\n", "TIME/OP");
+}
+
 void timer_ns(const char* operation, size_t N) {
   static struct timespec start = {0, 0};
   static bool ticking = false;
@@ -42,10 +48,9 @@ void timer_ns(const char* operation, size_t N) {
   unsigned long ns = (end.tv_sec - start.tv_sec) * 1000000000UL + (end.tv_nsec - start.tv_nsec);
 
   double us_per_op = 1E-3 * ns / N;
-  printf("Operation: %s\n", operation);
-  printf("Total time: %.2f s\n", 1E-9 * ns);
-  printf("Time/op: %.2f us\n", us_per_op);
-  printf("\n");
+  printf("%10s\t", operation);
+  printf("%.2f\t", 1E-9 * ns);
+  printf("%.2f\n", us_per_op);
 }
 
 int main(int argc, char* argv[]) {
@@ -57,6 +62,7 @@ int main(int argc, char* argv[]) {
   assert(numbers != NULL);
 
   printf("Constructing %d bitmaps\n\n", (int) count);
+  print_header();
   redisContext* c = create_context();
 
   {
