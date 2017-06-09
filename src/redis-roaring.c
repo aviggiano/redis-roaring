@@ -336,10 +336,10 @@ int RBitCountCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 
 
 /**
- * R.BITPOS <key> <bit>
+ * R.BITPOS <key>
  * */
 int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
-  if (argc != 3) {
+  if (argc != 2) {
     return RedisModule_WrongArity(ctx);
   }
   RedisModule_AutoMemory(ctx);
@@ -348,8 +348,6 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
-  long long bit;
-  RedisModule_StringToLongLong(argv[2], &bit);
 
   int64_t pos;
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
@@ -357,14 +355,7 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
   else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-    if(bit == 1) {
-      pos = bitmap_get_nth_element(bitmap, 1);
-    }
-    else {
-      Bitmap* inverted_bitmap = bitmap_not(bitmap);
-      pos = bitmap_get_nth_element(inverted_bitmap, 1);
-      bitmap_free(inverted_bitmap);
-    }
+    pos = bitmap_get_nth_element(bitmap, 1);
   }
 
   RedisModule_ReplyWithLongLong(ctx, (long long) pos);

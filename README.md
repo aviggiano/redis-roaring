@@ -52,23 +52,8 @@ Missing commands:
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset the travis build image [#241045666](https://travis-ci.org/aviggiano/redis-roaring/jobs/241045666).
+Tested using CRoaring's `census1881` dataset on a Dell Inspiron 7559 - Intel(R) Core(TM) i5-6300HQ CPU @ 2.30GHz
 
-| OP | TIME/OP (us) |
+| SETBIT | R.SETBIT |
 | ------ | -------- |
-| R.SETBIT | 46.91 |
-| SETBIT | 45.05 |
-| R.GETBIT | 44.24 |
-| GETBIT | 42.28 |
-| R.BITCOUNT | 43.50 |
-| BITCOUNT | 290.15 |
-| R.BITPOS | 210.68 |
-| BITPOS | 44.68 |
-| R.BITOP NOT | 261.94 |
-| BITOP NOT | 195.81 |
-| R.BITOP AND | 54.73 |
-| BITOP AND | 323.36 |
-| R.BITOP OR | 67.70 |
-| BITOP OR | 233.45 |
-| R.BITOP XOR | 68.85 |
-| BITOP XOR | 262.85 |
+| TBD us  | TBD us    |

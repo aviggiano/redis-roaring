@@ -2,7 +2,7 @@
 
 set -eu
 
-LOG_FILE=""
+LOG_FILE=$(mktemp)
 function setup()
 {
   mkdir -p build
@@ -20,7 +20,6 @@ function start_redis()
 {
   local USE_VALGRIND="$1"
   if [ "$USE_VALGRIND" == "yes" ]; then
-    LOG_FILE=$(mktemp)
     valgrind --leak-check=yes --show-leak-kinds=definite,indirect --error-exitcode=1 --log-file=$LOG_FILE ./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
   else
     ./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
@@ -36,13 +35,9 @@ function stop_redis()
     sleep 0.1
   done
   sleep 2
-  if [ "$LOG_FILE" != "" ]; then
-    cat "$LOG_FILE"
-    local VALGRIND_ERRORS=$(cat "$LOG_FILE" | grep --color=no "indirectly lost\|definitely lost\|Invalid write\|Invalid read\|uninitialised\|Invalid free\|a block of size" | grep --color=no -v ": 0 bytes in 0 blocks")
-    [ "$VALGRIND_ERRORS" == "" ]
-    rm "$LOG_FILE"
-    LOG_FILE=""
-  fi
+  cat "$LOG_FILE"
+  local VALGRIND_ERRORS=$(cat "$LOG_FILE" | grep --color=no "indirectly lost\|definitely lost\|Invalid write\|Invalid read\|uninitialised\|Invalid free\|a block of size" | grep --color=no -v ": 0 bytes in 0 blocks")
+  [ "$VALGRIND_ERRORS" == "" ]
 }
 function integration()
 {

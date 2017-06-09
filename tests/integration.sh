@@ -113,23 +113,13 @@ function test_bitcount()
 function test_bitpos()
 {
   echo "test_bitpos"
-  FOUND=$(echo "R.SETBIT test_bitpos_1 3 1" | redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_1 6 1" | redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_1 4 1" | redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_1 12 1" | redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_1 10 1" | redis-cli)
-  FOUND=$(echo "R.BITPOS test_bitpos_1 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitpos 3 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitpos 6 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitpos 4 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitpos 12 1" | redis-cli)
+  FOUND=$(echo "R.SETBIT test_bitpos 10 1" | redis-cli)
+  FOUND=$(echo "R.BITPOS test_bitpos" | redis-cli)
   EXPECTED="3"
-  [ "$FOUND" == "$EXPECTED" ]
-
-  FOUND=$(echo "R.SETBIT test_bitpos_0 0 1" | redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_0 1 1" | redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_0 2 1" | redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_0 3 1" | redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_0 4 1" | redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_0 6 1" | redis-cli)
-  FOUND=$(echo "R.BITPOS test_bitpos_0 0" | redis-cli)
-  EXPECTED="5"
   [ "$FOUND" == "$EXPECTED" ]
 }
 function test_getintarray_setintarray()
