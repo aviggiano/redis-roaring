@@ -28,7 +28,7 @@ redisContext* create_context() {
 }
 
 void print_header() {
-  printf("%10s\t", "OP");
+  printf("%16s\t", "OP");
   printf("%s\t", "TIME");
   printf("%s\n", "TIME/OP");
 }
@@ -48,7 +48,7 @@ void timer_ns(const char* operation, size_t N) {
   unsigned long ns = (end.tv_sec - start.tv_sec) * 1000000000UL + (end.tv_nsec - start.tv_nsec);
 
   double us_per_op = 1E-3 * ns / N;
-  printf("%10s\t", operation);
+  printf("%16s\t", operation);
   printf("%.2f\t", 1E-9 * ns);
   printf("%.2f\n", us_per_op);
 }
@@ -171,12 +171,44 @@ int main(int argc, char* argv[]) {
       for (size_t i = 0; i < count; i++) {
         for (size_t j = 0; j < howmany[i]; j++) {
           redisReply* reply = redisCommand(c, "%s %s dest-%d-%d %d-%d", ops[op], type, op, i, op, i);
-          log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
+          log("reply %s %s %lld\n", operation, reply->str, reply->integer);
           freeReplyObject(reply);
         }
         N += howmany[i];
       }
       timer_ns(operation, N);
+    }
+  }
+
+  {
+    const char* ops[] = {
+      "R.BITOP",
+      "BITOP"
+    };
+
+    const char* types[] = {
+      "AND",
+      "OR",
+      "XOR"
+    };
+
+    for (size_t t = 0; t < sizeof(types) / sizeof(*types); t++) {
+      for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
+        size_t N = 0;
+        char operation[256];
+        snprintf(operation, sizeof(operation), "%s %s", ops[op], types[t]);
+        timer_ns(operation, N);
+        for (size_t i = 0; i < count; i++) {
+          for (size_t j = 0; j < howmany[i]; j++) {
+            redisReply* reply = redisCommand(c, "%s %s dest-%d-%d %d-%d %d-%d",
+                                             ops[op], types[t], op, i, op, 2 * i, op, 2 * i + 1);
+            log("reply %s %s %lld\n", operation, reply->str, reply->integer);
+            freeReplyObject(reply);
+          }
+          N += howmany[i];
+        }
+        timer_ns(operation, N);
+      }
     }
   }
 
