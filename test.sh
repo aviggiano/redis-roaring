@@ -70,7 +70,7 @@ function end()
 }
 
 setup
-unit
-integration
+#unit
+#integration
 performance
 end
