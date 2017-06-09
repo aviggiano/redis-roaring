@@ -200,8 +200,8 @@ int main(int argc, char* argv[]) {
         timer_ns(operation, N);
         for (size_t i = 0; i < count; i++) {
           for (size_t j = 0; j < howmany[i]; j++) {
-            redisReply* reply = redisCommand(c, "%s %s dest-%d-%d %d-%d %d-%d",
-                                             ops[op], types[t], op, i, op, 2 * i, op, 2 * i + 1);
+            redisReply* reply = redisCommand(c, "%s %s dest-%d-%d-%d %d-%d %d-%d",
+                                             ops[op], types[t], t, op, i, op, 2 * i, op, 2 * i + 1);
             log("reply %s %s %lld\n", operation, reply->str, reply->integer);
             freeReplyObject(reply);
           }
