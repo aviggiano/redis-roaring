@@ -54,7 +54,6 @@ int main(int argc, char* argv[]) {
   uint32_t** numbers = read_all_integer_files("./deps/CRoaring/benchmarks/realdata/census1881",
                                               ".txt", &howmany, &count);
 
-  count = 1;
   assert(numbers != NULL);
 
   printf("Constructing %d bitmaps\n\n", (int) count);
