@@ -54,6 +54,21 @@ Missing commands:
 
 Tested using CRoaring's `census1881` dataset the travis build image.
 
-| SETBIT | R.SETBIT |
+| OP | TIME/OP (us) |
 | ------ | -------- |
-| TBD  | TBD    |
+| R.SETBIT | 46.91 |
+| SETBIT | 45.05 |
+| R.GETBIT | 44.24 |
+| GETBIT | 42.28 |
+| R.BITCOUNT | 43.50 |
+| BITCOUNT | 290.15 |
+| R.BITPOS | 210.68 |
+| BITPOS | 44.68 |
+| R.BITOP NOT | 261.94 |
+| BITOP NOT | 195.81 |
+| R.BITOP AND | 54.73 |
+| BITOP AND | 323.36 |
+| R.BITOP OR | 67.70 |
+| BITOP OR | 233.45 |
+| R.BITOP XOR | 68.85 |
+| BITOP XOR | 262.85 |
