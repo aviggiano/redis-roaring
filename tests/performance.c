@@ -68,13 +68,16 @@ int main(int argc, char* argv[]) {
     for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
       size_t N = 0;
       timer_ns(ops[op], N);
-      for (size_t i = 0; i < count; i++) {
-        for (size_t j = 0; j < howmany[i]; j++) {
-          redisReply* reply = redisCommand(c, "%s %d-%d %d 1", ops[op], op, i, numbers[i][j]);
-          log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
-          freeReplyObject(reply);
+      const int bits[] = {1, 0, 1};
+      for (size_t b = 0; b < sizeof(bits) / sizeof(*bits); b++) {
+        for (size_t i = 0; i < count; i++) {
+          for (size_t j = 0; j < howmany[i]; j++) {
+            redisReply* reply = redisCommand(c, "%s %d-%d %d %d", ops[op], op, i, numbers[i][j], bits[b]);
+            log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
+            freeReplyObject(reply);
+          }
+          N += howmany[i];
         }
-        N += howmany[i];
       }
       timer_ns(ops[op], N);
     }
@@ -131,20 +134,16 @@ int main(int argc, char* argv[]) {
     for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
       size_t N = 0;
       timer_ns(ops[op], N);
-      for (size_t i = 0; i < count; i++) {
-        for (size_t j = 0; j < howmany[i]; j++) {
-          {
-            redisReply* reply = redisCommand(c, "%s %d-%d 1", ops[op], op, i);
+      const int bits[] = {1, 0};
+      for (size_t b = 0; b < sizeof(bits) / sizeof(*bits); b++) {
+        for (size_t i = 0; i < count; i++) {
+          for (size_t j = 0; j < howmany[i]; j++) {
+            redisReply* reply = redisCommand(c, "%s %d-%d %d", ops[op], op, i, bits[b]);
             log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
             freeReplyObject(reply);
           }
-          {
-            redisReply* reply = redisCommand(c, "%s %d-%d 0", ops[op], op, i);
-            log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
-            freeReplyObject(reply);
-          }
+          N += howmany[i];
         }
-        N += howmany[i];
       }
       timer_ns(ops[op], N);
     }
