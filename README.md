@@ -56,4 +56,4 @@ Tested using CRoaring's `census1881` dataset on a Dell Inspiron 7559 - Intel(R) 
 
 | SETBIT | R.SETBIT |
 | ------ | -------- |
-| 12 us  | 13 us    |
+| TBD us  | TBD us    |
