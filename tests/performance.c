@@ -91,7 +91,28 @@ int main(int argc, char* argv[]) {
       timer_ns(ops[op], N);
       for (size_t i = 0; i < count; i++) {
         for (size_t j = 0; j < howmany[i]; j++) {
-          redisReply* reply = redisCommand(c, "%s %d-%d %d", ops[op], op, i);
+          redisReply* reply = redisCommand(c, "%s %d-%d %d", ops[op], op, i, numbers[i][j]);
+          log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
+          freeReplyObject(reply);
+        }
+        N += howmany[i];
+      }
+      timer_ns(ops[op], N);
+    }
+  }
+
+  {
+    const char* ops[] = {
+      "R.BITCOUNT",
+      "BITCOUNT"
+    };
+
+    for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
+      size_t N = 0;
+      timer_ns(ops[op], N);
+      for (size_t i = 0; i < count; i++) {
+        for (size_t j = 0; j < howmany[i]; j++) {
+          redisReply* reply = redisCommand(c, "%s %d-%d", ops[op], op, i);
           log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
           freeReplyObject(reply);
         }
