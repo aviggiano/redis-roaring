@@ -28,9 +28,9 @@ redisContext* create_context() {
 }
 
 void print_header() {
-  printf("%16s\t", "OP");
-  printf("%s\t", "TIME");
-  printf("%s\n", "TIME/OP");
+  printf("%16s    ", "OP");
+  printf("%8s    ", "TIME (s)");
+  printf("%12s\n\n", "TIME/OP (us)");
 }
 
 void timer_ns(const char* operation, size_t N) {
@@ -48,9 +48,9 @@ void timer_ns(const char* operation, size_t N) {
   unsigned long ns = (end.tv_sec - start.tv_sec) * 1000000000UL + (end.tv_nsec - start.tv_nsec);
 
   double us_per_op = 1E-3 * ns / N;
-  printf("%16s\t", operation);
-  printf("%.2f\t", 1E-9 * ns);
-  printf("%.2f\n", us_per_op);
+  printf("%16s    ", operation);
+  printf("%8.2f    ", 1E-9 * ns);
+  printf("%12.2f\n", us_per_op);
 }
 
 int main(int argc, char* argv[]) {
@@ -211,6 +211,8 @@ int main(int argc, char* argv[]) {
       }
     }
   }
+
+  printf("\n");
 
   redisFree(c);
   return 0;
