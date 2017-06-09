@@ -52,7 +52,7 @@ Missing commands:
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset the travis build image.
+Tested using CRoaring's `census1881` dataset the travis build image [#241045666](https://travis-ci.org/aviggiano/redis-roaring/jobs/241045666).
 
 | OP | TIME/OP (us) |
 | ------ | -------- |
