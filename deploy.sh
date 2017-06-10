@@ -7,7 +7,7 @@ SOURCE_BRANCH="master"
 TARGET_BRANCH="gh-pages"
 
 function update_gh_pages {
-  echo "Update gh-pages :)" >> docs/README.md
+  cat "/tmp/test.out" > docs/README.md
 }
 
 # Pull requests and commits to other branches shouldn't try to deploy, just build to verify
