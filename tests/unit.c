@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
       assert(element == -1);
     }
     {
-      for (size_t i = 0; i < array_len; i++) {
+      for (size_t i = 0; i < 1000; i++) {
         int64_t element = bitmap_get_nth_element_not_present(bitmap, i + 1);
         int64_t element_check = bitmap_get_nth_element_not_present_slow(bitmap, i + 1);
         assert(element == element_check);
