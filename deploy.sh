@@ -31,6 +31,7 @@ git config user.email "$COMMIT_AUTHOR_EMAIL"
 # Commit the "changes", i.e. the new version.
 # The delta will show diffs between new and old versions.
 update_readme
+git checkout "$DEPLOY_BRANCH"
 git add -A .
 git commit -m "Deploy [ci skip]: ${SHA}"
 
