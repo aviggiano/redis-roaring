@@ -56,6 +56,7 @@ void timer_ns(const char* operation, size_t N) {
 int main(int argc, char* argv[]) {
   size_t count;
   size_t* howmany = NULL;
+  const char test_output[] = "/tmp/test.out";
   uint32_t** numbers = read_all_integer_files("./deps/CRoaring/benchmarks/realdata/census1881",
                                               ".txt", &howmany, &count);
 
@@ -213,6 +214,16 @@ int main(int argc, char* argv[]) {
   }
 
   printf("\n");
+
+  FILE* fp;
+  fp = fopen(test_output, "w");
+  assert(fp != NULL);
+
+  fprintf(fp, "| R.SETBIT | SETBIT |\n");
+  fprintf(fp, "| -------- | ------ |\n");
+  fprintf(fp, "| TBD      | TBD    |\n");
+
+  fclose(fp);
 
   redisFree(c);
   return 0;
