@@ -27,6 +27,7 @@ redisContext* create_context() {
 int main(int argc, char* argv[]) {
   size_t count;
   size_t* howmany = NULL;
+  const char test_output[] = "/tmp/test.out";
   uint32_t** numbers = read_all_integer_files("./deps/CRoaring/benchmarks/realdata/census1881",
                                               ".txt", &howmany, &count);
   assert(numbers != NULL);
@@ -35,8 +36,8 @@ int main(int argc, char* argv[]) {
   redisContext* c = create_context();
 
   const char* ops[] = {
-      "R.SETBIT",
-      "SETBIT"
+    "R.SETBIT",
+    "SETBIT"
   };
 
   for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
@@ -60,6 +61,19 @@ int main(int argc, char* argv[]) {
     printf("Time/op: %lu us\n", us_per_op);
     printf("\n");
   }
+
+  FILE* fp;
+  fp = fopen(test_output, "w");
+  assert(fp != NULL);
+
+  fprintf(fp, "Benchmarks\n");
+  fprintf(fp, "==========\n\n");
+
+  fprintf(fp, "| R.SETBIT | SETBIT |\n");
+  fprintf(fp, "| -------- | ------ |\n");
+  fprintf(fp, "| TBD      | TBD    |\n");
+
+  fclose(fp);
 
   redisFree(c);
   return 0;
