@@ -3,9 +3,7 @@
 
 set -ex
 
-SOURCE_BRANCH="master"
-TARGET_BRANCH="gh-pages"
-DEPLOY_TAG="deploy"
+DEPLOY_BRANCH="master"
 
 function update_readme {
   sed -i "/## Performance/q" README.md
@@ -16,7 +14,7 @@ function update_readme {
 }
 
 # Pull requests and commits to other branches shouldn't try to deploy, just build to verify
-if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_BRANCH" != "$SOURCE_BRANCH" -o "$TRAVIS_TAG" == "$DEPLOY_TAG" ]; then
+if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_BRANCH" != "$DEPLOY_BRANCH" ]; then
   echo "Skipping deploy."
   exit 0
 fi
@@ -34,8 +32,7 @@ git config user.email "$COMMIT_AUTHOR_EMAIL"
 # The delta will show diffs between new and old versions.
 update_readme
 git add -A .
-git commit -m "Deploy to GitHub Pages: ${SHA}"
-git tag -f -a "$DEPLOY_TAG" -m "$DEPLOY_TAG"
+git commit -m "Deploy [ci skip]: ${SHA}"
 
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
 ENCRYPTED_KEY_VAR="encrypted_${ENCRYPTION_LABEL}_key"
@@ -48,4 +45,4 @@ eval `ssh-agent -s`
 ssh-add deploy_key
 
 # Now that we're all set up, we can push.
-git push $SSH_REPO $TARGET_BRANCH
+git push $SSH_REPO $DEPLOY_BRANCH
