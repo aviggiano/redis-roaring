@@ -27,7 +27,7 @@ char bitmap_getbit(Bitmap* bitmap, uint32_t offset) {
   return roaring_bitmap_contains(bitmap, offset) == true;
 }
 
-int64_t bitmap_get_nth_element(Bitmap* bitmap, uint64_t n) {
+int64_t bitmap_get_nth_element_present(Bitmap* bitmap, uint64_t n) {
   roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
   int64_t element = -1;
   for (uint64_t i = 1; iterator->has_value; i++) {
@@ -38,6 +38,34 @@ int64_t bitmap_get_nth_element(Bitmap* bitmap, uint64_t n) {
     roaring_advance_uint32_iterator(iterator);
   }
   roaring_free_uint32_iterator(iterator);
+  return element;
+}
+
+int64_t bitmap_get_nth_element_not_present(Bitmap* bitmap, uint64_t n) {
+  roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
+  int64_t element = -1;
+  int64_t last = -1;
+  for (uint64_t i = 1; iterator->has_value; i++) {
+    int64_t current = iterator->current_value;
+    int64_t step = current - last;
+    if (n < step) {
+      element = last + n;
+      break;
+    }
+    else {
+      n -= (step - 1);
+    }
+    last = current;
+    roaring_advance_uint32_iterator(iterator);
+  }
+  roaring_free_uint32_iterator(iterator);
+  return element;
+}
+
+int64_t bitmap_get_nth_element_not_present_slow(Bitmap* bitmap, uint64_t n) {
+  roaring_bitmap_t* inverted_bitmap = bitmap_not(bitmap);
+  int64_t element = bitmap_get_nth_element_present(inverted_bitmap, n);
+  roaring_bitmap_free(inverted_bitmap);
   return element;
 }
 

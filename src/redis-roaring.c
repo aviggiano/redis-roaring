@@ -358,12 +358,10 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
     if(bit == 1) {
-      pos = bitmap_get_nth_element(bitmap, 1);
+      pos = bitmap_get_nth_element_present(bitmap, 1);
     }
     else {
-      Bitmap* inverted_bitmap = bitmap_not(bitmap);
-      pos = bitmap_get_nth_element(inverted_bitmap, 1);
-      bitmap_free(inverted_bitmap);
+      pos = bitmap_get_nth_element_not_present(bitmap, 1);
     }
   }
 
