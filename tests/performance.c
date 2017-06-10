@@ -66,9 +66,6 @@ int main(int argc, char* argv[]) {
   fp = fopen(test_output, "w");
   assert(fp != NULL);
 
-  fprintf(fp, "Benchmarks\n");
-  fprintf(fp, "==========\n\n");
-
   fprintf(fp, "| R.SETBIT | SETBIT |\n");
   fprintf(fp, "| -------- | ------ |\n");
   fprintf(fp, "| TBD      | TBD    |\n");

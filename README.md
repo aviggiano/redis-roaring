@@ -52,7 +52,7 @@ Missing commands:
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset on a Dell Inspiron 7559 - Intel(R) Core(TM) i5-6300HQ CPU @ 2.30GHz
+Tested using CRoaring's `census1881` dataset on travis:
 
 | SETBIT | R.SETBIT |
 | ------ | -------- |
