@@ -16,18 +16,15 @@ compiler:
 script:
   - ./test.sh
 
+after_success:
+  - ./deploy.sh
+
 notifications:
   email:
     on_success: never
     on_failure: never
 
-deploy:
-  provider: pages
-  skip_cleanup: true
-  github_token: "$GITHUB_TOKEN"
-  on:
-    branch: gh-pages
-
 env:
-  matrix:
-    secure: THaQ8ZFVhvrGzAqQcPt5kdQFf8r7M5ITzS/rIS9K2IgmS6AxZAV77pgppRpVwZJccgVbtm6tvzTEhEKgHR+z+Ts9r82+bNx1iwe8o+LmE5DZzGYLLS5YWSyeFqdK7YhjwFM19BvnDB7jdoaxK2CNPceMgFB6eWQ9q5ZT7PDhGa9JIqSNn1Xf8Dt6iOmx12qm+bmHBJyaCAnREjN8nZdKWu4JLJVXNJm9yZ+LAcQva9IXq3oRelXJrE8DUl5fKocoYleag8HWwBaDsEmmPx2a/JJjGbacUFA6sHC1ZtvhI1y7aoji0/76Xq+PbuiI2hcsYTxtDGKnHD7FIe8BoIVyhaQdj9YlBWn0sxa7lYF5Y0c+grBPzaku+kzU0E/F/xcKiZofZ6dzfFXRx7oVMXi3/GINOo+81jo+pVwJGMk2AcJK57YxY8ZFWbSopevVQnW8tdfGK1/+2sB415kI7ZLezwGP8bdUMrdQYQjhsKgVlbNx9JogCIRKtMJpwVBY61QicBxza/HWojFwZZhHo0FF1gZKDOc0V3VT1M59oWmUdlVkjgClsHVKtcgXqZktn+kmn73Ko1UyySGnHWGVSuKhM2knWrApGTpMrtD6QBd/5VW/jSakMvXaYtR7PLR1Ky8hI0ryZI/gurTLpIeteslqXJsW8ZPLhkSoxw6qgyAG/S0=
+  global:
+  - ENCRYPTION_LABEL: "1c6c3a1a3c8d"
+  - COMMIT_AUTHOR_EMAIL: "agfviggiano@gmail.com"
