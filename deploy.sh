@@ -8,11 +8,11 @@ TARGET_BRANCH="gh-pages"
 DEPLOY_TAG="deploy"
 
 function update_readme {
-  sed -i "/## Performance/q" docs/README.md
+  sed -i "/## Performance/q" README.md
   local BUILD_URL="https://travis-ci.org/$TRAVIS_REPO_SLUG/builds/$TRAVIS_BUILD_ID"
-  echo "Tested using CRoaring's \`census1881\` dataset on [travis]($BUILD_URL):" >> docs/README.md
-  echo "" >> docs/README.md
-  cat "/tmp/test.out" >> docs/README.md
+  echo "Tested using CRoaring's \`census1881\` dataset on [travis]($BUILD_URL):" >> README.md
+  echo "" >> README.md
+  cat "/tmp/test.out" >> README.md
 }
 
 # Pull requests and commits to other branches shouldn't try to deploy, just build to verify
