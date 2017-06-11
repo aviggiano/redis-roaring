@@ -52,4 +52,4 @@ Missing commands:
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset on [travis](https://travis-ci.org/aviggiano/redis-roaring/builds/241619404):
+Tested using CRoaring's `census1881` dataset on the travis build [241620577](https://travis-ci.org/aviggiano/redis-roaring/builds/241620577):
