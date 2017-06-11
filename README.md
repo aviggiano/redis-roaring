@@ -52,4 +52,23 @@ Missing commands:
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset on the travis build [241620577](https://travis-ci.org/aviggiano/redis-roaring/builds/241620577):
+Tested using CRoaring's `census1881` dataset on the travis build [241662381](https://travis-ci.org/aviggiano/redis-roaring/builds/241662381):
+
+|           OP | TIME/OP (us) |
+| ------------ | ------------ |
+|     R.SETBIT |        34.07 |
+|       SETBIT |        30.43 |
+|     R.GETBIT |        30.17 |
+|       GETBIT |        28.92 |
+|   R.BITCOUNT |        31.34 |
+|     BITCOUNT |       188.66 |
+|     R.BITPOS |        30.30 |
+|       BITPOS |        50.83 |
+|  R.BITOP NOT |       100.33 |
+|    BITOP NOT |       291.32 |
+|  R.BITOP AND |        43.32 |
+|    BITOP AND |       454.93 |
+|   R.BITOP OR |        51.34 |
+|     BITOP OR |       368.58 |
+|  R.BITOP XOR |        52.74 |
+|    BITOP XOR |       402.81 |
