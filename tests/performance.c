@@ -151,8 +151,8 @@ int main(int argc, char* argv[]) {
         redisReply* reply = redisCommand(c, "%s %d-%d", ops[op], op, i);
         debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
         freeReplyObject(reply);
-        N += howmany[i];
       }
+      N += count;
       timer_ns(ops[op], N);
     }
   }
@@ -172,8 +172,8 @@ int main(int argc, char* argv[]) {
           redisReply* reply = redisCommand(c, "%s %d-%d %d", ops[op], op, i, bits[b]);
           debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
           freeReplyObject(reply);
-          N += howmany[i];
         }
+        N += count;
       }
       timer_ns(ops[op], N);
     }
@@ -196,8 +196,8 @@ int main(int argc, char* argv[]) {
         redisReply* reply = redisCommand(c, "%s %s dest-%d-%d %d-%d", ops[op], type, op, i, op, i);
         debug("reply %s %s %lld\n", operation, reply->str, reply->integer);
         freeReplyObject(reply);
-        N += howmany[i];
       }
+      N += count;
       timer_ns(operation, N);
     }
   }
@@ -225,8 +225,8 @@ int main(int argc, char* argv[]) {
                                            ops[op], types[t], t, op, i, op, 2 * i, op, 2 * i + 1);
           debug("reply %s %s %lld\n", operation, reply->str, reply->integer);
           freeReplyObject(reply);
-          N += howmany[i];
         }
+        N += count;
         timer_ns(operation, N);
       }
     }
