@@ -5,8 +5,40 @@
 #include "hiredis.h"
 #include "benchmarks/numbersfromtextfiles.h"
 
-//#define log(fmt, ...) printf(fmt, ##__VA_ARGS__)
-#define log(fmt, ...)
+/*
+ * macros
+ */
+//#define debug(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#define debug(fmt, ...)
+
+/*
+ * function declarations
+ */
+void print(const char* fmt, ...);
+redisContext* create_context();
+void print_header();
+void timer_ns(const char* operation, size_t N);
+int main(int argc, char* argv[]);
+
+/*
+ * function definitions
+ */
+void print(const char* fmt, ...) {
+  static FILE* fp = NULL;
+  if (fp == NULL) {
+    fp = fopen("/tmp/test.out", "w");
+    assert(fp != NULL);
+  }
+
+  va_list args_stdout;
+  va_list args_fp;
+  va_start(args_stdout, fmt);
+  va_start(args_fp, fmt);
+  vfprintf(stdout, fmt, args_stdout);
+  vfprintf(fp, fmt, args_fp);
+  va_end(args_stdout);
+  va_end(args_fp);
+}
 
 redisContext* create_context() {
   redisContext* c;
@@ -15,22 +47,19 @@ redisContext* create_context() {
 
   struct timeval timeout = {2, 0};
   c = redisConnectWithTimeout(hostname, port, timeout);
-  if (c == NULL || c->err) {
-    if (c) {
-      printf("Connection error: %s\n", c->errstr);
-      redisFree(c);
-    } else {
-      printf("Connection error: can't allocate redis context\n");
-    }
-    exit(1);
-  }
+  assert(c != NULL);
+  assert(c->err == 0);
   return c;
 }
 
 void print_header() {
-  printf("%16s    ", "OP");
-  printf("%8s    ", "TIME (s)");
-  printf("%12s\n\n", "TIME/OP (us)");
+  print("| %12s ", "OP");
+  print("| %8s ", "TIME (s)");
+  print("| %12s |\n", "TIME/OP (us)");
+
+  print("| %12s ", "------------");
+  print("| %8s ", "--------");
+  print("| %12s |\n", "------------");
 }
 
 void timer_ns(const char* operation, size_t N) {
@@ -48,21 +77,19 @@ void timer_ns(const char* operation, size_t N) {
   unsigned long ns = (end.tv_sec - start.tv_sec) * 1000000000UL + (end.tv_nsec - start.tv_nsec);
 
   double us_per_op = 1E-3 * ns / N;
-  printf("%16s    ", operation);
-  printf("%8.2f    ", 1E-9 * ns);
-  printf("%12.2f\n", us_per_op);
+  print("| %12s ", operation);
+  print("| %8.2f ", 1E-9 * ns);
+  print("| %12.2f |\n", us_per_op);
 }
 
 int main(int argc, char* argv[]) {
   size_t count;
   size_t* howmany = NULL;
-  const char test_output[] = "/tmp/test.out";
   uint32_t** numbers = read_all_integer_files("./deps/CRoaring/benchmarks/realdata/census1881",
                                               ".txt", &howmany, &count);
 
   assert(numbers != NULL);
 
-  printf("Constructing %d bitmaps\n\n", (int) count);
   print_header();
   redisContext* c = create_context();
 
@@ -80,7 +107,7 @@ int main(int argc, char* argv[]) {
         for (size_t i = 0; i < count; i++) {
           for (size_t j = 0; j < howmany[i]; j++) {
             redisReply* reply = redisCommand(c, "%s %d-%d %d %d", ops[op], op, i, numbers[i][j], bits[b]);
-            log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
+            debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
             freeReplyObject(reply);
           }
           N += howmany[i];
@@ -102,7 +129,7 @@ int main(int argc, char* argv[]) {
       for (size_t i = 0; i < count; i++) {
         for (size_t j = 0; j < howmany[i]; j++) {
           redisReply* reply = redisCommand(c, "%s %d-%d %d", ops[op], op, i, numbers[i][j]);
-          log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
+          debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
           freeReplyObject(reply);
         }
         N += howmany[i];
@@ -122,7 +149,7 @@ int main(int argc, char* argv[]) {
       timer_ns(ops[op], N);
       for (size_t i = 0; i < count; i++) {
         redisReply* reply = redisCommand(c, "%s %d-%d", ops[op], op, i);
-        log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
+        debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
         freeReplyObject(reply);
         N += howmany[i];
       }
@@ -143,7 +170,7 @@ int main(int argc, char* argv[]) {
       for (size_t b = 0; b < sizeof(bits) / sizeof(*bits); b++) {
         for (size_t i = 0; i < count; i++) {
           redisReply* reply = redisCommand(c, "%s %d-%d %d", ops[op], op, i, bits[b]);
-          log("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
+          debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
           freeReplyObject(reply);
           N += howmany[i];
         }
@@ -167,7 +194,7 @@ int main(int argc, char* argv[]) {
       timer_ns(operation, N);
       for (size_t i = 0; i < count; i++) {
         redisReply* reply = redisCommand(c, "%s %s dest-%d-%d %d-%d", ops[op], type, op, i, op, i);
-        log("reply %s %s %lld\n", operation, reply->str, reply->integer);
+        debug("reply %s %s %lld\n", operation, reply->str, reply->integer);
         freeReplyObject(reply);
         N += howmany[i];
       }
@@ -196,7 +223,7 @@ int main(int argc, char* argv[]) {
         for (size_t i = 0; i < count; i++) {
           redisReply* reply = redisCommand(c, "%s %s dest-%d-%d-%d %d-%d %d-%d",
                                            ops[op], types[t], t, op, i, op, 2 * i, op, 2 * i + 1);
-          log("reply %s %s %lld\n", operation, reply->str, reply->integer);
+          debug("reply %s %s %lld\n", operation, reply->str, reply->integer);
           freeReplyObject(reply);
           N += howmany[i];
         }
@@ -207,16 +234,12 @@ int main(int argc, char* argv[]) {
 
   printf("\n");
 
-  FILE* fp;
-  fp = fopen(test_output, "w");
-  assert(fp != NULL);
-
-  fprintf(fp, "| R.SETBIT | SETBIT |\n");
-  fprintf(fp, "| -------- | ------ |\n");
-  fprintf(fp, "| TBD      | TBD    |\n");
-
-  fclose(fp);
-
+  for (size_t i = 0; i < count; i++) {
+    free(numbers[i]);
+  }
+  free(numbers);
+  free(howmany);
   redisFree(c);
+
   return 0;
 }
