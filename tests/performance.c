@@ -54,11 +54,9 @@ redisContext* create_context() {
 
 void print_header() {
   print("| %12s ", "OP");
-  print("| %8s ", "TIME (s)");
   print("| %12s |\n", "TIME/OP (us)");
 
   print("| %12s ", "------------");
-  print("| %8s ", "--------");
   print("| %12s |\n", "------------");
 }
 
@@ -78,7 +76,6 @@ void timer_ns(const char* operation, size_t N) {
 
   double us_per_op = 1E-3 * ns / N;
   print("| %12s ", operation);
-  print("| %8.2f ", 1E-9 * ns);
   print("| %12.2f |\n", us_per_op);
 }
 
