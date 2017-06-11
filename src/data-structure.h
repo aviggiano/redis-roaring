@@ -20,7 +20,22 @@ char bitmap_getbit(Bitmap* bitmap, uint32_t offset);
  *
  * @example set {1, 10, 100, 1000} and n=1 returns 1, n=3 returns 100, n=0 returns -1, n=5 returns -1
  */
-int64_t bitmap_get_nth_element(Bitmap* bitmap, uint64_t n);
+int64_t bitmap_get_nth_element_present(Bitmap* bitmap, uint64_t n);
+/**
+ * Gets the n-th element not present in the set
+ *
+ * @param bitmap - the bitmap set
+ * @param n - the position of the element not present in the set
+ *
+ * @return the n-th non-existent element of the bitmap set
+ *
+ * @example set {1, 2, 4, 5, 7} and n=1 returns 0, n=2 returns 3, n=3 returns 6, n=5 returns 9
+ */
+int64_t bitmap_get_nth_element_not_present(Bitmap* bitmap, uint64_t n);
+/**
+ * Same as `bitmap_get_nth_element_not_present` but slower. Useful for cross validation.
+ */
+int64_t bitmap_get_nth_element_not_present_slow(Bitmap* bitmap, uint64_t n);
 Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps);
 Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps);
 Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps);
