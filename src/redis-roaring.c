@@ -26,7 +26,7 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
   long long value;
   if ((RedisModule_StringToLongLong(argv[3], &value) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be either 0 or 1");
+    return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be either 0 or 1");
   }
 
   /* Create an empty value object if the key is currently empty. */
@@ -83,6 +83,129 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   return REDISMODULE_OK;
 }
 
+/**
+ * R.SETINTARRAY <key> <value1> [<value2> <value3> ... <valueN>]
+ * */
+int RSetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+  int type = RedisModule_KeyType(key);
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  size_t length = (size_t) (argc - 2);
+  uint32_t* values = RedisModule_Alloc(sizeof(*values) * length);
+  for (int i = 0; i < length; i++) {
+    long long value;
+    if ((RedisModule_StringToLongLong(argv[2 + i], &value) != REDISMODULE_OK)) {
+      RedisModule_Free(values);
+      return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be an unsigned 32 bit integer");
+    }
+    values[i] = (uint32_t) value;
+  }
+
+  Bitmap* bitmap = bitmap_from_int_array(length, values);
+  RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
+
+  RedisModule_Free(values);
+
+  RedisModule_ReplicateVerbatim(ctx);
+  RedisModule_ReplyWithSimpleString(ctx, "OK");
+
+
+  return REDISMODULE_OK;
+}
+
+/**
+ * R.GETINTARRAY <key>
+ * */
+int RGetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+  int type = RedisModule_KeyType(key);
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
+
+  size_t n = 0;
+  uint32_t* array = bitmap == NULL ? NULL : bitmap_get_int_array(bitmap, &n);
+
+  RedisModule_ReplyWithArray(ctx, n);
+
+  for (size_t i = 0; i < n; i++) {
+    RedisModule_ReplyWithLongLong(ctx, array[i]);
+  }
+
+  bitmap_free_int_array(array);
+
+  return REDISMODULE_OK;
+}
+
+
+/**
+ * R.SETBITARRAY <key> <value1>
+ * */
+int RSetBitArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+  int type = RedisModule_KeyType(key);
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  size_t len;
+  const char* array = RedisModule_StringPtrLen(argv[2], &len);
+  Bitmap* bitmap = bitmap_from_bit_array(len, array);
+  RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
+
+  RedisModule_ReplicateVerbatim(ctx);
+  RedisModule_ReplyWithSimpleString(ctx, "OK");
+
+  return REDISMODULE_OK;
+}
+
+/**
+ * R.GETBITARRAY <key>
+ * */
+int RGetBitArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+  int type = RedisModule_KeyType(key);
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  if (type != REDISMODULE_KEYTYPE_EMPTY) {
+    Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
+    size_t size;
+    char* array = bitmap_get_bit_array(bitmap, &size);
+    RedisModule_ReplyWithStringBuffer(ctx, array, size);
+
+    bitmap_free_bit_array(array);
+  }
+  else {
+    RedisModule_ReplyWithSimpleString(ctx, "");
+  }
+
+  return REDISMODULE_OK;
+}
+
+
 int RBitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, Bitmap* (* operation)(uint32_t, const Bitmap**)) {
   // open destkey for writing
   RedisModuleKey* destkey = RedisModule_OpenKey(ctx, argv[2], REDISMODULE_READ | REDISMODULE_WRITE);
@@ -137,7 +260,7 @@ int RBitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, Bitmap* (* o
 
   // Integer reply: The size of the string stored in the destination key
   // (adapted to cardinality)
-  uint64_t cardinality = roaring_bitmap_get_cardinality(result);
+  uint64_t cardinality = bitmap_get_cardinality(result);
   RedisModule_ReplyWithLongLong(ctx, (long long) cardinality);
 
   return REDISMODULE_OK;
@@ -203,7 +326,7 @@ int RBitCountCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
   else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-    count = roaring_bitmap_get_cardinality(bitmap);
+    count = bitmap_get_cardinality(bitmap);
   }
 
   RedisModule_ReplyWithLongLong(ctx, (long long) count);
@@ -213,10 +336,10 @@ int RBitCountCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 
 
 /**
- * R.BITPOS <key>
+ * R.BITPOS <key> <bit>
  * */
 int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
-  if (argc != 2) {
+  if (argc != 3) {
     return RedisModule_WrongArity(ctx);
   }
   RedisModule_AutoMemory(ctx);
@@ -225,6 +348,8 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
+  long long bit;
+  RedisModule_StringToLongLong(argv[2], &bit);
 
   int64_t pos;
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
@@ -232,10 +357,12 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
   else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-    roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
-    if (iterator->has_value) pos = iterator->current_value;
-    else pos = -1;
-    roaring_free_uint32_iterator(iterator);
+    if(bit == 1) {
+      pos = bitmap_get_nth_element_present(bitmap, 1);
+    }
+    else {
+      pos = bitmap_get_nth_element_not_present(bitmap, 1);
+    }
   }
 
   RedisModule_ReplyWithLongLong(ctx, (long long) pos);
@@ -266,6 +393,18 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R.GETBIT", RGetBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R.SETINTARRAY", RSetIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R.GETINTARRAY", RGetIntArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R.SETBITARRAY", RSetBitArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R.GETBITARRAY", RGetBitArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R.BITOP", RBitOpCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {

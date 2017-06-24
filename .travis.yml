@@ -16,7 +16,15 @@ compiler:
 script:
   - ./test.sh
 
+after_success:
+  - ./deploy.sh
+
 notifications:
   email:
     on_success: never
     on_failure: never
+
+env:
+  global:
+  - ENCRYPTION_LABEL: "1c6c3a1a3c8d"
+  - COMMIT_AUTHOR_EMAIL: "agfviggiano@gmail.com"
