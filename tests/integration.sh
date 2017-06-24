@@ -132,19 +132,6 @@ function test_bitpos()
   EXPECTED="5"
   [ "$FOUND" == "$EXPECTED" ]
 }
-function test_memory()
-{
-  echo "test_memory"
-  FOUND=$(echo "FLUSHDB" | redis-cli)
-  FOUND=$(echo "INFO memory" | redis-cli | grep --color=no "used_memory:" | sed 's/\r//g')
-  EXPECTED="used_memory:827376"
-  [ "$FOUND" == "$EXPECTED" ]
-
-  FOUND=$(echo "R.SETBIT test_memory 0 1" | redis-cli)
-  FOUND=$(echo "INFO memory" | redis-cli | grep --color=no "used_memory:" | sed 's/\r//g')
-  EXPECTED="used_memory:827480"
-  [ "$FOUND" == "$EXPECTED" ]
-}
 function test_getintarray_setintarray()
 {
   echo "test_getintarray_setintarray"
@@ -215,4 +202,3 @@ test_bitcount
 test_bitpos
 test_getintarray_setintarray
 test_getbitarray_setbitarray
-test_memory
