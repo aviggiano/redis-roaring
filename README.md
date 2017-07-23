@@ -39,7 +39,7 @@ $ git submodule status
 
 ## Build
 
-Build the the project with cmake and it will generate the Redis Module shared library `libredis-roaring.so`, together with unit tests and performance tests.
+Build the project with cmake and it will generate the Redis Module shared library `libredis-roaring.so`, together with unit tests and performance tests.
 
 ```bash
 mkdir -p build
