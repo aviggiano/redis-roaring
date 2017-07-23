@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 
+function configure_submodules()
+{
+  git submodule init
+  git submodule update
+  git submodule status
+}
 function configure_croaring()
 {
   pushd .
-
-  git submodule init
-  git submodule update
 
   cd deps/CRoaring
 
@@ -33,6 +36,7 @@ function configure_hiredis()
   cd -
 }
 
+configure_submodules
 configure_croaring
 configure_redis
 configure_hiredis
