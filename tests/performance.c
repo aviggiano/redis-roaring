@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 #include <assert.h>
 #include "hiredis.h"
 #include "benchmarks/numbersfromtextfiles.h"
@@ -12,12 +13,27 @@
 #define debug(fmt, ...)
 
 /*
+ * structs
+ */
+
+typedef struct statistics_s {
+  const char* operation;
+  struct timespec start;
+  bool ticking;
+  size_t N;
+  double mean;
+  double variance;
+} Statistics;
+
+/*
  * function declarations
  */
 void print(const char* fmt, ...);
 redisContext* create_context();
 void print_header();
-void timer_ns(const char* operation, size_t N);
+void static inline timer(Statistics* statistics);
+Statistics statistics_init(const char* operation);
+void statistics_print(Statistics* statistics);
 int main(int argc, char* argv[]);
 
 /*
@@ -54,29 +70,53 @@ redisContext* create_context() {
 
 void print_header() {
   print("| %12s ", "OP");
-  print("| %12s |\n", "TIME/OP (us)");
+  print("| %12s ", "TIME/OP (us)");
+  print("| %12s |\n", "ST.DEV. (us)");
 
+  print("| %12s ", "------------");
   print("| %12s ", "------------");
   print("| %12s |\n", "------------");
 }
 
-void timer_ns(const char* operation, size_t N) {
-  static struct timespec start = {0, 0};
-  static bool ticking = false;
-  if (!ticking) {
-    clock_gettime(CLOCK_MONOTONIC, &start);
-    ticking = true;
+void static inline timer(Statistics* statistics) {
+  if (!statistics->ticking) {
+    clock_gettime(CLOCK_MONOTONIC, &statistics->start);
+    statistics->ticking = true;
     return;
   }
-  ticking = false;
+  statistics->ticking = false;
 
   struct timespec end;
   clock_gettime(CLOCK_MONOTONIC, &end);
-  unsigned long ns = (end.tv_sec - start.tv_sec) * 1000000000UL + (end.tv_nsec - start.tv_nsec);
+  double ns = (end.tv_sec - statistics->start.tv_sec) * 1000000000UL + (end.tv_nsec - statistics->start.tv_nsec);
 
-  double us_per_op = 1E-3 * ns / N;
-  print("| %12s ", operation);
-  print("| %12.2f |\n", us_per_op);
+  // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
+  statistics->N++;
+  double delta = ns - statistics->mean;
+  statistics->mean += delta / statistics->N;
+  double delta2 = ns - (statistics->mean);
+  statistics->variance += delta * delta2;
+
+}
+
+Statistics statistics_init(const char* operation) {
+  return (Statistics) {
+    .operation = operation,
+    .start = {0, 0},
+    .ticking = false,
+    .N = 0,
+    .mean = -1,
+    .variance = -1
+  };
+}
+
+void statistics_print(Statistics* statistics) {
+  double mean = 1E-3 * statistics->mean;
+  double stdev = 1E-6 * sqrt(statistics->variance);
+
+  print("| %12s ", statistics->operation);
+  print("| %12.2f ", mean);
+  print("| %12.2f |\n", stdev);
 }
 
 int main(int argc, char* argv[]) {
@@ -97,20 +137,20 @@ int main(int argc, char* argv[]) {
     };
 
     for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
-      size_t N = 0;
-      timer_ns(ops[op], N);
+      Statistics statistics = statistics_init(ops[op]);
       const int bits[] = {1, 0, 1};
       for (size_t b = 0; b < sizeof(bits) / sizeof(*bits); b++) {
         for (size_t i = 0; i < count; i++) {
           for (size_t j = 0; j < howmany[i]; j++) {
+            timer(&statistics);
             redisReply* reply = redisCommand(c, "%s %d-%d %d %d", ops[op], op, i, numbers[i][j], bits[b]);
+            timer(&statistics);
             debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
             freeReplyObject(reply);
           }
-          N += howmany[i];
         }
       }
-      timer_ns(ops[op], N);
+      statistics_print(&statistics);
     }
   }
 
@@ -121,17 +161,17 @@ int main(int argc, char* argv[]) {
     };
 
     for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
-      size_t N = 0;
-      timer_ns(ops[op], N);
+      Statistics statistics = statistics_init(ops[op]);
       for (size_t i = 0; i < count; i++) {
         for (size_t j = 0; j < howmany[i]; j++) {
+          timer(&statistics);
           redisReply* reply = redisCommand(c, "%s %d-%d %d", ops[op], op, i, numbers[i][j]);
+          timer(&statistics);
           debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
           freeReplyObject(reply);
         }
-        N += howmany[i];
       }
-      timer_ns(ops[op], N);
+      statistics_print(&statistics);
     }
   }
 
@@ -142,15 +182,15 @@ int main(int argc, char* argv[]) {
     };
 
     for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
-      size_t N = 0;
-      timer_ns(ops[op], N);
+      Statistics statistics = statistics_init(ops[op]);
       for (size_t i = 0; i < count; i++) {
+        timer(&statistics);
         redisReply* reply = redisCommand(c, "%s %d-%d", ops[op], op, i);
+        timer(&statistics);
         debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
         freeReplyObject(reply);
       }
-      N += count;
-      timer_ns(ops[op], N);
+      statistics_print(&statistics);
     }
   }
 
@@ -161,18 +201,18 @@ int main(int argc, char* argv[]) {
     };
 
     for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
-      size_t N = 0;
-      timer_ns(ops[op], N);
+      Statistics statistics = statistics_init(ops[op]);
       const int bits[] = {1, 0};
       for (size_t b = 0; b < sizeof(bits) / sizeof(*bits); b++) {
         for (size_t i = 0; i < count; i++) {
+          timer(&statistics);
           redisReply* reply = redisCommand(c, "%s %d-%d %d", ops[op], op, i, bits[b]);
+          timer(&statistics);
           debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
           freeReplyObject(reply);
         }
-        N += count;
       }
-      timer_ns(ops[op], N);
+      statistics_print(&statistics);
     }
   }
 
@@ -185,17 +225,17 @@ int main(int argc, char* argv[]) {
     const char type[] = "NOT";
 
     for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
-      size_t N = 0;
       char operation[256];
       snprintf(operation, sizeof(operation), "%s %s", ops[op], type);
-      timer_ns(operation, N);
+      Statistics statistics = statistics_init(operation);
       for (size_t i = 0; i < count; i++) {
+        timer(&statistics);
         redisReply* reply = redisCommand(c, "%s %s dest-%d-%d %d-%d", ops[op], type, op, i, op, i);
+        timer(&statistics);
         debug("reply %s %s %lld\n", operation, reply->str, reply->integer);
         freeReplyObject(reply);
       }
-      N += count;
-      timer_ns(operation, N);
+      statistics_print(&statistics);
     }
   }
 
@@ -213,18 +253,18 @@ int main(int argc, char* argv[]) {
 
     for (size_t t = 0; t < sizeof(types) / sizeof(*types); t++) {
       for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
-        size_t N = 0;
         char operation[256];
         snprintf(operation, sizeof(operation), "%s %s", ops[op], types[t]);
-        timer_ns(operation, N);
+        Statistics statistics = statistics_init(operation);
         for (size_t i = 0; i < count; i++) {
+          timer(&statistics);
           redisReply* reply = redisCommand(c, "%s %s dest-%d-%d-%d %d-%d %d-%d",
                                            ops[op], types[t], t, op, i, op, 2 * i, op, 2 * i + 1);
+          timer(&statistics);
           debug("reply %s %s %lld\n", operation, reply->str, reply->integer);
           freeReplyObject(reply);
         }
-        N += count;
-        timer_ns(operation, N);
+        statistics_print(&statistics);
       }
     }
   }
