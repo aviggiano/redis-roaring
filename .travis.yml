@@ -2,8 +2,6 @@ language: cpp
 dist: trusty
 
 before_install:
-  - git submodule init
-  - git submodule update
   - ./configure.sh
 
 install:
