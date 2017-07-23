@@ -105,8 +105,8 @@ Statistics statistics_init(const char* operation) {
     .start = {0, 0},
     .ticking = false,
     .N = 0,
-    .mean = -1,
-    .variance = -1
+    .mean = 0,
+    .variance = 0
   };
 }
 
