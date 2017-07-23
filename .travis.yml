@@ -10,8 +10,33 @@ install:
   - sudo apt-get update
   - sudo apt-get install -y valgrind
 
-compiler:
-  - gcc
+matrix:
+  include:
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - gcc-5
+            - g++-5
+            - cmake
+            - cmake-data
+      env: COMPILER=gcc
+    - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.7
+            - george-edison55-precise-backports
+          packages:
+            - clang-3.7
+            - clang++-3.7
+            - cmake
+            - cmake-data
+      env: COMPILER=clang
 
 script:
   - ./test.sh
