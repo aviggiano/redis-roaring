@@ -41,8 +41,8 @@ static bool BitmapAofRewriteCallback(uint32_t offset, void* param) {
 void BitmapAofRewrite(RedisModuleIO* aof, RedisModuleString* key, void* value) {
   Bitmap* bitmap = value;
   Bitmap_aof_rewrite_callback_params params = {
-      aof: aof,
-      key: key
+      .aof = aof,
+      .key = key
   };
   roaring_iterate(bitmap, BitmapAofRewriteCallback, &params);
 }
