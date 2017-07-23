@@ -15,31 +15,31 @@ Pull requests are welcome.
 - CRoaring (bitmap compression library used by this redis module)
 - cmake (build tools needed for compiling the source code)
 - redis (server needed for integration tests)
-- hiredis (redis' C client library needed for performance tests)
+- hiredis (redis client library needed for performance tests)
 
 ## Getting started
 
-Clone this repository on a directory on your machine:
+Clone this repository:
 
 ```bash
 $ git clone https://github.com/aviggiano/redis-roaring.git
 $ cd redis-roaring/
 ```
 
-Run the `configure.sh`, or manually do the following steps:
+Run the `configure.sh` script, or manually do the following steps:
 
 ```bash
 $ git submodule init
 $ git submodule update
 $ git submodule status
-# cd to deps/CRoaring and compile it and follow the build instructions on their repository
+# cd to deps/CRoaring and compile it, following the build instructions on their repository
 # cd to deps/redis and compile it
 # cd to deps/hiredis and compile it
 ```
 
 ## Build
 
-Build the the project with cmake and it will generate the Redis Module shared library, together with unit tests and performance tests.
+Build the the project with cmake and it will generate the Redis Module shared library `libredis-roaring.so`, together with unit tests and performance tests.
 
 ```bash
 mkdir -p build
