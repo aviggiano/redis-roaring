@@ -37,6 +37,7 @@ set(PERFORMANCE_FILES ${TEST_PATH}/performance.c)
 
 add_executable(performance ${PERFORMANCE_FILES})
 target_link_libraries(performance libhiredis.a)
+target_link_libraries(performance m)
 add_test(NAME performance_tests COMMAND performance)
 
 ####### redis module #######
