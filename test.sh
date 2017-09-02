@@ -52,7 +52,7 @@ function stop_redis()
 function integration_1()
 {
   stop_redis
-  # FIXME should be "yes"
+  # FIXME should be "yes", but we are waiting on redis issue #4284
   start_redis "no"
   ./tests/integration_1.sh
   stop_redis
