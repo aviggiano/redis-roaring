@@ -64,7 +64,16 @@ function stop_redis()
     LOG_FILE=""
   fi
 }
-function integration()
+function integration_1()
+{
+  stop_redis
+  # FIXME should be "yes", but we are waiting on redis issue #4284
+  start_redis "no"
+  ./tests/integration_1.sh
+  stop_redis
+  echo "All integration (1) tests passed"
+}
+function integration_2()
 {
   stop_redis
   # FIXME should be "--valgrind", but we are waiting on redis issue #4284
@@ -105,6 +114,7 @@ function end()
 
 setup
 unit
-integration
+integration_1
+integration_2
 performance
 end
