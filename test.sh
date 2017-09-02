@@ -3,10 +3,6 @@
 set -eu
 
 LOG_FILE=""
-function reset_rdb()
-{
-  rm dump.rdb 2>/dev/null || true
-}
 function setup()
 {
   mkdir -p build
@@ -14,7 +10,8 @@ function setup()
   cmake ..
   make
   cd -
-  reset_rdb
+  rm dump.rdb 2>/dev/null || true
+  rm appendonly.aof 2>/dev/null || true
 }
 function unit()
 {
@@ -23,9 +20,6 @@ function unit()
 }
 function start_redis()
 {
-  local REDIS_COMMAND="./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so"
-  local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --error-exitcode=1 --log-file=$LOG_FILE"
-
   local USE_VALGRIND="no"
   local USE_AOF="no"
   while [[ $# -gt 0 ]]; do
@@ -42,6 +36,8 @@ function start_redis()
     shift
   done
 
+  local REDIS_COMMAND="./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so"
+  local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --error-exitcode=1 --log-file=$LOG_FILE"
   local AOF_OPTION="--appendonly $USE_AOF"
   if [ "$USE_VALGRIND" == "no" ]; then
     VALGRIND_COMMAND=""
@@ -72,14 +68,21 @@ function integration()
 {
   stop_redis
   # FIXME should be "--valgrind", but we are waiting on redis issue #4284
-  start_redis
+  start_redis --aof
   ./tests/integration_1.sh
   stop_redis
 
+  # Test RDB load
   start_redis --valgrind
   ./tests/integration_2.sh
   stop_redis
-  reset_rdb
+  rm dump.rdb 2>/dev/null || true
+
+  # Test AOF load
+  start_redis --valgrind --aof
+  ./tests/integration_2.sh
+  stop_redis
+  rm appendonly.aof 2>/dev/null || true
 
   echo "All integration tests passed"
 }
