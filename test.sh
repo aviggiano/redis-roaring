@@ -3,6 +3,10 @@
 set -eu
 
 LOG_FILE=""
+function reset_rdb()
+{
+  rm dump.rdb 2>/dev/null || true
+}
 function setup()
 {
   mkdir -p build
@@ -10,7 +14,7 @@ function setup()
   cmake ..
   make
   cd -
-  rm dump.rdb 2>/dev/null || true
+  reset_rdb
 }
 function unit()
 {
@@ -48,6 +52,7 @@ function stop_redis()
 function integration_1()
 {
   stop_redis
+  # FIXME should be "yes"
   start_redis "no"
   ./tests/integration_1.sh
   stop_redis
@@ -59,6 +64,7 @@ function integration_2()
   start_redis "yes"
   ./tests/integration_2.sh
   stop_redis
+  reset_rdb
   echo "All integration (2) tests passed"
 }
 function performance()

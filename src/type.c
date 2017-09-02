@@ -20,6 +20,7 @@ void* BitmapRdbLoad(RedisModuleIO* rdb, int encver) {
   size_t size;
   char* serialized_bitmap = RedisModule_LoadStringBuffer(rdb, &size);
   Bitmap* bitmap = roaring_bitmap_deserialize(serialized_bitmap);
+  RedisModule_Free(serialized_bitmap);
   return bitmap;
 }
 
