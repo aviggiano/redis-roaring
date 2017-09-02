@@ -23,7 +23,6 @@ function unit()
 }
 function start_redis()
 {
-  LOG_FILE=$(mktemp)
   local REDIS_COMMAND="./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so"
   local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --error-exitcode=1 --log-file=$LOG_FILE"
 
@@ -34,6 +33,7 @@ function start_redis()
     case $PARAM in
       --valgrind)
         USE_VALGRIND="yes"
+        LOG_FILE=$(mktemp)
         ;;
       --aof)
         USE_AOF="yes"
