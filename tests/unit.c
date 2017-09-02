@@ -237,5 +237,21 @@ int main(int argc, char* argv[]) {
     bitmap_free(bitmap);
   }
 
+  {
+    printf("Should serialize\n");
+    uint32_t array[] = {317811, 196418, 121393, 233, 144, 89, 55, 34, 21};
+    size_t array_len = sizeof(array) / sizeof(*array);
+    Bitmap* bitmap = bitmap_from_int_array(array_len, array);
+
+    size_t serialized_max_size = roaring_bitmap_size_in_bytes(bitmap);
+    char* serialized_bitmap = malloc(serialized_max_size);
+    size_t serialized_size = roaring_bitmap_serialize(bitmap, serialized_bitmap);
+
+    free(serialized_bitmap);
+    assert(serialized_size <= serialized_max_size);
+
+    bitmap_free(bitmap);
+  }
+
   return 0;
 }
