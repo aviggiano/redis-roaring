@@ -49,23 +49,20 @@ function stop_redis()
     LOG_FILE=""
   fi
 }
-function integration_1()
+function integration()
 {
   stop_redis
   # FIXME should be "yes", but we are waiting on redis issue #4284
   start_redis "no"
   ./tests/integration_1.sh
   stop_redis
-  echo "All integration (1) tests passed"
-}
-function integration_2()
-{
-  stop_redis
+
   start_redis "yes"
   ./tests/integration_2.sh
   stop_redis
   reset_rdb
-  echo "All integration (2) tests passed"
+
+  echo "All integration tests passed"
 }
 function performance()
 {
@@ -86,7 +83,6 @@ function end()
 
 setup
 unit
-integration_1
-integration_2
+integration
 performance
 end
