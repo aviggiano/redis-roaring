@@ -23,13 +23,32 @@ function unit()
 }
 function start_redis()
 {
-  local USE_VALGRIND="$1"
-  if [ "$USE_VALGRIND" == "yes" ]; then
-    LOG_FILE=$(mktemp)
-    valgrind --leak-check=yes --show-leak-kinds=definite,indirect --error-exitcode=1 --log-file=$LOG_FILE ./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
-  else
-    ./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so &
+  LOG_FILE=$(mktemp)
+  local REDIS_COMMAND="./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so"
+  local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --error-exitcode=1 --log-file=$LOG_FILE"
+
+  local USE_VALGRIND="no"
+  local USE_AOF="no"
+  while [[ $# -gt 0 ]]; do
+    local PARAM="$1"
+    case $PARAM in
+      --valgrind)
+        USE_VALGRIND="yes"
+        ;;
+      --aof)
+        USE_AOF="yes"
+        ;;
+    esac
+    shift
+  done
+
+  local AOF_OPTION="--appendonly $USE_AOF"
+  if [ "$USE_VALGRIND" == "no" ]; then
+    VALGRIND_COMMAND=""
   fi
+
+  eval "$VALGRIND_COMMAND" "$REDIS_COMMAND" "$AOF_OPTION" &
+
   while [ "$(./deps/redis/src/redis-cli PING 2>/dev/null)" != "PONG" ]; do
     sleep 0.1
   done
@@ -52,12 +71,12 @@ function stop_redis()
 function integration()
 {
   stop_redis
-  # FIXME should be "yes", but we are waiting on redis issue #4284
-  start_redis "no"
+  # FIXME should be "--valgrind", but we are waiting on redis issue #4284
+  start_redis
   ./tests/integration_1.sh
   stop_redis
 
-  start_redis "yes"
+  start_redis --valgrind
   ./tests/integration_2.sh
   stop_redis
   reset_rdb
@@ -67,7 +86,7 @@ function integration()
 function performance()
 {
   stop_redis
-  start_redis "no"
+  start_redis
   ./build/performance
   stop_redis
   echo "All performance tests passed"
