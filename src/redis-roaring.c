@@ -385,7 +385,7 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
       .free = BitmapFree
   };
 
-  BitmapType = RedisModule_CreateDataType(ctx, "reroaring", 0, &tm);
+  BitmapType = RedisModule_CreateDataType(ctx, "reroaring", BITMAP_ENCODING_VERSION, &tm);
   if (BitmapType == NULL) return REDISMODULE_ERR;
 
   // register our commands

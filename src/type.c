@@ -2,17 +2,13 @@
 #include "data-structure.h"
 #include "type.h"
 
-#define BITMAP_ENCODING_VERSION 1
-
 /* === Bitmap type methods === */
 void BitmapRdbSave(RedisModuleIO* rdb, void* value) {
   Bitmap* bitmap = value;
-  size_t serialized_size = roaring_bitmap_size_in_bytes(bitmap);
-  char* serialized_bitmap = RedisModule_Alloc(serialized_size);
-  size_t serialized_size_check = roaring_bitmap_serialize(bitmap, serialized_bitmap);
-
-  RedisModule_SaveStringBuffer(rdb, serialized_bitmap, serialized_size_check);
-
+  size_t serialized_max_size = roaring_bitmap_size_in_bytes(bitmap);
+  char* serialized_bitmap = RedisModule_Alloc(serialized_max_size);
+  size_t serialized_size = roaring_bitmap_serialize(bitmap, serialized_bitmap);
+  RedisModule_SaveStringBuffer(rdb, serialized_bitmap, serialized_size);
   RedisModule_Free(serialized_bitmap);
 }
 

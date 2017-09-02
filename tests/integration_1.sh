@@ -195,6 +195,25 @@ function test_getbitarray_setbitarray()
   EXPECTED=""
   [ "$FOUND" == "$EXPECTED" ]
 }
+function test_del()
+{
+  echo "test_del"
+
+  FOUND=$(echo "R.SETBIT test_del 0 1" | redis-cli)
+  EXPECTED="0"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "DEL test_del" | redis-cli)
+  EXPECTED="1"
+  [ "$FOUND" == "$EXPECTED" ]
+}
+function test_save()
+{
+  echo "test_save"
+
+  FOUND=$(echo "SAVE" | redis-cli)
+  EXPECTED="OK"
+}
 
 test_setbit_getbit
 test_bitop
@@ -202,3 +221,5 @@ test_bitcount
 test_bitpos
 test_getintarray_setintarray
 test_getbitarray_setbitarray
+test_del
+test_save
