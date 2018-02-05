@@ -48,6 +48,15 @@ cmake ..
 make
 ```
 
+## Docker
+
+It is also possible to run this project as a docker container:
+
+```bash
+docker build -t redis-roaring
+docker run -p 6379:6379 redis-roaring:latest
+```
+
 ## Tests
 
 Run the `test.sh` script for unit tests, integration tests and performance tests.
