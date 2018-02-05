@@ -1,0 +1,21 @@
+priv/libvex_amd64_linux_a-s390_disasm.o: priv/s390_disasm.c \
+  /usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h \
+  ../VEX/pub/libvex_basictypes.h priv/main_util.h priv/main_globals.h \
+  ../VEX/pub/libvex.h ../VEX/pub/libvex_ir.h priv/s390_defs.h \
+  priv/s390_disasm.h
+
+/usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h:
+
+../VEX/pub/libvex_basictypes.h:
+
+priv/main_util.h:
+
+priv/main_globals.h:
+
+../VEX/pub/libvex.h:
+
+../VEX/pub/libvex_ir.h:
+
+priv/s390_defs.h:
+
+priv/s390_disasm.h:

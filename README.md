@@ -73,23 +73,23 @@ Missing commands:
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset on the travis build [271275462](https://travis-ci.org/aviggiano/redis-roaring/builds/271275462):
+Tested using CRoaring's `census1881` dataset on the travis build [337720166](https://travis-ci.org/aviggiano/redis-roaring/builds/337720166):
 
 |           OP | TIME/OP (us) | ST.DEV. (us) |
 | ------------ | ------------ | ------------ |
-|     R.SETBIT |        34.53 |        14.08 |
-|       SETBIT |        32.92 |        15.55 |
-|     R.GETBIT |        32.82 |         4.58 |
-|       GETBIT |        31.69 |         9.82 |
-|   R.BITCOUNT |        32.69 |         0.05 |
-|     BITCOUNT |       207.50 |         1.02 |
-|     R.BITPOS |        35.26 |         0.07 |
-|       BITPOS |        56.13 |         0.62 |
-|  R.BITOP NOT |       112.20 |         1.45 |
-|    BITOP NOT |       306.33 |         4.43 |
-|  R.BITOP AND |        47.96 |         0.35 |
-|    BITOP AND |       402.64 |         6.96 |
-|   R.BITOP OR |        59.05 |         1.04 |
-|     BITOP OR |       403.92 |         6.88 |
-|  R.BITOP XOR |        59.75 |         1.19 |
-|    BITOP XOR |       398.44 |         6.71 |
+|     R.SETBIT |        35.85 |        18.59 |
+|       SETBIT |        34.03 |        17.36 |
+|     R.GETBIT |        33.88 |         8.36 |
+|       GETBIT |        32.84 |         7.82 |
+|   R.BITCOUNT |        32.38 |         0.06 |
+|     BITCOUNT |       179.11 |         0.93 |
+|     R.BITPOS |        34.23 |         0.05 |
+|       BITPOS |        55.10 |         0.63 |
+|  R.BITOP NOT |       107.76 |         1.42 |
+|    BITOP NOT |       288.39 |         4.26 |
+|  R.BITOP AND |        48.29 |         0.32 |
+|    BITOP AND |       377.56 |         6.53 |
+|   R.BITOP OR |        58.08 |         1.02 |
+|     BITOP OR |       376.41 |         6.45 |
+|  R.BITOP XOR |        61.50 |         1.16 |
+|    BITOP XOR |       383.20 |         6.48 |

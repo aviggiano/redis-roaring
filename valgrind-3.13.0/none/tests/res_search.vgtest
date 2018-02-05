@@ -1,0 +1,4 @@
+prereq: test $(command -v host) && host www.yahoo.com > /dev/null && ! ../../tests/os_test darwin
+prog: res_search
+args: www.yahoo.com
+vgopts: -q

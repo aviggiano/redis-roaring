@@ -1,0 +1,188 @@
+
+Bugs reported after Thu Sep 19 10:34:49 CEST 2013
+For bugs reported before this time, see 3_8_BUGSTATUS.txt
+
+=== VEX/amd64 ==========================================================
+
+276252  callgrind / valgrind + intel ipp h264 decoder gets killed in
+        intel optimised ipp libraries
+325328  __float128 loses precision under memcheck
+        == 197915
+327285  amd64->IR: 0x8F 0xEA 0xF8 0x10 0xCE 0x3 0x1D 0x0
+        == 323431 (probably amd specific, vpcmov)
+328357  amd64->IR: 0x8F 0xEA 0xF8 0x10 0xEF 0x3 0x5 0x0 (amd XOP pfx)
+329245  amd64->IR: 0x48 0xF 0x5A 0x7 (rex.W cvtps2pd (%rdi),%xmm0)
+330590  Missing support for multiple VEX CMP instruction Opcodes (Causes SIGILL)
+330808  Crash with Intel IPP samples (MMX related assertion)
+335785  vex amd64->IR: 0xC4 0xE2 0x75 0x2F 0xAC 0x18 0x40 0x7 (vmovupd)
+338393  vex amd64->IR: 0x6E 0xD8 0x48 0x89 0xE5 0x41 0x55 0xC4
+338559  vex amd64->IR: 0x66 0x41 0xF 0x3A 0x61 0x4 0x0 0x18 (pcmpestri 0x18)
+338602  AVX2 bit in CPUID missing
+
+=== VEX/arm ============================================================
+
+329963  Half precision floating point conversion on ARM is not supported
+330349  Endless loop happen when using lackey with --trace-mem=yes on ARM
+331178  disInstr(arm): unhandled instruction: 0xEE190F1D (read PMCCNTR)
+        Probably WONTFIX or CANTFIX
+        == 328423
+335618  arm(thumb): unhanded instruction: mov.w rN, pc/sp
+
+=== VEX/arm64 ==========================================================
+
+335440  arm64: ld1 (single structure) is not implemented
+335713  arm64: unhanded instruction: prfm (immediate) (PREFETCH)
+
+=== VEX/x86 ============================================================
+
+333625  Program under valgrind calculates complex exp() wrongly
+335563  wine's kernel32/thread test fails under valgrind (x87 FPU limitations)
+
+=== VEX/mips ===========================================================
+
+=== VEX/ppc ============================================================
+
+338095  Not able to run Valgrind on Power Architecture PPC Linux.
+
+=== VEX general ========================================================
+
+330887  doRegisterAllocation performance improvements
+
+=== Syscalls/ioctls ====================================================
+
+197259  (wine) Unsupported arch_prtctl option
+331311  Valgrind shows open files in /proc/self/fd that don't
+        work for the process
+        Probable wontfix
+333434  In some weird corner case Valgrind cannot execute
+        executable files symlinked by /proc/self/fd (related to 331311?)
+333051  handling hugepages (is largely broken)
+337388  fcntl works on Valgrind's own file descriptors
+337716  False positive for openat system call with absolute paths
+338877  sys_capget and sys_catset not correctly handled
+
+=== Debuginfo reader ===================================================
+
+306340  parse_var_DIE confused by DWARF from clang-3.1
+327427  ifunc wrapper crashes when symbols are discarded because of false mmap
+        overlaps
+328468  unwind x86/amd64 gcc <= 4.4 compiled code does not unwind properly
+        at "ret" instruction
+328559  Some back trace generation (from mmap function) problem on ARM
+330321  Serious error when reading debug info:
+        DW_AT_signature 9b d0 55 13 bb 1e e9 37
+333175  dwarf3 reader problems with Fortran (against 3.8.1)
+335907  segfault when running wine's ddrawex/tests/surface.c under
+        valgrind (stack unwind, QUERIED)
+338803  Handling of dwz debug alt files or cross-CU is broken
+
+=== Tools/Memcheck =====================================================
+
+329619  leak-check gets assertion failure when nesting
+        VALGRIND_MALLOCLIKE_BLOCK (has patch, needs looking at)
+330617  ppc false positive conditional jump depends on uninitialised value
+        (probably fixable)
+331833  the memory initialized by semget(key, 0, GETALL, semun)
+        is treated as uninitialized on some platforms
+331550  Detect the potential of mis-malloc/free in different libraries
+        (wishlist)
+333775  Have valgrind (memcheck) only check memory alloc/free traces (wishlist)
+336393  Implement new user request to get redzone size (wishlist)
+337794  memcheck: stack overflow segv message should show callstack (wishlist)
+
+=== Tools/DRD ==========================================================
+
+=== Tools/Helgrind =====================================================
+
+325333  VALGRIND_HG_DISABLE_CHECKING does not seem to work locally
+        probably invalid
+327548  Helgrind: false positive while destroying mutex
+327881  Helgrind: False Positive Warning on std::atomic_bool
+337735  Helgrind does not know pthread_once is a memory barrier
+
+=== Tools/SGCheck ======================================================
+
+332577  exp-sgcheck: sg_main.c:560 (add_blocks_to_StackTree):
+        Assertion '!already_present' failed.
+332591  False positive: invalid read in vfprintf (KNOWN BUG)
+335353  expected output of exp-sgcheck/tests/hackedbz2 mismatch with gcc 4.8.1
+
+=== Tools/Massif =======================================================
+
+=== Tools/Cachegrind ===================================================
+
+338141  Cachegrind's Cycle Estimation is very different from the
+        free run
+
+=== other/mips =========================================================
+
+328441  valgrind_3.9.0 failed to compile in mips32
+        Error: illegal operands `cfc1 $t0,$31'
+        QUERIED
+331126  Compiling with mipsbe toolchain
+334649  Cavium Octeon 2 MIPS64: valgrind is up but ld.so assert
+        "rtld.c: 1257: dl_main: Assertion
+        '_rtld_local._dl_rtld_map.l_relocated' failed" and exits
+336768  vex mips->IR: unhandled instruction bytes: 0x3B 0xE8 0x3 0xEC
+        (possibly invalid)
+
+=== other/arm ==========================================================
+
+327583  libpixman error on ARM system (memcheck false +)
+331033  valgrind crashes on arm-linux while running an executable (ARM TLS?)
+
+=== other/s390 =========================================================
+
+
+=== other/MacOS ========================================================
+
+326797  Assertion 'sizeof(UWord) == sizeof(UInt)' failed.
+        POSSIBLY INVALID; QUERIED
+327745  valgrind 3.9.0 build fails on Mac OS X 10.6.8
+        OLD; QUERIED.
+
+=== GDB server =========================================================
+
+328081  embedded gdbserver and non-stop mode (wishlist)
+338633  gdbserver_tests/nlcontrolc.vgtest hangs on arm64
+
+=== Output =============================================================
+
+328563  make track-fds support xml output (wishlist)
+
+=== MPI ================================================================
+
+330147  libmpiwrap: byte count from PMPI_Get_count should be made defined
+
+=== Documentation ======================================================
+
+332060  Please document how best to use massif with libgc
+332917  Valgrind should warn the user that SSE4 is not supported 
+        in the 32-bit mode
+
+=== Uncategorised ======================================================
+
+326487  child of debugged process exits without becoming zombie
+327665  out of memory error
+328721  MSVC 2008 compiler warns about while(0) in warning level 4
+330293  Please add a AppData application description (Valkyrie)
+333628  Out of tree build (has incomplete patch)
+        == 256174
+334110  Why install internal headers/libraries/.pc file?
+334802  valgrind does not always explain why a given option is bad
+335143  Capabilities not supported
+337869  Eliminate fixed size buffers (in progress)
+        Hercules, Augean stables, etc
+338252  CFLAGS="-flto" and VEX/pub/libvex_guest_offsets.h (wishlist)
+338606  Strange error message for invalid interpreter
+338365  New client request to fetch valgrind version (probably invalid)
+        QUERIED.  PROBABLY INVALID.
+
+========================================================================
+========================================================================
+
+338731  ppc testsuite does not build in case compiler doesnot support -maltivec
+338781  Unable to read debug information (3.10.0 BETA1) (OSX)
+338896  Valgrind refuses to run SUID programs
+
+Mon Sep  8 13:20:50 CEST 2014

@@ -1,0 +1,209 @@
+'\" t
+.\"     Title: vgdb
+.\"    Author: [see the "Author" section]
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 06/15/2017
+.\"    Manual: Release 3.13.0
+.\"    Source: Release 3.13.0
+.\"  Language: English
+.\"
+.TH "VGDB" "1" "06/15/2017" "Release 3.13.0" "Release 3.13.0"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+vgdb \- intermediary between Valgrind and GDB or a shell
+.SH "SYNOPSIS"
+.HP \w'\fBvgdb\fR\ 'u
+\fBvgdb\fR [\fIoptions\fR]
+.SH "DESCRIPTION"
+.PP
+\fBvgdb\fR
+("Valgrind to GDB") is used as an intermediary between Valgrind and GDB or a shell\&. It has two usage modes:
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  1." 4.2
+.\}
+As a standalone utility, it is used from a shell command line to send monitor commands to a process running under Valgrind\&. For this usage, the vgdb OPTION(s) must be followed by the monitor command to send\&. To send more than one command, separate them with the
+\fB\-c\fR
+option\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  2." 4.2
+.\}
+In combination with GDB "target remote |" command, it is used as the relay application between GDB and the Valgrind gdbserver\&. For this usage, only OPTION(s) can be given, but no COMMAND can be given\&.
+.RE
+.SH "OPTIONS"
+.PP
+\fB\-\-pid=<number>\fR
+.RS 4
+Specifies the PID of the process to which vgdb must connect to\&. This option is useful in case more than one Valgrind gdbserver can be connected to\&. If the
+\fB\-\-pid\fR
+argument is not given and multiple Valgrind gdbserver processes are running, vgdb will report the list of such processes and then exit\&.
+.RE
+.PP
+\fB\-\-vgdb\-prefix\fR
+.RS 4
+Must be given to both Valgrind and vgdb if you want to change the default prefix for the FIFOs (named pipes) used for communication between the Valgrind gdbserver and vgdb\&.
+.RE
+.PP
+\fB\-\-wait=<number>\fR
+.RS 4
+Instructs vgdb to search for available Valgrind gdbservers for the specified number of seconds\&. This makes it possible start a vgdb process before starting the Valgrind gdbserver with which you intend the vgdb to communicate\&. This option is useful when used in conjunction with a
+\fB\-\-vgdb\-prefix\fR
+that is unique to the process you want to wait for\&. Also, if you use the
+\fB\-\-wait\fR
+argument in the GDB "target remote" command, you must set the GDB remotetimeout to a value bigger than the \-\-wait argument value\&. See option
+\fB\-\-max\-invoke\-ms\fR
+(just below) for an example of setting the remotetimeout value\&.
+.RE
+.PP
+\fB\-\-max\-invoke\-ms=<number>\fR
+.RS 4
+Gives the number of milliseconds after which vgdb will force the invocation of gdbserver embedded in Valgrind\&. The default value is 100 milliseconds\&. A value of 0 disables forced invocation\&. The forced invocation is used when vgdb is connected to a Valgrind gdbserver, and the Valgrind process has all its threads blocked in a system call\&.
+.sp
+If you specify a large value, you might need to increase the GDB "remotetimeout" value from its default value of 2 seconds\&. You should ensure that the timeout (in seconds) is bigger than the
+\fB\-\-max\-invoke\-ms\fR
+value\&. For example, for
+\fB\-\-max\-invoke\-ms=5000\fR, the following GDB command is suitable:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+    (gdb) set remotetimeout 6
+    
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.RE
+.PP
+\fB\-\-cmd\-time\-out=<number>\fR
+.RS 4
+Instructs a standalone vgdb to exit if the Valgrind gdbserver it is connected to does not process a command in the specified number of seconds\&. The default value is to never time out\&.
+.RE
+.PP
+\fB\-\-port=<portnr>\fR
+.RS 4
+Instructs vgdb to use tcp/ip and listen for GDB on the specified port nr rather than to use a pipe to communicate with GDB\&. Using tcp/ip allows to have GDB running on one computer and debugging a Valgrind process running on another target computer\&. Example:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+# On the target computer, start your program under valgrind using
+valgrind \-\-vgdb\-error=0 prog
+# and then in another shell, run:
+vgdb \-\-port=1234
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+On the computer which hosts GDB, execute the command:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+gdb prog
+(gdb) target remote targetip:1234
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+where targetip is the ip address or hostname of the target computer\&.
+.RE
+.PP
+\fB\-c\fR
+.RS 4
+To give more than one command to a standalone vgdb, separate the commands by an option
+\fB\-c\fR\&. Example:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+vgdb v\&.set log_output \-c leak_check any
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\fB\-l\fR
+.RS 4
+Instructs a standalone vgdb to report the list of the Valgrind gdbserver processes running and then exit\&.
+.RE
+.PP
+\fB\-D\fR
+.RS 4
+Instructs a standalone vgdb to show the state of the shared memory used by the Valgrind gdbserver\&. vgdb will exit after having shown the Valgrind gdbserver shared memory state\&.
+.RE
+.PP
+\fB\-d\fR
+.RS 4
+Instructs vgdb to produce debugging output\&. Give multiple
+\fB\-d\fR
+args to increase the verbosity\&. When giving
+\fB\-d\fR
+to a relay vgdb, you better redirect the standard error (stderr) of vgdb to a file to avoid interaction between GDB and vgdb debugging output\&.
+.RE
+.SH "SEE ALSO"
+.PP
+valgrind(1),
+$INSTALL/share/doc/valgrind/html/index\&.html
+or
+http://www\&.valgrind\&.org/docs/manual/index\&.html,
+\m[blue]\fBDebugging your program using Valgrind\*(Aqs gdbserver and GDB\fR\m[]\&\s-2\u[1]\d\s+2
+\m[blue]\fBvgdb\fR\m[]\&\s-2\u[2]\d\s+2,
+\m[blue]\fBValgrind monitor commands\fR\m[]\&\s-2\u[3]\d\s+2\&.
+.SH "AUTHOR"
+.PP
+Philippe Waroquiers\&.
+.SH "NOTES"
+.IP " 1." 4
+Debugging your program using Valgrind's gdbserver and GDB
+.RS 4
+\%http://www.valgrind.org/docs/manual/manual-core-adv.html#manual-core-adv.gdbserver
+.RE
+.IP " 2." 4
+vgdb
+.RS 4
+\%http://www.valgrind.org/docs/manual/manual-core-adv.html#manual-core-adv.vgdb
+.RE
+.IP " 3." 4
+Valgrind monitor commands
+.RS 4
+\%http://www.valgrind.org/docs/manual/manual-core-adv.html#manual-core-adv.valgrind-monitor-commands
+.RE

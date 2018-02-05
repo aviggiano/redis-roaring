@@ -1,0 +1,264 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>11. SGCheck: an experimental stack and global array overrun detector</title>
+<link rel="stylesheet" type="text/css" href="vg_basic.css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="index.html" title="Valgrind Documentation">
+<link rel="up" href="manual.html" title="Valgrind User Manual">
+<link rel="prev" href="dh-manual.html" title="10. DHAT: a dynamic heap analysis tool">
+<link rel="next" href="bbv-manual.html" title="12. BBV: an experimental basic block vector generation tool">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<div><table class="nav" width="100%" cellspacing="3" cellpadding="3" border="0" summary="Navigation header"><tr>
+<td width="22px" align="center" valign="middle"><a accesskey="p" href="dh-manual.html"><img src="images/prev.png" width="18" height="21" border="0" alt="Prev"></a></td>
+<td width="25px" align="center" valign="middle"><a accesskey="u" href="manual.html"><img src="images/up.png" width="21" height="18" border="0" alt="Up"></a></td>
+<td width="31px" align="center" valign="middle"><a accesskey="h" href="index.html"><img src="images/home.png" width="27" height="20" border="0" alt="Up"></a></td>
+<th align="center" valign="middle">Valgrind User Manual</th>
+<td width="22px" align="center" valign="middle"><a accesskey="n" href="bbv-manual.html"><img src="images/next.png" width="18" height="21" border="0" alt="Next"></a></td>
+</tr></table></div>
+<div class="chapter">
+<div class="titlepage"><div><div><h1 class="title">
+<a name="sg-manual"></a>11. SGCheck: an experimental stack and global array overrun detector</h1></div></div></div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl class="toc">
+<dt><span class="sect1"><a href="sg-manual.html#sg-manual.overview">11.1. Overview</a></span></dt>
+<dt><span class="sect1"><a href="sg-manual.html#sg-manual.options">11.2. SGCheck Command-line Options</a></span></dt>
+<dt><span class="sect1"><a href="sg-manual.html#sg-manual.how-works.sg-checks">11.3. How SGCheck Works</a></span></dt>
+<dt><span class="sect1"><a href="sg-manual.html#sg-manual.cmp-w-memcheck">11.4. Comparison with Memcheck</a></span></dt>
+<dt><span class="sect1"><a href="sg-manual.html#sg-manual.limitations">11.5. Limitations</a></span></dt>
+<dt><span class="sect1"><a href="sg-manual.html#sg-manual.todo-user-visible">11.6. Still To Do: User-visible Functionality</a></span></dt>
+<dt><span class="sect1"><a href="sg-manual.html#sg-manual.todo-implementation">11.7. Still To Do: Implementation Tidying</a></span></dt>
+</dl>
+</div>
+<p>To use this tool, you must specify
+<code class="option">--tool=exp-sgcheck</code> on the Valgrind
+command line.</p>
+<div class="sect1">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="sg-manual.overview"></a>11.1. Overview</h2></div></div></div>
+<p>SGCheck is a tool for finding overruns of stack and global
+arrays.  It works by using a heuristic approach derived from an
+observation about the likely forms of stack and global array accesses.
+</p>
+</div>
+<div class="sect1">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="sg-manual.options"></a>11.2. SGCheck Command-line Options</h2></div></div></div>
+<p><a name="sg.opts.list"></a>There are no SGCheck-specific command-line options at present.</p>
+</div>
+<div class="sect1">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="sg-manual.how-works.sg-checks"></a>11.3. How SGCheck Works</h2></div></div></div>
+<p>When a source file is compiled
+with <code class="option">-g</code>, the compiler attaches DWARF3
+debugging information which describes the location of all stack and
+global arrays in the file.</p>
+<p>Checking of accesses to such arrays would then be relatively
+simple, if the compiler could also tell us which array (if any) each
+memory referencing instruction was supposed to access.  Unfortunately
+the DWARF3 debugging format does not provide a way to represent such
+information, so we have to resort to a heuristic technique to
+approximate it.  The key observation is that
+   <span class="emphasis"><em>
+   if a memory referencing instruction accesses inside a stack or
+   global array once, then it is highly likely to always access that
+   same array</em></span>.</p>
+<p>To see how this might be useful, consider the following buggy
+fragment:</p>
+<pre class="programlisting">
+   { int i, a[10];  // both are auto vars
+     for (i = 0; i &lt;= 10; i++)
+        a[i] = 42;
+   }
+</pre>
+<p>At run time we will know the precise address
+of <code class="computeroutput">a[]</code> on the stack, and so we can
+observe that the first store resulting from <code class="computeroutput">a[i] =
+42</code> writes <code class="computeroutput">a[]</code>, and
+we will (correctly) assume that that instruction is intended always to
+access <code class="computeroutput">a[]</code>.  Then, on the 11th
+iteration, it accesses somewhere else, possibly a different local,
+possibly an un-accounted for area of the stack (eg, spill slot), so
+SGCheck reports an error.</p>
+<p>There is an important caveat.</p>
+<p>Imagine a function such as <code class="function">memcpy</code>, which is used
+to read and write many different areas of memory over the lifetime of the
+program.  If we insist that the read and write instructions in its memory
+copying loop only ever access one particular stack or global variable, we
+will be flooded with errors resulting from calls to
+<code class="function">memcpy</code>.</p>
+<p>To avoid this problem, SGCheck instantiates fresh likely-target
+records for each entry to a function, and discards them on exit.  This
+allows detection of cases where (e.g.) <code class="function">memcpy</code>
+overflows its source or destination buffers for any specific call, but
+does not carry any restriction from one call to the next.  Indeed,
+multiple threads may make multiple simultaneous calls to
+(e.g.) <code class="function">memcpy</code> without mutual interference.</p>
+<p>It is important to note that the association is done between
+  a <span class="emphasis"><em>binary instruction</em></span> and an array, the
+  <span class="emphasis"><em>first time</em></span> this binary instruction accesses an
+  array during a function call.  When the same instruction is executed
+  again during the same function call, then SGCheck might report a
+  problem, if these further executions are not accessing the same
+  array. This technique causes several limitations in SGCheck, see
+  <a class="xref" href="sg-manual.html#sg-manual.limitations" title="11.5. Limitations">Limitations</a>.
+</p>
+</div>
+<div class="sect1">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="sg-manual.cmp-w-memcheck"></a>11.4. Comparison with Memcheck</h2></div></div></div>
+<p>SGCheck and Memcheck are complementary: their capabilities do
+not overlap.  Memcheck performs bounds checks and use-after-free
+checks for heap arrays.  It also finds uses of uninitialised values
+created by heap or stack allocations.  But it does not perform bounds
+checking for stack or global arrays.</p>
+<p>SGCheck, on the other hand, does do bounds checking for stack or
+global arrays, but it doesn't do anything else.</p>
+</div>
+<div class="sect1">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="sg-manual.limitations"></a>11.5. Limitations</h2></div></div></div>
+<p>This is an experimental tool, which relies rather too heavily on some
+not-as-robust-as-I-would-like assumptions on the behaviour of correct
+programs.  There are a number of limitations which you should be aware
+of.</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+<p>False negatives (missed errors): it follows from the
+   description above (<a class="xref" href="sg-manual.html#sg-manual.how-works.sg-checks" title="11.3. How SGCheck Works">How SGCheck Works</a>)
+   that the first access by a memory referencing instruction to a
+   stack or global array creates an association between that
+   instruction and the array, which is checked on subsequent accesses
+   by that instruction, until the containing function exits.  Hence,
+   the first access by an instruction to an array (in any given
+   function instantiation) is not checked for overrun, since SGCheck
+   uses that as the "example" of how subsequent accesses should
+   behave.</p>
+<p>It also means that errors will not be found in an instruction
+     executed only once (e.g. because this instruction is not in a loop,
+     or the loop is executed only once).</p>
+</li>
+<li class="listitem">
+<p>False positives (false errors): similarly, and more serious,
+   it is clearly possible to write legitimate pieces of code which
+   break the basic assumption upon which the checking algorithm
+   depends.  For example:</p>
+<pre class="programlisting">
+  { int a[10], b[10], *p, i;
+    for (i = 0; i &lt; 10; i++) {
+       p = /* arbitrary condition */  ? &amp;a[i]  : &amp;b[i];
+       *p = 42;
+    }
+  }
+</pre>
+<p>In this case the store sometimes
+   accesses <code class="computeroutput">a[]</code> and
+   sometimes <code class="computeroutput">b[]</code>, but in no cases is
+   the addressed array overrun.  Nevertheless the change in target
+   will cause an error to be reported.</p>
+<p>It is hard to see how to get around this problem.  The only
+   mitigating factor is that such constructions appear very rare, at
+   least judging from the results using the tool so far.  Such a
+   construction appears only once in the Valgrind sources (running
+   Valgrind on Valgrind) and perhaps two or three times for a start
+   and exit of Firefox.  The best that can be done is to suppress the
+   errors.</p>
+</li>
+<li class="listitem"><p>Performance: SGCheck has to read all of
+   the DWARF3 type and variable information on the executable and its
+   shared objects.  This is computationally expensive and makes
+   startup quite slow.  You can expect debuginfo reading time to be in
+   the region of a minute for an OpenOffice sized application, on a
+   2.4 GHz Core 2 machine.  Reading this information also requires a
+   lot of memory.  To make it viable, SGCheck goes to considerable
+   trouble to compress the in-memory representation of the DWARF3
+   data, which is why the process of reading it appears slow.</p></li>
+<li class="listitem"><p>Performance: SGCheck runs slower than Memcheck.  This is
+   partly due to a lack of tuning, but partly due to algorithmic
+   difficulties.  The
+   stack and global checks can sometimes require a number of range
+   checks per memory access, and these are difficult to short-circuit,
+   despite considerable efforts having been made.  A
+   redesign and reimplementation could potentially make it much faster.
+   </p></li>
+<li class="listitem">
+<p>Coverage: Stack and global checking is fragile.  If a shared
+   object does not have debug information attached, then SGCheck will
+   not be able to determine the bounds of any stack or global arrays
+   defined within that shared object, and so will not be able to check
+   accesses to them.  This is true even when those arrays are accessed
+   from some other shared object which was compiled with debug
+   info.</p>
+<p>At the moment SGCheck accepts objects lacking debuginfo
+   without comment.  This is dangerous as it causes SGCheck to
+   silently skip stack and global checking for such objects.  It would
+   be better to print a warning in such circumstances.</p>
+</li>
+<li class="listitem"><p>Coverage: SGCheck does not check whether the areas read
+   or written by system calls do overrun stack or global arrays.  This
+   would be easy to add.</p></li>
+<li class="listitem"><p>Platforms: the stack/global checks won't work properly on
+   PowerPC, ARM or S390X platforms, only on X86 and AMD64 targets.
+   That's because the stack and global checking requires tracking
+   function calls and exits reliably, and there's no obvious way to do
+   it on ABIs that use a link register for function returns.
+   </p></li>
+<li class="listitem"><p>Robustness: related to the previous point.  Function
+   call/exit tracking for X86 and AMD64 is believed to work properly
+   even in the presence of longjmps within the same stack (although
+   this has not been tested).  However, code which switches stacks is
+   likely to cause breakage/chaos.</p></li>
+</ul></div>
+</div>
+<div class="sect1">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="sg-manual.todo-user-visible"></a>11.6. Still To Do: User-visible Functionality</h2></div></div></div>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem"><p>Extend system call checking to work on stack and global arrays.</p></li>
+<li class="listitem"><p>Print a warning if a shared object does not have debug info
+   attached, or if, for whatever reason, debug info could not be
+   found, or read.</p></li>
+<li class="listitem"><p>Add some heuristic filtering that removes obvious false
+     positives.  This would be easy to do.  For example, an access
+     transition from a heap to a stack object almost certainly isn't a
+     bug and so should not be reported to the user.</p></li>
+</ul></div>
+</div>
+<div class="sect1">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="sg-manual.todo-implementation"></a>11.7. Still To Do: Implementation Tidying</h2></div></div></div>
+<p>Items marked CRITICAL are considered important for correctness:
+non-fixage of them is liable to lead to crashes or assertion failures
+in real use.</p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem"><p> sg_main.c: Redesign and reimplement the basic checking
+   algorithm.  It could be done much faster than it is -- the current
+   implementation isn't very good.
+   </p></li>
+<li class="listitem"><p> sg_main.c: Improve the performance of the stack / global
+   checks by doing some up-front filtering to ignore references in
+   areas which "obviously" can't be stack or globals.  This will
+   require using information that m_aspacemgr knows about the address
+   space layout.</p></li>
+<li class="listitem"><p>sg_main.c: fix compute_II_hash to make it a bit more sensible
+   for ppc32/64 targets (except that sg_ doesn't work on ppc32/64
+   targets, so this is a bit academic at the moment).</p></li>
+</ul></div>
+</div>
+</div>
+<div>
+<br><table class="nav" width="100%" cellspacing="3" cellpadding="2" border="0" summary="Navigation footer">
+<tr>
+<td rowspan="2" width="40%" align="left">
+<a accesskey="p" href="dh-manual.html">&lt;&lt; 10. DHAT: a dynamic heap analysis tool</a> </td>
+<td width="20%" align="center"><a accesskey="u" href="manual.html">Up</a></td>
+<td rowspan="2" width="40%" align="right"> <a accesskey="n" href="bbv-manual.html">12. BBV: an experimental basic block vector generation tool &gt;&gt;</a>
+</td>
+</tr>
+<tr><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td></tr>
+</table>
+</div>
+</body>
+</html>

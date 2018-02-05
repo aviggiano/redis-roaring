@@ -1,0 +1,279 @@
+<?xml version="1.0"?> <!-- -*- sgml -*- -->
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd"
+[ <!ENTITY % vg-entities SYSTEM "vg-entities.xml"> %vg-entities; ]>
+
+
+<refentry id="valgrind">
+
+<refmeta>
+  <refentrytitle>VALGRIND</refentrytitle>
+  <manvolnum>1</manvolnum>
+  <refmiscinfo>Release &rel-version;</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+  <refname>valgrind</refname>
+  <refpurpose>a suite of tools for debugging and profiling programs</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv>
+<cmdsynopsis>
+  <command>valgrind</command>
+  <arg><replaceable>valgrind-options</replaceable></arg>
+  <arg><command>your-program</command></arg>
+  <arg><replaceable>your-program-options</replaceable></arg>
+</cmdsynopsis>
+</refsynopsisdiv>
+
+
+<refsect1 id="description">
+<title>Description</title>
+
+<para><command>Valgrind</command> is a flexible program for debugging
+and profiling Linux executables.  It consists of a core, which provides
+a synthetic CPU in software, and a series of debugging and profiling tools.
+The architecture is modular, so that new tools can be created easily and
+without disturbing the existing structure.</para>
+
+<para>Some of the options described below work with all Valgrind tools, and
+some only work with a few or one.  The section MEMCHECK OPTIONS and those
+below it describe tool-specific options.</para>
+
+<para>This manual page covers only basic usage and options.  For more
+comprehensive information, please see the HTML documentation on your
+system: <filename>&vg-docs-path;</filename>, or online:
+<filename>&vg-docs-url;</filename>.</para>
+
+</refsect1>
+
+
+
+<refsect1 id="tool-selection-options">
+<title>Tool Selection Options</title>
+
+<xi:include href="manual-core.xml" xpointer="tool.opts.para"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<xi:include href="manual-core.xml" xpointer="tool.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+<refsect1 id="basic-options">
+<title>Basic Options</title>
+
+<xi:include href="manual-core.xml" xpointer="basic.opts.para"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<xi:include href="manual-core.xml" xpointer="basic.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+<refsect1 id="error-related-options">
+<title>Error-Related Options</title>
+
+<xi:include href="manual-core.xml" xpointer="error-related.opts.para"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<xi:include href="manual-core.xml" xpointer="error-related.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+<refsect1 id="malloc-related-options">
+<title>malloc()-related Options</title>
+
+<xi:include href="manual-core.xml" xpointer="malloc-related.opts.para"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<xi:include href="manual-core.xml" xpointer="malloc-related.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+<refsect1 id="uncommon-options">
+<title>Uncommon Options</title>
+
+
+<xi:include href="manual-core.xml" xpointer="uncommon.opts.para"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<xi:include href="manual-core.xml" xpointer="uncommon.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+<refsect1 id="debugging-valgrind-options">
+<title>Debugging Valgrind Options</title>
+
+<xi:include href="manual-core.xml" xpointer="debug.opts.para"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+<refsect1 id="memcheck-options">
+<title>Memcheck Options</title>
+
+<xi:include href="../../memcheck/docs/mc-manual.xml" 
+            xpointer="mc.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+<refsect1 id="cachegrind-options">
+<title>Cachegrind Options</title>
+
+<xi:include href="../../cachegrind/docs/cg-manual.xml" 
+            xpointer="cg.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+<refsect1 id="callgrind-options">
+<title>Callgrind Options</title>
+
+<xi:include href="../../callgrind/docs/cl-manual.xml" 
+            xpointer="cl.opts.list.creation"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+<xi:include href="../../callgrind/docs/cl-manual.xml" 
+            xpointer="cl.opts.list.activity"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+<xi:include href="../../callgrind/docs/cl-manual.xml" 
+            xpointer="cl.opts.list.collection"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+<xi:include href="../../callgrind/docs/cl-manual.xml" 
+            xpointer="cl.opts.list.simulation"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+</refsect1>
+
+
+
+<refsect1 id="helgrind-options">
+<title>Helgrind Options</title>
+
+<xi:include href="../../helgrind/docs/hg-manual.xml" 
+            xpointer="hg.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+<refsect1 id="drd-options">
+<title>DRD Options</title>
+
+<xi:include href="../../drd/docs/drd-manual.xml" 
+            xpointer="drd.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+<xi:include href="../../drd/docs/drd-manual.xml" 
+            xpointer="drd.debugopts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+<refsect1 id="massif-options">
+<title>Massif Options</title>
+
+<xi:include href="../../massif/docs/ms-manual.xml" 
+            xpointer="ms.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+<refsect1 id="sgcheck-options">
+<title>SGcheck Options</title>
+
+<xi:include href="../../exp-sgcheck/docs/sg-manual.xml" 
+            xpointer="sg.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+<refsect1 id="bbv-options">
+<title>BBV Options</title>
+
+<xi:include href="../../exp-bbv/docs/bbv-manual.xml" 
+            xpointer="bbv.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+<refsect1 id="lackey-options">
+<title>Lackey Options</title>
+
+<xi:include href="../../lackey/docs/lk-manual.xml" 
+            xpointer="lk.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+<refsect1 id="see_also">
+<title>See Also</title>
+
+<para>
+cg_annotate(1),
+callgrind_annotate(1),
+callgrind_control(1),
+ms_print(1),
+<filename>&vg-docs-path;</filename> or
+<filename>&vg-docs-url;</filename>,
+<ulink id="&vg-gdbserver-id;"
+       xreflabel="&vg-gdbserver-label;"
+       url="&vg-gdbserver-url;">&vg-gdbserver-label;</ulink>
+<ulink id="&vg-vgdb-id;"
+       xreflabel="&vg-vgdb-label;"
+       url="&vg-vgdb-url;">&vg-vgdb-label;</ulink>,
+<ulink id="&vg-monitor-id;"
+       xreflabel="&vg-monitor-label;"
+       url="&vg-monitor-url;">&vg-monitor-label;</ulink>,
+<ulink id="&vg-comment-id;"
+       xreflabel="&vg-comment-label;"
+       url="&vg-comment-url;">&vg-comment-label;</ulink>,
+<ulink id="&vg-pthreads-perf-sched-id;"
+       xreflabel="&vg-pthreads-perf-sched-label;"
+       url="&vg-pthreads-perf-sched-url;">&vg-pthreads-perf-sched-label;</ulink>,
+<ulink id="&vg-cg-manual-id;"
+       xreflabel="&vg-cg-manual-label;"
+       url="&vg-cg-manual-url;">&vg-cg-manual-label;</ulink>.
+</para>
+
+</refsect1>
+
+
+<refsect1 id="author">
+<title>Author</title>
+
+<para>See the AUTHORS file in the valgrind distribution for a
+comprehensive list of authors.</para>
+<para>This manpage was written by Andres Roldan &lt;aroldan@debian.org&gt;
+and the Valgrind developers.</para>
+
+</refsect1>
+
+
+</refentry>
+

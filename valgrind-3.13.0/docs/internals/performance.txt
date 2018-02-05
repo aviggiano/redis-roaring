@@ -1,0 +1,43 @@
+-----------------------------------------------------------------------------
+Notes on performance
+-----------------------------------------------------------------------------
+The intent of this file is to record progress in improving performance.
+
+-----------------------------------------------------------------------------
+Just before 3.1.0:
+- Julian made LibVEX_Alloc() inlinable.  Saved a couple of percent.
+- Julian started building Vex at -O2.  Saved up to 8% or so(?) in some
+  cases.
+
+Post 3.1.0:
+- Julian made the tree builder linear.  Saved 2--13% on a range of programs.
+- Nick improved vg_SP_update_pass() to identify more small constant
+  increments/decrements of SP, so the fast cases can be used more often.
+  Saved 1--3% on a few programs.
+- r5345,r5346,r5352: Julian improved the dispatcher so that x86 and
+  AMD64 use jumps instead of call/return for calling translations.
+  Also, on x86, amd64, ppc32 and ppc64, --profile-flags style profiling was
+  removed from the despatch loop unless --profile-flags is being used.
+  Improved Nulgrind performance typically by 10--20%, and Memcheck
+  performance typically by 2--20%.
+- Julian changed findSb to slowly move superblocks to the front of the list
+  as they were accessed.  This sped up perf/heap by 25--50%, and some big
+  programs (eg. ktuberling) programs by a couple of percent.
+- Nick reduced the iteration count of the loop in swizzle() from 20 to 5,
+  which gave almost identical results while saving 2% in perf/tinycc and 10%
+  in perf/heap on a 3GHz Prescott P4.
+- Nick changed ExeContext gathering to not record/save extra zeroes at the
+  end.  Saved 7% on perf/heap with --num-callers=50, and about 1% on
+  perf/tinycc.
+- Julian vectorised copy_address_range_perms for common cases, which
+  gives about 40% speedup on artificial programs which just do
+  realloc() and nothing else, and about a 3-4% speedup on starting
+  kpresenter-1.5.0 and loading a 16-slide presentation.
+
+COMPVBITS branch:
+- Nick converted to compress V bits, initial version saved 0--5% on most
+  cases, with a 30% improvement on one case (tsim_arch) which calls
+  set_address_range_perms() a lot.
+- Nick rewrote set_address_range_perms(), which gained 0--3% typically,
+  and 22% on tsim_arch.
+

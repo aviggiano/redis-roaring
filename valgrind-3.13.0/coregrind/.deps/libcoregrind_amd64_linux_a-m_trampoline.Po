@@ -1,0 +1,16 @@
+libcoregrind_amd64_linux_a-m_trampoline.o: m_trampoline.S \
+  pub_core_basics_asm.h ../include/pub_tool_basics_asm.h ../config.h \
+  pub_core_vkiscnums_asm.h ../include/pub_tool_vkiscnums_asm.h \
+  ../include/vki/vki-scnums-amd64-linux.h
+
+pub_core_basics_asm.h:
+
+../include/pub_tool_basics_asm.h:
+
+../config.h:
+
+pub_core_vkiscnums_asm.h:
+
+../include/pub_tool_vkiscnums_asm.h:
+
+../include/vki/vki-scnums-amd64-linux.h:

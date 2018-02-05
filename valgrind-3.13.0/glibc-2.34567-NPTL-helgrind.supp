@@ -1,0 +1,301 @@
+
+# FIXME 22 Jan 09: helgrind-glibc2X-005 overlaps with a lot of
+# other stuff.  They should be removed.
+
+##----------------------------------------------------------------------##
+# Suppressions for the Helgrind tool when using 
+# a glibc-2.{3,4,5,6,7,8,9} system
+
+####################################################
+# glibc-2.X specific
+# These are generic cover-alls which catch a lot of stuff
+# in various combinations of ld, libc and libpthread
+#
+# Note this is heavyhanded and not very clever:
+#
+# - suppress anything that has its top frame in ld.so
+#   That's fine, since it's mostly dynamic linking stuff,
+#   which has various deliberate (harmless) races
+#
+# - suppress anything that has its top frame in libc.so.
+#   This really isn't clever, since it could hide some 
+#   legitimate races.  But the problem is, if we don't do
+#   this, then loads of errors to do with stdio are reported, because
+#   H fails to see glibc's internal locking/unlocking of FILE*s
+#   as required by POSIX.  A better solution is needed.
+#
+# - some of the stdio functions in newer glibc manipulate stdio
+#   FILE*s state through mempcpy, which we intercept, so we also need
+#   to suppress such manipulations.
+
+#{
+#   helgrind-glibc2X-001
+#   Helgrind:Race
+#   obj:*/lib*/ld-2.*so*
+#}
+
+# helgrind-glibc2X-002 was merged into helgrind-glibc2X-001
+
+# helgrind-glibc2X-003 was merged into helgrind-glibc2X-001
+
+{
+   helgrind-glibc2X-004
+   Helgrind:Race
+   obj:*/lib*/libc-2.*so*
+}
+
+{
+   helgrind-glibc-io-xsputn-mempcpy
+   Helgrind:Race
+   fun:__GI_mempcpy
+   fun:_IO_*xsputn*
+   obj:*/lib*/libc-2.*so*
+}
+
+{
+   helgrind-glibc2X-005
+   Helgrind:Race
+   obj:*/lib*/libpthread-2.*so*
+}
+
+# helgrind-glibc2X-006 was merged into helgrind-glibc2X-005
+
+# helgrind-glibc2X-007 was merged into helgrind-glibc2X-001
+
+# helgrind-glibc2X-008 was merged into helgrind-glibc2X-004
+
+# helgrind-glibc2X-009 was merged into helgrind-glibc2X-004
+
+# helgrind-glibc2X-010 was merged into helgrind-glibc2X-001
+
+# helgrind-glibc2X-011 was merged into helgrind-glibc2X-004
+
+# helgrind-glibc2X-012 was merged into helgrind-glibc2X-001
+
+# helgrind-glibc2X-013 was merged into helgrind-glibc2X-001
+
+# helgrind-glibc2X-014 was merged into helgrind-glibc2X-001
+
+# helgrind-glibc2X-015 was merged into helgrind-glibc2X-004
+
+# helgrind-glibc2X-016 was merged into helgrind-glibc2X-004
+
+# These are very ugly.  They are needed to suppress errors inside (eg)
+# NPTL's pthread_cond_signal.  Why only one stack frame -- at least we
+# should see the wrapper calling the real functions, right?
+# Unfortunately, no: the real functions are handwritten assembly (in
+# the glibc-2.5 sources) and does not create a proper stack frame.
+# Therefore it's only one level of unwinding before we're back out in
+# user code rather than the 2 levels you'd expect.
+{
+   helgrind-glibc2X-101
+   Helgrind:Race
+   obj:*/lib*/libpthread-2.*so*
+   fun:pthread_*
+}
+{
+   helgrind-glibc2X-102
+   Helgrind:Race
+   fun:mythread_wrapper
+   obj:*/lib*/libpthread-2.*so*
+}
+{
+   helgrind-glibc2X-103
+   Helgrind:Race
+   fun:pthread_cond_*@@GLIBC_2.*
+}
+{
+   helgrind-glibc2X-104
+   Helgrind:Race
+   fun:__lll_mutex_*
+}
+{
+   helgrind-glibc2X-105
+   Helgrind:Race
+   fun:pthread_rwlock_*lock*
+}
+{
+   helgrind-glibc2X-106
+   Helgrind:Race
+   fun:__lll_lock_wait
+}
+{
+   helgrind-glibc2X-107
+   Helgrind:Race
+   obj:*/lib*/libpthread-2.*so*
+   fun:sem_*
+}
+{
+   helgrind-glibc2X-108
+   Helgrind:Race
+   fun:clone
+}
+{
+   helgrind-glibc2X-109
+   Helgrind:Race
+   fun:start_thread
+}
+{
+   helgrind-glibc2X-110
+   Helgrind:Race
+   obj:*/lib*/libc-2.*so*
+   fun:pthread_*
+}
+{
+   helgrind-glibc2X-111
+   Helgrind:Race
+   fun:__lll_*lock_*
+}
+{
+   helgrind-glibc2X-113
+   Helgrind:Race
+   fun:pthread_barrier_wait*
+}
+
+
+####################################################
+# qt4 specific (GNU mangling)
+#
+{
+   helgrind-qt4---QMutex::lock()-QMutex::lock()
+   Helgrind:Race
+   ...
+   fun:_ZN6QMutex4lockEv
+   fun:_ZN6QMutex4lockEv
+}
+
+{                                                               
+   helgrind-qt4---QMutex::unlock()-QMutex::unlock()
+   Helgrind:Race                                                
+   ...
+   fun:_ZN6QMutex6unlockEv                                      
+   fun:_ZN6QMutex6unlockEv
+}
+
+{
+   helgrind-qt4---pthread_setspecific-QThreadPrivate::start(void*)
+   Helgrind:Race
+   fun:pthread_setspecific
+   fun:_ZN14QThreadPrivate5startEPv
+}
+
+
+####################################################
+# Other stuff.
+#
+# pthread_exit apparently calls some kind of unwind
+# mechanism - maybe to remove some number of frames
+# from the thread's stack, so as to get back to the 
+# outermost frame for the thread?  Anyway..
+
+{
+   helgrind---*Unwind*-...-pthread_exit
+   Helgrind:Race
+   fun:*Unwind*
+   ...
+   fun:pthread_exit
+}
+
+{
+   helgrind---...-*Unwind*-*pthread_unwind*
+   Helgrind:Race
+   ...
+   fun:*Unwind*
+   fun:*pthread_unwind*
+}
+
+{
+   helgrind---...-*Unwind*-*pthread_unwind*
+   Helgrind:Race
+   ...
+   fun:_Unwind*
+   ...
+   fun:_Unwind_Backtrace
+}
+
+
+
+
+####################################################
+# To do with thread stack allocation and deallocation?
+#
+{
+   helgrind---free_stacks-__deallocate_stack
+   Helgrind:Race
+   fun:free_stacks
+   fun:__deallocate_stack
+}
+
+{
+   helgrind---__deallocate_stack-start_thread-clone
+   Helgrind:Race
+   fun:__deallocate_stack
+   fun:start_thread
+   fun:clone
+}
+
+
+####################################################
+# To do with pthread_{set,get}specific
+#
+{
+   helgrind---pthread_setspecific
+   Helgrind:Race
+   fun:pthread_setspecific
+}
+
+{
+   helgrind---pthread_getspecific
+   Helgrind:Race
+   fun:pthread_getspecific
+}
+
+
+####################################################
+# To do with dynamic linking
+#
+# helgrind---ld.so-...-dlsym was merged into helgrind-glibc2X-001
+
+{
+   helgrind---_dl_allocate_tls 
+   Helgrind:Race
+   fun:mempcpy
+   fun:_dl_allocate_tls_init
+   ...
+   fun:pthread_create@@GLIBC_2.2*
+   fun:pthread_create_WRK
+   fun:pthread_create@*
+}
+
+{
+   helgrind---_dl_allocate_tls2
+   Helgrind:Race
+   fun:memcpy
+   fun:__mempcpy_inline
+   fun:_dl_allocate_tls_init
+   ...
+   fun:pthread_create@@GLIBC_2.2*
+   fun:pthread_create_WRK
+   fun:pthread_create@*
+}
+
+####################################################
+# To do with GNU libgomp
+#
+{
+   helgrind---libgomp43-1
+   Helgrind:Race
+   fun:gomp_ordered_sync
+}
+
+{
+   helgrind---libgomp43-1
+   Helgrind:Race
+   fun:gomp_ordered_next
+}
+
+{
+   helgrind---libgomp43-1
+   Helgrind:Race
+   fun:gomp_ordered_last
+}

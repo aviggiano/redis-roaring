@@ -1,0 +1,20 @@
+m_syswrap/libcoregrind_amd64_linux_a-syscall-s390x-linux.o: \
+  m_syswrap/syscall-s390x-linux.S pub_core_basics_asm.h \
+  ../include/pub_tool_basics_asm.h ../config.h pub_core_vkiscnums_asm.h \
+  ../include/pub_tool_vkiscnums_asm.h \
+  ../include/vki/vki-scnums-amd64-linux.h \
+  ../VEX/pub/libvex_guest_offsets.h
+
+pub_core_basics_asm.h:
+
+../include/pub_tool_basics_asm.h:
+
+../config.h:
+
+pub_core_vkiscnums_asm.h:
+
+../include/pub_tool_vkiscnums_asm.h:
+
+../include/vki/vki-scnums-amd64-linux.h:
+
+../VEX/pub/libvex_guest_offsets.h:

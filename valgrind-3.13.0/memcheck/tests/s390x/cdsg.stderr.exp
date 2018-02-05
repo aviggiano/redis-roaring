@@ -1,0 +1,10 @@
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: test (cdsg.c:21)
+   by 0x........: op1_undefined (cdsg.c:39)
+   by 0x........: main (cdsg.c:64)
+
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: test (cdsg.c:21)
+   by 0x........: op2_undefined (cdsg.c:49)
+   by 0x........: main (cdsg.c:65)
+

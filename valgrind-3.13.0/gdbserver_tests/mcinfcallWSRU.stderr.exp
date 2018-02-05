@@ -1,0 +1,7 @@
+loops/sleep_ms/burn/threads_spec/affinity:  100 100000000 1000000000 -S-S-SB- 1
+Brussels ready to sleep and/or burn
+London ready to sleep and/or burn
+Petaouchnok ready to sleep and/or burn
+main ready to sleep and/or burn
+pid .... Thread .... thread 1 inferior call pushed from gdb in mcinfcallWSRU.stdinB.gdb
+Reset valgrind output to log (orderly_finish)

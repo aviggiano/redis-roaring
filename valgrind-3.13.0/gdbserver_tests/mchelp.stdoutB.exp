@@ -1,0 +1,130 @@
+general valgrind monitor commands:
+  help [debug]            : monitor command help. With debug: + debugging commands
+  v.wait [<ms>]           : sleep <ms> (default 0) then continue
+  v.info all_errors       : show all errors found so far
+  v.info last_error       : show last error found
+  v.info location <addr>  : show information about location <addr>
+  v.info n_errs_found [msg] : show the nr of errors found so far and the given msg
+  v.info open_fds         : show open file descriptors (only if --track-fds=yes)
+  v.kill                  : kill the Valgrind process
+  v.set gdb_output        : set valgrind output to gdb
+  v.set log_output        : set valgrind output to log
+  v.set mixed_output      : set valgrind output to log, interactive output to gdb
+  v.set merge-recursive-frames <num> : merge recursive calls in max <num> frames
+  v.set vgdb-error <errornr> : debug me at error >= <errornr> 
+memcheck monitor commands:
+  xb <addr> [<len>]
+        prints validity bits for <len> (or 1) bytes at <addr>
+            bit values 0 = valid, 1 = invalid, __ = unaddressable byte
+        Then prints the bytes values below the corresponding validity bits
+        in a layout similar to the gdb command 'x /<len>xb <addr>'
+        Example: xb 0x........ 10
+  get_vbits <addr> [<len>]
+        Similar to xb, but only prints the validity bytes by group of 4.
+  make_memory [noaccess|undefined
+                     |defined|Definedifaddressable] <addr> [<len>]
+        mark <len> (or 1) bytes at <addr> with the given accessibility
+  check_memory [addressable|defined] <addr> [<len>]
+        check that <len> (or 1) bytes at <addr> have the given accessibility
+            and outputs a description of <addr>
+  leak_check [full*|summary|xtleak]
+                [kinds kind1,kind2,...|reachable|possibleleak*|definiteleak]
+                [heuristics heur1,heur2,...]
+                [increased*|changed|any]
+                [unlimited*|limited <max_loss_records_output>]
+            * = defaults
+         xtleak produces an xtree full leak result in xtleak.kcg.%p.%n
+       where kind is one of:
+         definite indirect possible reachable all none
+       where heur is one of:
+         stdstring length64 newarray multipleinheritance all none*
+       Examples: leak_check
+                 leak_check summary any
+                 leak_check full kinds indirect,possible
+                 leak_check full reachable any limited 100
+  block_list <loss_record_nr>|<loss_record_nr_from>..<loss_record_nr_to>
+                [unlimited*|limited <max_blocks>]
+                [heuristics heur1,heur2,...]
+        after a leak search, shows the list of blocks of <loss_record_nr>
+        (or of the range <loss_record_nr_from>..<loss_record_nr_to>).
+        With heuristics, only shows the blocks found via heur1,heur2,...
+            * = defaults
+  who_points_at <addr> [<len>]
+        shows places pointing inside <len> (default 1) bytes at <addr>
+        (with len 1, only shows "start pointers" pointing exactly to <addr>,
+         with len > 1, will also show "interior pointers")
+  xtmemory [<filename>]
+        dump xtree memory profile in <filename> (default xtmemory.kcg.%p.%n)
+general valgrind monitor commands:
+  help [debug]            : monitor command help. With debug: + debugging commands
+  v.wait [<ms>]           : sleep <ms> (default 0) then continue
+  v.info all_errors       : show all errors found so far
+  v.info last_error       : show last error found
+  v.info location <addr>  : show information about location <addr>
+  v.info n_errs_found [msg] : show the nr of errors found so far and the given msg
+  v.info open_fds         : show open file descriptors (only if --track-fds=yes)
+  v.kill                  : kill the Valgrind process
+  v.set gdb_output        : set valgrind output to gdb
+  v.set log_output        : set valgrind output to log
+  v.set mixed_output      : set valgrind output to log, interactive output to gdb
+  v.set merge-recursive-frames <num> : merge recursive calls in max <num> frames
+  v.set vgdb-error <errornr> : debug me at error >= <errornr> 
+debugging valgrind internals monitor commands:
+  v.do   expensive_sanity_check_general : do an expensive sanity check now
+  v.info gdbserver_status : show gdbserver status
+  v.info memory [aspacemgr] : show valgrind heap memory stats
+     (with aspacemgr arg, also shows valgrind segments on log output)
+  v.info exectxt          : show stacktraces and stats of all execontexts
+  v.info scheduler        : show valgrind thread state and stacktrace
+  v.info stats            : show various valgrind and tool stats
+  v.info unwind <addr> [<len>] : show unwind debug info for <addr> .. <addr+len>
+  v.set debuglog <level>  : set valgrind debug log level to <level>
+  v.set hostvisibility [yes*|no] : (en/dis)ables access by gdb/gdbserver to
+    Valgrind internal host status/memory
+  v.translate <addr> [<traceflags>]  : debug translation of <addr> with <traceflags>
+    (default traceflags 0b00100000 : show after instrumentation)
+   An additional flag  0b100000000 allows to show gdbserver instrumentation
+memcheck monitor commands:
+  xb <addr> [<len>]
+        prints validity bits for <len> (or 1) bytes at <addr>
+            bit values 0 = valid, 1 = invalid, __ = unaddressable byte
+        Then prints the bytes values below the corresponding validity bits
+        in a layout similar to the gdb command 'x /<len>xb <addr>'
+        Example: xb 0x........ 10
+  get_vbits <addr> [<len>]
+        Similar to xb, but only prints the validity bytes by group of 4.
+  make_memory [noaccess|undefined
+                     |defined|Definedifaddressable] <addr> [<len>]
+        mark <len> (or 1) bytes at <addr> with the given accessibility
+  check_memory [addressable|defined] <addr> [<len>]
+        check that <len> (or 1) bytes at <addr> have the given accessibility
+            and outputs a description of <addr>
+  leak_check [full*|summary|xtleak]
+                [kinds kind1,kind2,...|reachable|possibleleak*|definiteleak]
+                [heuristics heur1,heur2,...]
+                [increased*|changed|any]
+                [unlimited*|limited <max_loss_records_output>]
+            * = defaults
+         xtleak produces an xtree full leak result in xtleak.kcg.%p.%n
+       where kind is one of:
+         definite indirect possible reachable all none
+       where heur is one of:
+         stdstring length64 newarray multipleinheritance all none*
+       Examples: leak_check
+                 leak_check summary any
+                 leak_check full kinds indirect,possible
+                 leak_check full reachable any limited 100
+  block_list <loss_record_nr>|<loss_record_nr_from>..<loss_record_nr_to>
+                [unlimited*|limited <max_blocks>]
+                [heuristics heur1,heur2,...]
+        after a leak search, shows the list of blocks of <loss_record_nr>
+        (or of the range <loss_record_nr_from>..<loss_record_nr_to>).
+        With heuristics, only shows the blocks found via heur1,heur2,...
+            * = defaults
+  who_points_at <addr> [<len>]
+        shows places pointing inside <len> (default 1) bytes at <addr>
+        (with len 1, only shows "start pointers" pointing exactly to <addr>,
+         with len > 1, will also show "interior pointers")
+  xtmemory [<filename>]
+        dump xtree memory profile in <filename> (default xtmemory.kcg.%p.%n)
+monitor command request to kill this process

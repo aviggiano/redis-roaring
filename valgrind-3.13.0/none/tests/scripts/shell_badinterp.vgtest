@@ -1,0 +1,2 @@
+prog: shell_badinterp
+vgopts: -q

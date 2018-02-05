@@ -1,0 +1,50 @@
+<?xml version="1.0"?> <!-- -*- sgml -*- -->
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" 
+[ <!ENTITY % vg-entities SYSTEM "vg-entities.xml"> %vg-entities; ]>
+
+
+<book id="manual" xreflabel="Valgrind User Manual">
+
+<bookinfo>
+  <title>Valgrind User Manual</title>
+  <releaseinfo>&rel-type; &rel-version; &rel-date;</releaseinfo>
+  <copyright>
+    <year>&vg-lifespan;</year>
+    <holder><ulink url="&vg-devs-url;">Valgrind Developers</ulink></holder>
+   </copyright>
+   <legalnotice>
+     <para>Email: <ulink url="mailto:&vg-vemail;">&vg-vemail;</ulink></para>
+   </legalnotice>
+</bookinfo>
+
+  <xi:include href="manual-intro.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="manual-core.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="manual-core-adv.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="../../memcheck/docs/mc-manual.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="../../cachegrind/docs/cg-manual.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="../../callgrind/docs/cl-manual.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="../../helgrind/docs/hg-manual.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="../../drd/docs/drd-manual.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="../../massif/docs/ms-manual.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="../../exp-dhat/docs/dh-manual.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="../../exp-sgcheck/docs/sg-manual.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="../../exp-bbv/docs/bbv-manual.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />      
+  <xi:include href="../../lackey/docs/lk-manual.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="../../none/docs/nl-manual.xml" parse="xml"  
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</book>

@@ -1,0 +1,279 @@
+
+Valgrind Documentation
+----------------------
+This text assumes the following directory structure:
+
+Distribution text files (eg. AUTHORS, NEWS, ...):
+  valgrind/
+
+Main /docs/ dir:
+  valgrind/docs/
+
+Top-level XML files: 
+  valgrind/docs/xml/
+
+Tool specific XML docs:
+  valgrind/<toolname>/docs/
+
+All images used in the docs:
+  valgrind/docs/images/
+
+Stylesheets, catalogs, parsing/formatting scripts:
+  valgrind/docs/lib/
+
+Some files of note:
+  docs/xml/index.xml:        Top-level book-set wrapper
+  docs/xml/FAQ.xml:          The FAQ
+  docs/valgrind-manpage.xml  The valgrind manpage
+  docs/xml/vg-entities.xml:  Various strings, dates etc. used all over
+  docs/xml/xml_help.txt:     Basic guide to common XML tags.
+
+The docs/internals directory contains some useful high-level stuff about
+Valgrind's internals.  It's not relevant for the rest of this discussion.
+
+
+Overview
+---------
+The Documentation Set contains all books, articles, manpages, 
+etc. pertaining to Valgrind, and is designed to be built as:
+- chunked html files
+- PDF file
+- PS file
+- manpage
+
+The whole thing is a "book set", made up of multiple books (the user
+manual, the FAQ, the tech-docs, the licenses).  Each book could be
+made individually, but the build system doesn't do that.
+
+CSS: the style-sheet used by the docs is the same as that used by the
+website (consistency is king).  It might be worth doing a pre-build diff
+to check whether the website stylesheet has changed.
+
+
+The build process
+-----------------
+It's not obvious exactly when things get built, and so on.  Here's an
+overview:
+
+- The HTML docs can be built manually by running 'make html-docs' in
+  valgrind/docs/.  (Don't use 'make html'; that is a valid built-in
+  automake target, but does nothing.)  Likewise for PDF/PS with 'make
+  print-docs'.
+
+- 'make dist' (nb: at the top level, not in docs/) puts the XML files
+  into the tarball.  It also builds the HTML docs and puts them in too, 
+  in valgrind/docs/html/ (including style sheets, images, etc).
+
+- 'make install' installs the HTML docs in
+  $(install)/share/doc/valgrind/html/, if they are present.  (They will
+  be present if you are installing from the result of a 'make dist'.
+  They might not be present if you are developing in a Subversion
+  workspace and have not built them.)  It doesn't install the XML docs,
+  as they're not useful installed.
+
+If the XML processing tools ever mature enough to become standard, we
+could just build the docs from XML when doing 'make install', which
+would be simpler.
+
+
+Notes on building PDF / PS documents
+------------------------------------
+Below are random notes and recollections about how to build PDF / PS
+documents from the XML source at various times on various Linux distros.
+
+Notes [May 2017]
+----------------
+Fedora 25: the "Notes [Sept 2015]" are still valid.  But to summarise,
+two steps are necessary:
+
+(1) install packages as listed below
+(2) apply Mark's epstopdf-base.sty hack as documented in "Notes [Mar 2015]"
+
+Packages to install:
+
+  sudo dnf install texlive-xmltex texlive-xmltex-bin texlive-xmltex-doc \
+    texlive dblatex texlive-xmltex docbook-style-xsl docbook-dtds \
+    docbook-style-xsl.noarch docbook-simple.noarch docbook-simple.noarch \
+    docbook-slides.noarch docbook-style-dsssl.noarch docbook-utils.noarch \
+    docbook-utils-pdf.noarch docbook5-schemas.noarch \
+    docbook5-style-xsl.noarch passivetex
+
+
+Notes [Sept 2015]
+-----------------
+Fedora 21 and 22: Had mucho trouble with building the print docs on
+F21/22 even with the [Mar 2015] package set (or something similarish)
+installed.  Eventually installed "passivetex" and that fixes the
+failures.
+
+Installing the packages below on Fedora _might_ get you a working setup.
+Also you need the epstopdf-base.sty hack detailed below.
+
+  texlive-xmltex texlive-xmltex-bin texlive-xmltex-doc texlive dblatex
+  texlive-xmltex docbook-style-xsl docbook-dtds docbook-style-xsl.noarch
+  docbook-simple.noarch docbook-simple.noarch docbook-slides.noarch
+  docbook-style-dsssl.noarch docbook-utils.noarch
+  docbook-utils-pdf.noarch docbook5-schemas.noarch
+  docbook5-style-xsl.noarch passivetex
+
+Notes [Mar 2015]
+----------------
+On Ubuntu 14.04.2 LTS the following is known to work:
+
+Required packages:
+texlive
+dblatex
+xsltproc
+xmltex
+docbook-xml
+docbook-xsl
+
+Additional the following lines need to be changed in
+/usr/share/texlive/texmf-dist/tex/latex/oberdiek/epstopdf-base.sty
+around line 450  from
+
+
+\ifETE@prepend
+  \expandafter\PrependGraphicsExtensions
+\else
+  \expandafter\AppendGraphicsExtensions
+\fi
+{.eps}
+
+
+to
+
+
+%% \ifETE@prepend
+%%   \expandafter\PrependGraphicsExtensions
+%% \else
+%%   \expandafter\AppendGraphicsExtensions
+%% \fi
+%% {.eps}
+
+This hack was devised by Mark Wielaard. 
+
+
+Notes [Aug. 2012]
+-----------------
+On Ubuntu 10.04 there was a new capacity-related failure whilst
+building the print docs in the run up to the 3.8.0 release.  This was
+fixed by editing /etc/texmf/texmf.cnf and changing pool_size to
+2000000.
+
+
+Notes [May 2009]
+-----------------
+For Ubuntu 9.04, to build HTML docs I had to:
+
+  sudo apt-get install docbook docbook-xsl
+
+Actually, I'm not sure if the 'docbook' is necessary, but 'docbook-xsl'
+definitely is.
+
+To build the man pages I also changed the Makefile.am to try this
+stylesheet:
+
+    /usr/share/xml/docbook/stylesheet/nwalsh/current/manpages/docbook.xsl
+
+if it can't find this one:
+
+    /usr/share/xml/docbook/stylesheet/nwalsh/manpages/docbook.xsl
+
+I haven't succeeded in building the print docs.
+
+
+Notes [Mar. 2007]
+-----------------
+For SuSE 10.1, I have to install the following packages to get a
+working toolchain.  Non-indented ones I asked YaST to install;
+indented ones are extras it added on:
+
+docbook_4
+  iso_ent
+  xmlcharent
+docbook-dsssl-stylesheets
+  docbook_3
+docbook-xsl-stylesheets
+xmltex
+  gd
+  latex-ucs
+  te_latex
+  tetex
+  xaw3d
+passivetex
+xpdf
+  xpdf-tools
+
+pdfxmltex still bombs when building the print docs.  On SuSE 10.1 I
+edited /etc/texmf/web2c/texmf.cnf and changed
+  pool_size.pdfxmltex = 500000
+to
+  pool_size.pdfxmltex = 1500000
+and that fixes it.
+
+It is also reported that the print docs build OK on Fedora Core 5.
+
+
+Notes [Nov. 2005]
+-----------------
+After upgrading to Suse 10, found a (known) bug in PassiveTex which 
+broke the build, so added a bug-fix to 'docs/lib/vg-fo.xsl'.
+Bug-fix related links:
+http://lists.oasis-open.org/archives/docbook/200509/msg00032.html
+http://www.dpawson.co.uk/docbook/tools.html#d850e300
+http://www.haskell.org/pipermail/glasgow-haskell-bugs/2005-January.txt
+
+
+Notes [July 2005]
+-----------------
+jrs had to install zillions of packages on SuSE 9.2 in order to
+build the print docs (make print-docs), including
+   passivetex
+   xpdf (for pdftops, which does the nicest job)
+
+Even then, pdfxmltex eventually dies with "TeX capacity exceeded,
+sorry [pool size = 67555]" or some such.  To fix this, he edited
+/etc/texmf/texmf.cnf and changed
+   pool_size.pdfxmltex = 500000
+to 
+   pool_size.pdfxmltex = 1500000 
+and that fixed it.
+
+
+Notes [Nov. 2004]:
+-----------------
+- the end of file.xml must have only ONE newline after the last tag:
+  </book>
+- pdfxmltex barfs if given a filename with an underscore in it
+
+
+References:
+----------
+- samba have got all the stuff
+http://websvn.samba.org/listing.php?rep=4&path=/trunk/&opt=dir&sc=1
+
+excellent on-line howto reference:
+- http://www.cogent.ca/
+
+using automake with docbook:
+- http://www.movement.uklinux.net/docs/docbook-autotools/index.html
+
+Debugging catalog processing:
+- http://xmlsoft.org/catalog.html#Declaring
+  xmlcatalog -v <catalog-file>
+
+shell script to generate xml catalogs for docbook 4.1.2:
+- http://xmlsoft.org/XSLT/docbook.html
+
+configure.in re pdfxmltex
+- http://cvs.sourceforge.net/viewcvs.py/logreport/service/configure.in?rev=1.325
+
+some useful xls stylesheets in cvs:
+- http://cvs.sourceforge.net/viewcvs.py/perl-xml/perl-xml-faq/
+
+
+TODO LESS CRUCIAL:
+------------------
+- concat titlepage + subtitle page in fo output
+- try and get the QuickStart and FAQ titlepage+toc+content onto one page

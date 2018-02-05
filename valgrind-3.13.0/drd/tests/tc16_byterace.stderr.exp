@@ -1,0 +1,13 @@
+
+Conflicting load by thread 1 at 0x........ size 1
+   at 0x........: main (tc16_byterace.c:34)
+Location 0x........ is 0 bytes inside bytes[4],
+a global variable declared at tc16_byterace.c:7
+
+Conflicting store by thread 1 at 0x........ size 1
+   at 0x........: main (tc16_byterace.c:34)
+Location 0x........ is 0 bytes inside bytes[4],
+a global variable declared at tc16_byterace.c:7
+
+
+ERROR SUMMARY: 2 errors from 2 contexts (suppressed: 0 from 0)

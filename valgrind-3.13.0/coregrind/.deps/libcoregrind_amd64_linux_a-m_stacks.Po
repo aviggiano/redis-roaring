@@ -1,0 +1,65 @@
+libcoregrind_amd64_linux_a-m_stacks.o: m_stacks.c pub_core_basics.h \
+  ../include/pub_tool_basics.h ../VEX/pub/libvex_basictypes.h \
+  /usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h \
+  pub_core_debuglog.h pub_core_libcassert.h \
+  ../include/pub_tool_libcassert.h pub_core_libcprint.h \
+  ../include/pub_tool_libcprint.h pub_core_mallocfree.h \
+  ../include/pub_tool_mallocfree.h pub_core_aspacemgr.h \
+  ../include/pub_tool_aspacemgr.h pub_core_options.h \
+  ../include/pub_tool_options.h ../VEX/pub/libvex.h \
+  ../VEX/pub/libvex_ir.h pub_core_xarray.h ../include/pub_tool_xarray.h \
+  pub_core_stacks.h pub_core_tooliface.h ../include/pub_tool_tooliface.h \
+  ../include/pub_tool_errormgr.h ../include/pub_tool_execontext.h \
+  pub_core_inner.h ../config.h
+
+pub_core_basics.h:
+
+../include/pub_tool_basics.h:
+
+../VEX/pub/libvex_basictypes.h:
+
+/usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h:
+
+pub_core_debuglog.h:
+
+pub_core_libcassert.h:
+
+../include/pub_tool_libcassert.h:
+
+pub_core_libcprint.h:
+
+../include/pub_tool_libcprint.h:
+
+pub_core_mallocfree.h:
+
+../include/pub_tool_mallocfree.h:
+
+pub_core_aspacemgr.h:
+
+../include/pub_tool_aspacemgr.h:
+
+pub_core_options.h:
+
+../include/pub_tool_options.h:
+
+../VEX/pub/libvex.h:
+
+../VEX/pub/libvex_ir.h:
+
+pub_core_xarray.h:
+
+../include/pub_tool_xarray.h:
+
+pub_core_stacks.h:
+
+pub_core_tooliface.h:
+
+../include/pub_tool_tooliface.h:
+
+../include/pub_tool_errormgr.h:
+
+../include/pub_tool_execontext.h:
+
+pub_core_inner.h:
+
+../config.h:

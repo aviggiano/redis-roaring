@@ -1,0 +1,75 @@
+'\" t
+.\"     Title: ms_print
+.\"    Author: [see the "Author" section]
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 06/15/2017
+.\"    Manual: Release 3.13.0
+.\"    Source: Release 3.13.0
+.\"  Language: English
+.\"
+.TH "MS_PRINT" "1" "06/15/2017" "Release 3.13.0" "Release 3.13.0"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+ms_print \- post\-processing tool for Massif
+.SH "SYNOPSIS"
+.HP \w'\fBms_print\fR\ 'u
+\fBms_print\fR [\fIoptions\fR] \fImassif\-out\-file\fR
+.SH "DESCRIPTION"
+.PP
+\fBms_print\fR
+takes an output file produced by the Valgrind tool Massif and prints the information in an easy\-to\-read form\&.
+.SH "OPTIONS"
+.PP
+\fB\-h \-\-help \fR
+.RS 4
+Show the help message\&.
+.RE
+.PP
+\fB\-\-version \fR
+.RS 4
+Show the version number\&.
+.RE
+.PP
+\fB\-\-threshold=<m\&.n> [default: 1\&.0] \fR
+.RS 4
+Same as Massif\*(Aqs
+\fB\-\-threshold\fR
+option, but applied after profiling rather than during\&.
+.RE
+.PP
+\fB\-\-x=<4\&.\&.1000> [default: 72]\fR
+.RS 4
+Width of the graph, in columns\&.
+.RE
+.PP
+\fB\-\-y=<4\&.\&.1000> [default: 20] \fR
+.RS 4
+Height of the graph, in rows\&.
+.RE
+.SH "SEE ALSO"
+.PP
+valgrind(1),
+$INSTALL/share/doc/valgrind/html/index\&.html
+or
+http://www\&.valgrind\&.org/docs/manual/index\&.html\&.
+.SH "AUTHOR"
+.PP
+Nicholas Nethercote\&.

@@ -1,0 +1,20 @@
+#! /bin/sh
+
+# used to filter helgrind output shown by gdb/vgdb.
+
+dir=`dirname $0`
+
+$dir/../helgrind/tests/filter_stderr "$@"              |
+
+# filter vgdb messages
+$dir/filter_vgdb |
+
+# Perform Solaris-specific filtering.
+if $dir/../tests/os_test solaris; then
+   $dir/filter_helgrind_monitor_solaris
+else
+   cat
+fi |
+
+# and remove any remaining empty lines
+sed -e '/^$/d'

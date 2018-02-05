@@ -1,0 +1,45 @@
+#! /usr/bin/perl -w
+
+use strict;
+
+while (<>)
+{
+    s/ __getsockname / getsockname /;
+    s/ __sigaction / sigaction /;
+    s/ __GI___/ __/;
+    s/ __([a-z]*)_nocancel / $1 /;
+
+    # "lib[S|s]ystem*" occurs on Darwin, "libsocket" on older Solaris/illumos.
+    s/\(in \/.*(libc|libSystem|libsystem|libsocket).*\)$/(in \/...libc...)/;
+    s/\(within \/.*(libc|libSystem|libsystem|libsocket).*\)$/(within \/...libc...)/;
+
+    # Filter out dynamic loader
+    s/ \(in \/.*ld-.*so\)$//;
+
+    # Remove the filename -- on some platforms (eg. Linux) it will be in
+    # libc, on some (eg. Darwin) it will be in the main executable.
+    s/\(below main\) \(.+\)$/(below main)/;
+
+    # filter out the exact libc-start.c:### line number. (ppc64*)
+    s/\(libc-start.c:[0-9]*\)$/(in \/...libc...)/;
+
+    # Merge the different C++ operator variations.
+    s/(at.*)__builtin_new/$1...operator new.../;
+    s/(at.*)operator new\(unsigned(| int| long)\)/$1...operator new.../;
+
+    s/(at.*)__builtin_vec_new/$1...operator new.../;
+    s/(at.*)operator new\[\]\(unsigned(| int| long)\)/$1...operator new[].../;
+
+    s/(at.*)__builtin_delete/$1...operator delete.../;
+    s/(at.*)operator delete\(void\*\)/$1...operator delete.../;
+
+    s/(at.*)__builtin_vec_delete/$1...operator delete[].../;
+    s/(at.*)operator delete\[\]\(void\*\)/$1...operator delete[].../;
+
+    # Some glibc versions complain about unexpected futex syscall errors.
+    s/The futex facility returned an unexpected error code.//;
+
+    print;
+}
+
+exit 0;

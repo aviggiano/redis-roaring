@@ -1,0 +1,2 @@
+m_debuginfo/libcoregrind_amd64_linux_a-readmacho.o: \
+  m_debuginfo/readmacho.c

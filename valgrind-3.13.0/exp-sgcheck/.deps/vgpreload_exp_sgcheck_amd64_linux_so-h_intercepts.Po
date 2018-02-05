@@ -1,0 +1,34 @@
+vgpreload_exp_sgcheck_amd64_linux_so-h_intercepts.o: h_intercepts.c \
+  ../include/pub_tool_basics.h ../VEX/pub/libvex_basictypes.h \
+  /usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h \
+  ../include/pub_tool_hashtable.h ../include/pub_tool_redir.h \
+  ../config.h ../include/pub_tool_tooliface.h \
+  ../include/pub_tool_errormgr.h ../include/pub_tool_execontext.h \
+  ../VEX/pub/libvex.h ../VEX/pub/libvex_ir.h ../include/pub_tool_clreq.h \
+  ../include/valgrind.h
+
+../include/pub_tool_basics.h:
+
+../VEX/pub/libvex_basictypes.h:
+
+/usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h:
+
+../include/pub_tool_hashtable.h:
+
+../include/pub_tool_redir.h:
+
+../config.h:
+
+../include/pub_tool_tooliface.h:
+
+../include/pub_tool_errormgr.h:
+
+../include/pub_tool_execontext.h:
+
+../VEX/pub/libvex.h:
+
+../VEX/pub/libvex_ir.h:
+
+../include/pub_tool_clreq.h:
+
+../include/valgrind.h:

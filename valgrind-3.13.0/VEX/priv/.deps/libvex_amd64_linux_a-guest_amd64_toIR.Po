@@ -1,0 +1,26 @@
+priv/libvex_amd64_linux_a-guest_amd64_toIR.o: priv/guest_amd64_toIR.c \
+  ../VEX/pub/libvex_basictypes.h ../VEX/pub/libvex_ir.h \
+  ../VEX/pub/libvex.h ../VEX/pub/libvex_guest_amd64.h \
+  ../VEX/pub/libvex_emnote.h priv/main_util.h priv/main_globals.h \
+  priv/guest_generic_bb_to_IR.h priv/guest_generic_x87.h \
+  priv/guest_amd64_defs.h
+
+../VEX/pub/libvex_basictypes.h:
+
+../VEX/pub/libvex_ir.h:
+
+../VEX/pub/libvex.h:
+
+../VEX/pub/libvex_guest_amd64.h:
+
+../VEX/pub/libvex_emnote.h:
+
+priv/main_util.h:
+
+priv/main_globals.h:
+
+priv/guest_generic_bb_to_IR.h:
+
+priv/guest_generic_x87.h:
+
+priv/guest_amd64_defs.h:

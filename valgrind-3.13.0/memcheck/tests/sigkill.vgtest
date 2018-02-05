@@ -1,0 +1,2 @@
+prog: sigkill
+stderr_filter: filter_allocs

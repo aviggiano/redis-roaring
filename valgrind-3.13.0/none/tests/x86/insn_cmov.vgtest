@@ -1,0 +1,3 @@
+prog: ../../../none/tests/x86/insn_cmov
+prereq: ../../../tests/x86_amd64_features x86-cmov
+vgopts: -q

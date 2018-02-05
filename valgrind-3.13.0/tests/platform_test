@@ -1,0 +1,39 @@
+#! /bin/sh
+
+# This script determines which platforms that this Valgrind installation
+# supports.
+# We return:
+# - 0 if the machine matches the asked-for platform
+# - 1 if it didn't match, but did match the name of another platform
+# - 2 otherwise
+
+# Nb: When updating this file for a new platform, add the name to
+# 'all_platforms'.
+
+all_platforms=
+all_platforms="$all_platforms x86-linux amd64-linux ppc32-linux ppc64-linux"
+all_platforms="$all_platforms arm-linux arm64-linux"
+all_platforms="$all_platforms s390x-linux mips32-linux mips64-linux"
+all_platforms="$all_platforms x86-darwin amd64-darwin"
+all_platforms="$all_platforms x86-solaris amd64-solaris"
+
+if [ $# -ne 2 ] ; then
+    echo "usage: platform_test <arch-type> <OS-type>"
+    exit 2;
+fi
+
+# Get the directory holding the arch_test and os_test, which will be the same
+# as the one holding this script.
+dir=`dirname $0`
+
+if $dir/arch_test $1 && $dir/os_test $2 ; then
+    exit 0;         # Matches this platform.
+fi
+
+for p in $all_platforms ; do
+    if [ $1-$2 = $p ] ; then
+        exit 1;     # Matches another Valgrind-supported platform.
+    fi
+done
+
+exit 2;             # Doesn't match any Valgrind-supported platform.

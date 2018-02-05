@@ -1,0 +1,91 @@
+
+
+HEAP SUMMARY:
+    in use at exit: ... bytes in ... blocks
+  total heap usage: ... allocs, ... frees, ... bytes allocated
+
+For a detailed leak analysis, rerun with: --leak-check=full
+
+For counts of detected and suppressed errors, rerun with: -v
+ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+Unaddressable byte(s) found during client check request
+   at 0x........: test2 (addressable.c:48)
+   by 0x........: main (addressable.c:125)
+ Address 0x........ is not stack'd, malloc'd or (recently) free'd
+
+Invalid write of size 1
+   at 0x........: test2 (addressable.c:51)
+   by 0x........: main (addressable.c:125)
+ Address 0x........ is not stack'd, malloc'd or (recently) free'd
+
+
+Process terminating with default action of signal N (SIGSEGV or SIGBUS)
+ Bad memory (SIGSEGV or SIGBUS) at address 0x........
+   at 0x........: test2 (addressable.c:51)
+   by 0x........: main (addressable.c:125)
+ If you believe this happened as a result of a stack
+ overflow in your program's main thread (unlikely but
+ possible), you can try to increase the size of the
+ main thread stack using the --main-stacksize= flag.
+ The main thread stack size used in this run was ....
+
+HEAP SUMMARY:
+    in use at exit: ... bytes in ... blocks
+  total heap usage: ... allocs, ... frees, ... bytes allocated
+
+For a detailed leak analysis, rerun with: --leak-check=full
+
+For counts of detected and suppressed errors, rerun with: -v
+ERROR SUMMARY: 2 errors from 2 contexts (suppressed: 0 from 0)
+
+HEAP SUMMARY:
+    in use at exit: ... bytes in ... blocks
+  total heap usage: ... allocs, ... frees, ... bytes allocated
+
+For a detailed leak analysis, rerun with: --leak-check=full
+
+For counts of detected and suppressed errors, rerun with: -v
+ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+
+Process terminating with default action of signal N (SIGSEGV or SIGBUS)
+ Bad memory (SIGSEGV or SIGBUS) at address 0x........
+   at 0x........: test4 (addressable.c:74)
+   by 0x........: main (addressable.c:125)
+
+HEAP SUMMARY:
+    in use at exit: ... bytes in ... blocks
+  total heap usage: ... allocs, ... frees, ... bytes allocated
+
+For a detailed leak analysis, rerun with: --leak-check=full
+
+For counts of detected and suppressed errors, rerun with: -v
+ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+Uninitialised byte(s) found during client check request
+   at 0x........: test5 (addressable.c:85)
+   by 0x........: main (addressable.c:125)
+ Address 0x........ is in a rw- anonymous segment
+
+Uninitialised byte(s) found during client check request
+   at 0x........: test5 (addressable.c:91)
+   by 0x........: main (addressable.c:125)
+ Address 0x........ is in a r-- anonymous segment
+
+
+HEAP SUMMARY:
+    in use at exit: ... bytes in ... blocks
+  total heap usage: ... allocs, ... frees, ... bytes allocated
+
+For a detailed leak analysis, rerun with: --leak-check=full
+
+For counts of detected and suppressed errors, rerun with: -v
+Use --track-origins=yes to see where uninitialised values come from
+ERROR SUMMARY: 2 errors from 2 contexts (suppressed: 0 from 0)
+
+HEAP SUMMARY:
+    in use at exit: ... bytes in ... blocks
+  total heap usage: ... allocs, ... frees, ... bytes allocated
+
+For a detailed leak analysis, rerun with: --leak-check=full
+
+For counts of detected and suppressed errors, rerun with: -v
+ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

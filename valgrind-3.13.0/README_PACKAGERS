@@ -1,0 +1,95 @@
+
+Greetings, packaging person!  This information is aimed at people
+building binary distributions of Valgrind.
+
+Thanks for taking the time and effort to make a binary distribution of
+Valgrind.  The following notes may save you some trouble.
+
+
+-- Do not ship your Linux distro with a completely stripped
+   /lib/ld.so.  At least leave the debugging symbol names on -- line
+   number info isn't necessary.  If you don't want to leave symbols on
+   ld.so, alternatively you can have your distro install ld.so's
+   debuginfo package by default, or make ld.so.debuginfo be a
+   requirement of your Valgrind RPM/DEB/whatever.
+
+   Reason for this is that Valgrind's Memcheck tool needs to intercept
+   calls to, and provide replacements for, some symbols in ld.so at
+   startup (most importantly strlen).  If it cannot do that, Memcheck
+   shows a large number of false positives due to the highly optimised
+   strlen (etc) routines in ld.so.  This has caused some trouble in
+   the past.  As of version 3.3.0, on some targets (ppc32-linux,
+   ppc64-linux), Memcheck will simply stop at startup (and print an
+   error message) if such symbols are not present, because it is
+   infeasible to continue.
+
+   It's not like this is going to cost you much space.  We only need
+   the symbols for ld.so (a few K at most).  Not the debug info and
+   not any debuginfo or extra symbols for any other libraries.
+
+
+-- (Unfortunate but true) When you configure to build with the 
+   --prefix=/foo/bar/xyzzy option, the prefix /foo/bar/xyzzy gets
+   baked into valgrind.  The consequence is that you _must_ install
+   valgrind at the location specified in the prefix.  If you don't,
+   it may appear to work, but will break doing some obscure things,
+   particularly doing fork() and exec().
+
+   So you can't build a relocatable RPM / whatever from Valgrind.
+
+
+-- Don't strip the debug info off lib/valgrind/$platform/vgpreload*.so
+   in the installation tree.  Either Valgrind won't work at all, or it
+   will still work if you do, but will generate less helpful error
+   messages.  Here's an example:
+
+   Mismatched free() / delete / delete []
+      at 0x40043249: free (vg_clientfuncs.c:171)
+      by 0x4102BB4E: QGArray::~QGArray(void) (tools/qgarray.cpp:149)
+      by 0x4C261C41: PptDoc::~PptDoc(void) (include/qmemarray.h:60)
+      by 0x4C261F0E: PptXml::~PptXml(void) (pptxml.cc:44)
+      Address 0x4BB292A8 is 0 bytes inside a block of size 64 alloc'd
+      at 0x4004318C: __builtin_vec_new (vg_clientfuncs.c:152)
+      by 0x4C21BC15: KLaola::readSBStream(int) const (klaola.cc:314)
+      by 0x4C21C155: KLaola::stream(KLaola::OLENode const *) (klaola.cc:416)
+      by 0x4C21788F: OLEFilter::convert(QCString const &) (olefilter.cc:272)
+
+   This tells you that some memory allocated with new[] was freed with
+   free().
+
+   Mismatched free() / delete / delete []
+      at 0x40043249: (inside vgpreload_memcheck.so)
+      by 0x4102BB4E: QGArray::~QGArray(void) (tools/qgarray.cpp:149)
+      by 0x4C261C41: PptDoc::~PptDoc(void) (include/qmemarray.h:60)
+      by 0x4C261F0E: PptXml::~PptXml(void) (pptxml.cc:44)
+      Address 0x4BB292A8 is 0 bytes inside a block of size 64 alloc'd
+      at 0x4004318C: (inside vgpreload_memcheck.so)
+      by 0x4C21BC15: KLaola::readSBStream(int) const (klaola.cc:314)
+      by 0x4C21C155: KLaola::stream(KLaola::OLENode const *) (klaola.cc:416)
+      by 0x4C21788F: OLEFilter::convert(QCString const &) (olefilter.cc:272)
+
+   This isn't so helpful.  Although you can tell there is a mismatch, 
+   the names of the allocating and deallocating functions are no longer
+   visible.  The same kind of thing occurs in various other messages 
+   from valgrind.
+
+
+-- Don't strip symbols from lib/valgrind/* in the installation tree.
+   Doing so will likely cause problems.  Removing the line number info is
+   probably OK (at least for some of the files in that directory), although
+   that has not been tested by the Valgrind developers.
+
+
+-- Please test the final installation works by running it on something
+   huge.  I suggest checking that it can start and exit successfully
+   both Firefox and OpenOffice.org.  I use these as test programs, and I
+   know they fairly thoroughly exercise Valgrind.  The command lines to use
+   are:
+
+   valgrind -v --trace-children=yes firefox
+
+   valgrind -v --trace-children=yes soffice
+
+
+If you find any more hints/tips for packaging, please report
+it as a bugreport. See http://www.valgrind.org for details.

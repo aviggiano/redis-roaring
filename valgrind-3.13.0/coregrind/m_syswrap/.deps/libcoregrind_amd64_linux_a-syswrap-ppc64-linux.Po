@@ -1,0 +1,2 @@
+m_syswrap/libcoregrind_amd64_linux_a-syswrap-ppc64-linux.o: \
+  m_syswrap/syswrap-ppc64-linux.c

@@ -1,0 +1,2 @@
+prog: hg03_inherit
+vgopts: --read-var-info=yes

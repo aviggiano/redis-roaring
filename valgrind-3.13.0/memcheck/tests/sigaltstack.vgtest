@@ -1,0 +1,2 @@
+prog: sigaltstack
+vgopts: -q

@@ -1,0 +1,1 @@
+m_ume/libcoregrind_amd64_linux_a-macho.o: m_ume/macho.c

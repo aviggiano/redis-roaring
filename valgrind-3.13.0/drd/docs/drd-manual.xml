@@ -1,0 +1,1848 @@
+<?xml version="1.0"?> <!-- -*- sgml -*- -->
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd"
+[ <!ENTITY % vg-entities SYSTEM "../../docs/xml/vg-entities.xml"> %vg-entities; ]>
+
+
+<chapter id="drd-manual" xreflabel="DRD: a thread error detector">
+  <title>DRD: a thread error detector</title>
+
+<para>To use this tool, you must specify
+<option>--tool=drd</option>
+on the Valgrind command line.</para>
+
+
+<sect1 id="drd-manual.overview" xreflabel="Overview">
+<title>Overview</title>
+
+<para>
+DRD is a Valgrind tool for detecting errors in multithreaded C and C++
+programs. The tool works for any program that uses the POSIX threading
+primitives or that uses threading concepts built on top of the POSIX threading
+primitives.
+</para>
+
+<sect2 id="drd-manual.mt-progr-models" xreflabel="MT-progr-models">
+<title>Multithreaded Programming Paradigms</title>
+
+<para>
+There are two possible reasons for using multithreading in a program:
+<itemizedlist>
+  <listitem>
+    <para>
+      To model concurrent activities. Assigning one thread to each activity
+      can be a great simplification compared to multiplexing the states of
+      multiple activities in a single thread. This is why most server software
+      and embedded software is multithreaded.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      To use multiple CPU cores simultaneously for speeding up
+      computations. This is why many High Performance Computing (HPC)
+      applications are multithreaded.
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+<para>
+Multithreaded programs can use one or more of the following programming
+paradigms. Which paradigm is appropriate depends e.g. on the application type.
+Some examples of multithreaded programming paradigms are:
+<itemizedlist>
+  <listitem>
+    <para>
+      Locking. Data that is shared over threads is protected from concurrent
+      accesses via locking. E.g. the POSIX threads library, the Qt library
+      and the Boost.Thread library support this paradigm directly.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Message passing. No data is shared between threads, but threads exchange
+      data by passing messages to each other. Examples of implementations of
+      the message passing paradigm are MPI and CORBA.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Automatic parallelization. A compiler converts a sequential program into
+      a multithreaded program. The original program may or may not contain
+      parallelization hints. One example of such parallelization hints is the
+      OpenMP standard. In this standard a set of directives are defined which
+      tell a compiler how to parallelize a C, C++ or Fortran program. OpenMP
+      is well suited for computational intensive applications. As an example,
+      an open source image processing software package is using OpenMP to
+      maximize performance on systems with multiple CPU
+      cores. GCC supports the
+      OpenMP standard from version 4.2.0 on.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Software Transactional Memory (STM). Any data that is shared between
+      threads is updated via transactions. After each transaction it is
+      verified whether there were any conflicting transactions. If there were
+      conflicts, the transaction is aborted, otherwise it is committed. This
+      is a so-called optimistic approach. There is a prototype of the Intel C++
+      Compiler available that supports STM. Research about the addition of
+      STM support to GCC is ongoing.
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+<para>
+DRD supports any combination of multithreaded programming paradigms as
+long as the implementation of these paradigms is based on the POSIX
+threads primitives. DRD however does not support programs that use
+e.g. Linux' futexes directly. Attempts to analyze such programs with
+DRD will cause DRD to report many false positives.
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.pthreads-model" xreflabel="Pthreads-model">
+<title>POSIX Threads Programming Model</title>
+
+<para>
+POSIX threads, also known as Pthreads, is the most widely available
+threading library on Unix systems.
+</para>
+
+<para>
+The POSIX threads programming model is based on the following abstractions:
+<itemizedlist>
+  <listitem>
+    <para>
+      A shared address space. All threads running within the same
+      process share the same address space. All data, whether shared or
+      not, is identified by its address.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Regular load and store operations, which allow to read values
+      from or to write values to the memory shared by all threads
+      running in the same process.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Atomic store and load-modify-store operations. While these are
+      not mentioned in the POSIX threads standard, most
+      microprocessors support atomic memory operations.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Threads. Each thread represents a concurrent activity.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Synchronization objects and operations on these synchronization
+      objects. The following types of synchronization objects have been
+      defined in the POSIX threads standard: mutexes, condition variables,
+      semaphores, reader-writer synchronization objects, barriers and
+      spinlocks.
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+<para>
+Which source code statements generate which memory accesses depends on
+the <emphasis>memory model</emphasis> of the programming language being
+used. There is not yet a definitive memory model for the C and C++
+languages. For a draft memory model, see also the document
+<ulink url="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2338.html">
+WG21/N2338: Concurrency memory model compiler consequences</ulink>.
+</para>
+
+<para>
+For more information about POSIX threads, see also the Single UNIX
+Specification version 3, also known as
+<ulink url="http://www.opengroup.org/onlinepubs/000095399/idx/threads.html">
+IEEE Std 1003.1</ulink>.
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.mt-problems" xreflabel="MT-Problems">
+<title>Multithreaded Programming Problems</title>
+
+<para>
+Depending on which multithreading paradigm is being used in a program,
+one or more of the following problems can occur:
+<itemizedlist>
+  <listitem>
+    <para>
+      Data races. One or more threads access the same memory location without
+      sufficient locking. Most but not all data races are programming errors
+      and are the cause of subtle and hard-to-find bugs.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Lock contention. One thread blocks the progress of one or more other
+      threads by holding a lock too long.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Improper use of the POSIX threads API. Most implementations of the POSIX
+      threads API have been optimized for runtime speed. Such implementations
+      will not complain on certain errors, e.g. when a mutex is being unlocked
+      by another thread than the thread that obtained a lock on the mutex.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Deadlock. A deadlock occurs when two or more threads wait for
+      each other indefinitely.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      False sharing. If threads that run on different processor cores
+      access different variables located in the same cache line
+      frequently, this will slow down the involved threads a lot due
+      to frequent exchange of cache lines.
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+<para>
+Although the likelihood of the occurrence of data races can be reduced
+through a disciplined programming style, a tool for automatic
+detection of data races is a necessity when developing multithreaded
+software. DRD can detect these, as well as lock contention and
+improper use of the POSIX threads API.
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.data-race-detection" xreflabel="data-race-detection">
+<title>Data Race Detection</title>
+
+<para>
+The result of load and store operations performed by a multithreaded program
+depends on the order in which memory operations are performed. This order is
+determined by:
+<orderedlist>
+  <listitem>
+    <para>
+      All memory operations performed by the same thread are performed in
+      <emphasis>program order</emphasis>, that is, the order determined by the
+      program source code and the results of previous load operations.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Synchronization operations determine certain ordering constraints on
+      memory operations performed by different threads. These ordering
+      constraints are called the <emphasis>synchronization order</emphasis>.
+    </para>
+  </listitem>
+</orderedlist>
+The combination of program order and synchronization order is called the
+<emphasis>happens-before relationship</emphasis>. This concept was first
+defined by S. Adve et al in the paper <emphasis>Detecting data races on weak
+memory systems</emphasis>, ACM SIGARCH Computer Architecture News, v.19 n.3,
+p.234-243, May 1991.
+</para>
+
+<para>
+Two memory operations <emphasis>conflict</emphasis> if both operations are
+performed by different threads, refer to the same memory location and at least
+one of them is a store operation.
+</para>
+
+<para>
+A multithreaded program is <emphasis>data-race free</emphasis> if all
+conflicting memory accesses are ordered by synchronization
+operations.
+</para>
+
+<para>
+A well known way to ensure that a multithreaded program is data-race
+free is to ensure that a locking discipline is followed. It is e.g.
+possible to associate a mutex with each shared data item, and to hold
+a lock on the associated mutex while the shared data is accessed.
+</para>
+
+<para>
+All programs that follow a locking discipline are data-race free, but not all
+data-race free programs follow a locking discipline. There exist multithreaded
+programs where access to shared data is arbitrated via condition variables,
+semaphores or barriers. As an example, a certain class of HPC applications
+consists of a sequence of computation steps separated in time by barriers, and
+where these barriers are the only means of synchronization. Although there are
+many conflicting memory accesses in such applications and although such
+applications do not make use mutexes, most of these applications do not
+contain data races.
+</para>
+
+<para>
+There exist two different approaches for verifying the correctness of
+multithreaded programs at runtime. The approach of the so-called Eraser
+algorithm is to verify whether all shared memory accesses follow a consistent
+locking strategy. And the happens-before data race detectors verify directly
+whether all interthread memory accesses are ordered by synchronization
+operations. While the last approach is more complex to implement, and while it
+is more sensitive to OS scheduling, it is a general approach that works for
+all classes of multithreaded programs. An important advantage of
+happens-before data race detectors is that these do not report any false
+positives.
+</para>
+
+<para>
+DRD is based on the happens-before algorithm.
+</para>
+
+</sect2>
+
+
+</sect1>
+
+
+<sect1 id="drd-manual.using-drd" xreflabel="Using DRD">
+<title>Using DRD</title>
+
+<sect2 id="drd-manual.options" xreflabel="DRD Command-line Options">
+<title>DRD Command-line Options</title>
+
+<para>The following command-line options are available for controlling the
+behavior of the DRD tool itself:</para>
+
+<!-- start of xi:include in the manpage -->
+<variablelist id="drd.opts.list">
+  <varlistentry>
+    <term>
+      <option><![CDATA[--check-stack-var=<yes|no> [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Controls whether DRD detects data races on stack
+        variables. Verifying stack variables is disabled by default because
+        most programs do not share stack variables over threads.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--exclusive-threshold=<n> [default: off]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Print an error message if any mutex or writer lock has been
+        held longer than the time specified in milliseconds. This
+        option enables the detection of lock contention.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--join-list-vol=<n> [default: 10]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Data races that occur between a statement at the end of one thread
+	and another thread can be missed if memory access information is
+	discarded immediately after a thread has been joined. This option
+	allows to specify for how many joined threads memory access information
+	should be retained.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option>
+        <![CDATA[--first-race-only=<yes|no> [default: no]]]>
+      </option>
+    </term>
+    <listitem>
+      <para>
+        Whether to report only the first data race that has been detected on a
+        memory location or all data races that have been detected on a memory
+        location.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option>
+        <![CDATA[--free-is-write=<yes|no> [default: no]]]>
+      </option>
+    </term>
+    <listitem>
+      <para>
+        Whether to report races between accessing memory and freeing
+        memory. Enabling this option may cause DRD to run slightly
+        slower. Notes:</para>
+      <itemizedlist>
+	<listitem>
+	  <para>
+	    Don't enable this option when using custom memory allocators
+	    that use
+	    the <computeroutput>VG_USERREQ__MALLOCLIKE_BLOCK</computeroutput>
+	    and <computeroutput>VG_USERREQ__FREELIKE_BLOCK</computeroutput>
+	    because that would result in false positives.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>Don't enable this option when using reference-counted
+	    objects because that will result in false positives, even when
+	    that code has been annotated properly with
+	    <computeroutput>ANNOTATE_HAPPENS_BEFORE</computeroutput>
+	    and <computeroutput>ANNOTATE_HAPPENS_AFTER</computeroutput>. See
+	    e.g.  the output of the following command for an example:
+	    <computeroutput>valgrind --tool=drd --free-is-write=yes
+	      drd/tests/annotate_smart_pointer</computeroutput>.
+	  </para>
+	</listitem>
+      </itemizedlist>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option>
+        <![CDATA[--report-signal-unlocked=<yes|no> [default: yes]]]>
+      </option>
+    </term>
+    <listitem>
+      <para>
+        Whether to report calls to
+        <function>pthread_cond_signal</function> and
+        <function>pthread_cond_broadcast</function> where the mutex
+        associated with the signal through
+        <function>pthread_cond_wait</function> or
+        <function>pthread_cond_timed_wait</function>is not locked at
+        the time the signal is sent.  Sending a signal without holding
+        a lock on the associated mutex is a common programming error
+        which can cause subtle race conditions and unpredictable
+        behavior. There exist some uncommon synchronization patterns
+        however where it is safe to send a signal without holding a
+        lock on the associated mutex.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--segment-merging=<yes|no> [default: yes]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Controls segment merging. Segment merging is an algorithm to
+        limit memory usage of the data race detection
+        algorithm. Disabling segment merging may improve the accuracy
+        of the so-called 'other segments' displayed in race reports
+        but can also trigger an out of memory error.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--segment-merging-interval=<n> [default: 10]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Perform segment merging only after the specified number of new
+        segments have been created. This is an advanced configuration option
+        that allows to choose whether to minimize DRD's memory usage by
+        choosing a low value or to let DRD run faster by choosing a slightly
+        higher value. The optimal value for this parameter depends on the
+        program being analyzed. The default value works well for most programs.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--shared-threshold=<n> [default: off]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Print an error message if a reader lock has been held longer
+        than the specified time (in milliseconds). This option enables
+        the detection of lock contention.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--show-confl-seg=<yes|no> [default: yes]]]></option>
+    </term>
+    <listitem>
+      <para>
+         Show conflicting segments in race reports. Since this
+         information can help to find the cause of a data race, this
+         option is enabled by default. Disabling this option makes the
+         output of DRD more compact.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--show-stack-usage=<yes|no> [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Print stack usage at thread exit time. When a program creates a large
+        number of threads it becomes important to limit the amount of virtual
+        memory allocated for thread stacks. This option makes it possible to
+        observe how much stack memory has been used by each thread of the
+        client program. Note: the DRD tool itself allocates some temporary
+        data on the client thread stack. The space necessary for this
+        temporary data must be allocated by the client program when it
+        allocates stack memory, but is not included in stack usage reported by
+        DRD.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--ignore-thread-creation=<yes|no> [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Controls whether all activities during thread creation should be
+        ignored. By default enabled only on Solaris.
+        Solaris provides higher throughput, parallelism and scalability than
+        other operating systems, at the cost of more fine-grained locking
+        activity. This means for example that when a thread is created under
+        glibc, just one big lock is used for all thread setup. Solaris libc
+        uses several fine-grained locks and the creator thread resumes its
+        activities as soon as possible, leaving for example stack and TLS setup
+        sequence to the created thread.
+        This situation confuses DRD as it assumes there is some false ordering
+        in place between creator and created thread; and therefore many types
+        of race conditions in the application would not be reported. To prevent
+        such false ordering, this command line option is set to
+        <computeroutput>yes</computeroutput> by default on Solaris.
+        All activity (loads, stores, client requests) is therefore ignored
+        during:</para>
+      <itemizedlist>
+	<listitem>
+	  <para>
+	    pthread_create() call in the creator thread
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>
+	    thread creation phase (stack and TLS setup) in the created thread
+	  </para>
+	</listitem>
+      </itemizedlist>
+    </listitem>
+  </varlistentry>
+</variablelist>
+<!-- end of xi:include in the manpage -->
+
+<!-- start of xi:include in the manpage -->
+<para>
+The following options are available for monitoring the behavior of the
+client program:
+</para>
+
+<variablelist id="drd.debugopts.list">
+  <varlistentry>
+    <term>
+      <option><![CDATA[--trace-addr=<address> [default: none]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Trace all load and store activity for the specified
+        address. This option may be specified more than once.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--ptrace-addr=<address> [default: none]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Trace all load and store activity for the specified address and keep
+        doing that even after the memory at that address has been freed and
+        reallocated.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--trace-alloc=<yes|no> [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Trace all memory allocations and deallocations. May produce a huge
+        amount of output.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--trace-barrier=<yes|no> [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Trace all barrier activity.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--trace-cond=<yes|no> [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Trace all condition variable activity.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--trace-fork-join=<yes|no> [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Trace all thread creation and all thread termination events.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--trace-hb=<yes|no> [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Trace execution of the <literal>ANNOTATE_HAPPENS_BEFORE()</literal>,
+	<literal>ANNOTATE_HAPPENS_AFTER()</literal> and
+	<literal>ANNOTATE_HAPPENS_DONE()</literal> client requests.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--trace-mutex=<yes|no> [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Trace all mutex activity.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--trace-rwlock=<yes|no> [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>
+         Trace all reader-writer lock activity.
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term>
+      <option><![CDATA[--trace-semaphore=<yes|no> [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>
+        Trace all semaphore activity.
+      </para>
+    </listitem>
+  </varlistentry>
+</variablelist>
+<!-- end of xi:include in the manpage -->
+
+</sect2>
+
+
+<sect2 id="drd-manual.data-races" xreflabel="Data Races">
+<title>Detected Errors: Data Races</title>
+
+<para>
+DRD prints a message every time it detects a data race. Please keep
+the following in mind when interpreting DRD's output:
+<itemizedlist>
+  <listitem>
+    <para>
+      Every thread is assigned a <emphasis>thread ID</emphasis> by the DRD
+      tool. A thread ID is a number. Thread ID's start at one and are never
+      recycled.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The term <emphasis>segment</emphasis> refers to a consecutive
+      sequence of load, store and synchronization operations, all
+      issued by the same thread. A segment always starts and ends at a
+      synchronization operation. Data race analysis is performed
+      between segments instead of between individual load and store
+      operations because of performance reasons.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      There are always at least two memory accesses involved in a data
+      race. Memory accesses involved in a data race are called
+      <emphasis>conflicting memory accesses</emphasis>. DRD prints a
+      report for each memory access that conflicts with a past memory
+      access.
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+<para>
+Below you can find an example of a message printed by DRD when it
+detects a data race:
+</para>
+<programlisting><![CDATA[
+$ valgrind --tool=drd --read-var-info=yes drd/tests/rwlock_race
+...
+==9466== Thread 3:
+==9466== Conflicting load by thread 3 at 0x006020b8 size 4
+==9466==    at 0x400B6C: thread_func (rwlock_race.c:29)
+==9466==    by 0x4C291DF: vg_thread_wrapper (drd_pthread_intercepts.c:186)
+==9466==    by 0x4E3403F: start_thread (in /lib64/libpthread-2.8.so)
+==9466==    by 0x53250CC: clone (in /lib64/libc-2.8.so)
+==9466== Location 0x6020b8 is 0 bytes inside local var "s_racy"
+==9466== declared at rwlock_race.c:18, in frame #0 of thread 3
+==9466== Other segment start (thread 2)
+==9466==    at 0x4C2847D: pthread_rwlock_rdlock* (drd_pthread_intercepts.c:813)
+==9466==    by 0x400B6B: thread_func (rwlock_race.c:28)
+==9466==    by 0x4C291DF: vg_thread_wrapper (drd_pthread_intercepts.c:186)
+==9466==    by 0x4E3403F: start_thread (in /lib64/libpthread-2.8.so)
+==9466==    by 0x53250CC: clone (in /lib64/libc-2.8.so)
+==9466== Other segment end (thread 2)
+==9466==    at 0x4C28B54: pthread_rwlock_unlock* (drd_pthread_intercepts.c:912)
+==9466==    by 0x400B84: thread_func (rwlock_race.c:30)
+==9466==    by 0x4C291DF: vg_thread_wrapper (drd_pthread_intercepts.c:186)
+==9466==    by 0x4E3403F: start_thread (in /lib64/libpthread-2.8.so)
+==9466==    by 0x53250CC: clone (in /lib64/libc-2.8.so)
+...
+]]></programlisting>
+
+<para>
+The above report has the following meaning:
+<itemizedlist>
+  <listitem>
+    <para>
+      The number in the column on the left is the process ID of the
+      process being analyzed by DRD.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The first line ("Thread 3") tells you the thread ID for
+      the thread in which context the data race has been detected.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The next line tells which kind of operation was performed (load or
+      store) and by which thread. On the same line the start address and the
+      number of bytes involved in the conflicting access are also displayed.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Next, the call stack of the conflicting access is displayed. If
+      your program has been compiled with debug information
+      (<option>-g</option>), this call stack will include file names and
+      line numbers. The two
+      bottommost frames in this call stack (<function>clone</function>
+      and <function>start_thread</function>) show how the NPTL starts
+      a thread. The third frame
+      (<function>vg_thread_wrapper</function>) is added by DRD. The
+      fourth frame (<function>thread_func</function>) is the first
+      interesting line because it shows the thread entry point, that
+      is the function that has been passed as the third argument to
+      <function>pthread_create</function>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Next, the allocation context for the conflicting address is
+      displayed. For dynamically allocated data the allocation call
+      stack is shown. For static variables and stack variables the
+      allocation context is only shown when the option
+      <option>--read-var-info=yes</option> has been
+      specified. Otherwise DRD will print <computeroutput>Allocation
+      context: unknown</computeroutput>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      A conflicting access involves at least two memory accesses. For
+      one of these accesses an exact call stack is displayed, and for
+      the other accesses an approximate call stack is displayed,
+      namely the start and the end of the segments of the other
+      accesses. This information can be interpreted as follows:
+      <orderedlist>
+        <listitem>
+          <para>
+            Start at the bottom of both call stacks, and count the
+            number stack frames with identical function name, file
+            name and line number. In the above example the three
+            bottommost frames are identical
+            (<function>clone</function>,
+            <function>start_thread</function> and
+            <function>vg_thread_wrapper</function>).
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            The next higher stack frame in both call stacks now tells
+            you between in which source code region the other memory
+            access happened. The above output tells that the other
+            memory access involved in the data race happened between
+            source code lines 28 and 30 in file
+            <computeroutput>rwlock_race.c</computeroutput>.
+          </para>
+        </listitem>
+      </orderedlist>
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.lock-contention" xreflabel="Lock Contention">
+<title>Detected Errors: Lock Contention</title>
+
+<para>
+Threads must be able to make progress without being blocked for too long by
+other threads. Sometimes a thread has to wait until a mutex or reader-writer
+synchronization object is unlocked by another thread. This is called
+<emphasis>lock contention</emphasis>.
+</para>
+
+<para>
+Lock contention causes delays. Such delays should be as short as
+possible. The two command line options
+<literal>--exclusive-threshold=&lt;n&gt;</literal> and
+<literal>--shared-threshold=&lt;n&gt;</literal> make it possible to
+detect excessive lock contention by making DRD report any lock that
+has been held longer than the specified threshold. An example:
+</para>
+<programlisting><![CDATA[
+$ valgrind --tool=drd --exclusive-threshold=10 drd/tests/hold_lock -i 500
+...
+==10668== Acquired at:
+==10668==    at 0x4C267C8: pthread_mutex_lock (drd_pthread_intercepts.c:395)
+==10668==    by 0x400D92: main (hold_lock.c:51)
+==10668== Lock on mutex 0x7fefffd50 was held during 503 ms (threshold: 10 ms).
+==10668==    at 0x4C26ADA: pthread_mutex_unlock (drd_pthread_intercepts.c:441)
+==10668==    by 0x400DB5: main (hold_lock.c:55)
+...
+]]></programlisting>
+
+<para>
+The <literal>hold_lock</literal> test program holds a lock as long as
+specified by the <literal>-i</literal> (interval) argument. The DRD
+output reports that the lock acquired at line 51 in source file
+<literal>hold_lock.c</literal> and released at line 55 was held during
+503 ms, while a threshold of 10 ms was specified to DRD.
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.api-checks" xreflabel="API Checks">
+<title>Detected Errors: Misuse of the POSIX threads API</title>
+
+<para>
+  DRD is able to detect and report the following misuses of the POSIX
+  threads API:
+  <itemizedlist>
+    <listitem>
+      <para>
+        Passing the address of one type of synchronization object
+        (e.g. a mutex) to a POSIX API call that expects a pointer to
+        another type of synchronization object (e.g. a condition
+        variable).
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Attempts to unlock a mutex that has not been locked.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Attempts to unlock a mutex that was locked by another thread.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Attempts to lock a mutex of type
+        <literal>PTHREAD_MUTEX_NORMAL</literal> or a spinlock
+        recursively.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Destruction or deallocation of a locked mutex.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Sending a signal to a condition variable while no lock is held
+        on the mutex associated with the condition variable.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Calling <function>pthread_cond_wait</function> on a mutex
+        that is not locked, that is locked by another thread or that
+        has been locked recursively.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Associating two different mutexes with a condition variable
+        through <function>pthread_cond_wait</function>.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Destruction or deallocation of a condition variable that is
+        being waited upon.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Destruction or deallocation of a locked reader-writer synchronization
+        object.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Attempts to unlock a reader-writer synchronization object that was not
+        locked by the calling thread.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Attempts to recursively lock a reader-writer synchronization object
+        exclusively.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Attempts to pass the address of a user-defined reader-writer
+        synchronization object to a POSIX threads function.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Attempts to pass the address of a POSIX reader-writer synchronization
+        object to one of the annotations for user-defined reader-writer
+        synchronization objects.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Reinitialization of a mutex, condition variable, reader-writer
+        lock, semaphore or barrier.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Destruction or deallocation of a semaphore or barrier that is
+        being waited upon.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Missing synchronization between barrier wait and barrier destruction.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Exiting a thread without first unlocking the spinlocks, mutexes or
+        reader-writer synchronization objects that were locked by that thread.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        Passing an invalid thread ID to <function>pthread_join</function>
+        or <function>pthread_cancel</function>.
+      </para>
+    </listitem>
+  </itemizedlist>
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.clientreqs" xreflabel="Client requests">
+<title>Client Requests</title>
+
+<para>
+Just as for other Valgrind tools it is possible to let a client program
+interact with the DRD tool through client requests. In addition to the
+client requests several macros have been defined that allow to use the
+client requests in a convenient way.
+</para>
+
+<para>
+The interface between client programs and the DRD tool is defined in
+the header file <literal>&lt;valgrind/drd.h&gt;</literal>. The
+available macros and client requests are:
+<itemizedlist>
+  <listitem>
+    <para>
+      The macro <literal>DRD_GET_VALGRIND_THREADID</literal> and the
+      corresponding client
+      request <varname>VG_USERREQ__DRD_GET_VALGRIND_THREAD_ID</varname>.
+      Query the thread ID that has been assigned by the Valgrind core to the
+      thread executing this client request. Valgrind's thread ID's start at
+      one and are recycled in case a thread stops.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>DRD_GET_DRD_THREADID</literal> and the corresponding
+      client request <varname>VG_USERREQ__DRD_GET_DRD_THREAD_ID</varname>.
+      Query the thread ID that has been assigned by DRD to the thread
+      executing this client request. These are the thread ID's reported by DRD
+      in data race reports and in trace messages. DRD's thread ID's start at
+      one and are never recycled.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macros <literal>DRD_IGNORE_VAR(x)</literal>,
+      <literal>ANNOTATE_TRACE_MEMORY(&amp;x)</literal> and the corresponding
+      client request <varname>VG_USERREQ__DRD_START_SUPPRESSION</varname>. Some
+      applications contain intentional races. There exist e.g. applications
+      where the same value is assigned to a shared variable from two different
+      threads. It may be more convenient to suppress such races than to solve
+      these. This client request allows to suppress such races.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>DRD_STOP_IGNORING_VAR(x)</literal> and the
+      corresponding client request
+      <varname>VG_USERREQ__DRD_FINISH_SUPPRESSION</varname>. Tell DRD
+      to no longer ignore data races for the address range that was suppressed
+      either via the macro <literal>DRD_IGNORE_VAR(x)</literal> or via the
+      client request <varname>VG_USERREQ__DRD_START_SUPPRESSION</varname>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>DRD_TRACE_VAR(x)</literal>. Trace all load and store
+      activity for the address range starting at <literal>&amp;x</literal> and
+      occupying <literal>sizeof(x)</literal> bytes. When DRD reports a data
+      race on a specified variable, and it's not immediately clear which
+      source code statements triggered the conflicting accesses, it can be
+      very helpful to trace all activity on the offending memory location.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>DRD_STOP_TRACING_VAR(x)</literal>. Stop tracing load
+      and store activity for the address range starting
+      at <literal>&amp;x</literal> and occupying <literal>sizeof(x)</literal>
+      bytes.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_TRACE_MEMORY(&amp;x)</literal>. Trace all
+      load and store activity that touches at least the single byte at the
+      address <literal>&amp;x</literal>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The client request <varname>VG_USERREQ__DRD_START_TRACE_ADDR</varname>,
+      which allows to trace all load and store activity for the specified
+      address range.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The client
+      request <varname>VG_USERREQ__DRD_STOP_TRACE_ADDR</varname>. Do no longer
+      trace load and store activity for the specified address range.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_HAPPENS_BEFORE(addr)</literal> tells DRD to
+      insert a mark. Insert this macro just after an access to the variable at
+      the specified address has been performed.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_HAPPENS_AFTER(addr)</literal> tells DRD that
+      the next access to the variable at the specified address should be
+      considered to have happened after the access just before the latest
+      <literal>ANNOTATE_HAPPENS_BEFORE(addr)</literal> annotation that
+      references the same variable. The purpose of these two macros is to tell
+      DRD about the order of inter-thread memory accesses implemented via
+      atomic memory operations. See
+      also <literal>drd/tests/annotate_smart_pointer.cpp</literal> for an
+      example.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_RWLOCK_CREATE(rwlock)</literal> tells DRD
+      that the object at address <literal>rwlock</literal> is a
+      reader-writer synchronization object that is not a
+      <literal>pthread_rwlock_t</literal> synchronization object.  See
+      also <literal>drd/tests/annotate_rwlock.c</literal> for an example.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_RWLOCK_DESTROY(rwlock)</literal> tells DRD
+      that the reader-writer synchronization object at
+      address <literal>rwlock</literal> has been destroyed.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_WRITERLOCK_ACQUIRED(rwlock)</literal> tells
+      DRD that a writer lock has been acquired on the reader-writer
+      synchronization object at address <literal>rwlock</literal>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_READERLOCK_ACQUIRED(rwlock)</literal> tells
+      DRD that a reader lock has been acquired on the reader-writer
+      synchronization object at address <literal>rwlock</literal>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_RWLOCK_ACQUIRED(rwlock, is_w)</literal>
+      tells DRD that a writer lock (when <literal>is_w != 0</literal>) or that
+      a reader lock (when <literal>is_w == 0</literal>) has been acquired on
+      the reader-writer synchronization object at
+      address <literal>rwlock</literal>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_WRITERLOCK_RELEASED(rwlock)</literal> tells
+      DRD that a writer lock has been released on the reader-writer
+      synchronization object at address <literal>rwlock</literal>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_READERLOCK_RELEASED(rwlock)</literal> tells
+      DRD that a reader lock has been released on the reader-writer
+      synchronization object at address <literal>rwlock</literal>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_RWLOCK_RELEASED(rwlock, is_w)</literal>
+      tells DRD that a writer lock (when <literal>is_w != 0</literal>) or that
+      a reader lock (when <literal>is_w == 0</literal>) has been released on
+      the reader-writer synchronization object at
+      address <literal>rwlock</literal>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_BARRIER_INIT(barrier, count,
+      reinitialization_allowed)</literal> tells DRD that a new barrier object
+      at the address <literal>barrier</literal> has been initialized,
+      that <literal>count</literal> threads participate in each barrier and
+      also whether or not barrier reinitialization without intervening
+      destruction should be reported as an error. See
+      also <literal>drd/tests/annotate_barrier.c</literal> for an example.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_BARRIER_DESTROY(barrier)</literal>
+      tells DRD that a barrier object is about to be destroyed.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_BARRIER_WAIT_BEFORE(barrier)</literal>
+      tells DRD that waiting for a barrier will start.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_BARRIER_WAIT_AFTER(barrier)</literal>
+      tells DRD that waiting for a barrier has finished.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_BENIGN_RACE_SIZED(addr, size,
+      descr)</literal> tells DRD that any races detected on the specified
+      address are benign and hence should not be
+      reported. The <literal>descr</literal> argument is ignored but can be
+      used to document why data races on <literal>addr</literal> are benign.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_BENIGN_RACE_STATIC(var, descr)</literal>
+      tells DRD that any races detected on the specified static variable are
+      benign and hence should not be reported. The <literal>descr</literal>
+      argument is ignored but can be used to document why data races
+      on <literal>var</literal> are benign. Note: this macro can only be
+      used in C++ programs and not in C programs.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_IGNORE_READS_BEGIN</literal> tells
+      DRD to ignore all memory loads performed by the current thread.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_IGNORE_READS_END</literal> tells
+      DRD to stop ignoring the memory loads performed by the current thread.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_IGNORE_WRITES_BEGIN</literal> tells
+      DRD to ignore all memory stores performed by the current thread.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_IGNORE_WRITES_END</literal> tells
+      DRD to stop ignoring the memory stores performed by the current thread.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_IGNORE_READS_AND_WRITES_BEGIN</literal> tells
+      DRD to ignore all memory accesses performed by the current thread.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_IGNORE_READS_AND_WRITES_END</literal> tells
+      DRD to stop ignoring the memory accesses performed by the current thread.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_NEW_MEMORY(addr, size)</literal> tells
+      DRD that the specified memory range has been allocated by a custom
+      memory allocator in the client program and that the client program
+      will start using this memory range.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macro <literal>ANNOTATE_THREAD_NAME(name)</literal> tells DRD to
+      associate the specified name with the current thread and to include this
+      name in the error messages printed by DRD.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      The macros <literal>VALGRIND_MALLOCLIKE_BLOCK</literal> and
+      <literal>VALGRIND_FREELIKE_BLOCK</literal> from the Valgrind core are
+      implemented;  they are described in 
+      <xref linkend="manual-core-adv.clientreq"/>.
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+<para>
+Note: if you compiled Valgrind yourself, the header file
+<literal>&lt;valgrind/drd.h&gt;</literal> will have been installed in
+the directory <literal>/usr/include</literal> by the command
+<literal>make install</literal>. If you obtained Valgrind by
+installing it as a package however, you will probably have to install
+another package with a name like <literal>valgrind-devel</literal>
+before Valgrind's header files are available.
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.C++11" xreflabel="C++11">
+<title>Debugging C++11 Programs</title>
+
+<para>If you want to use the C++11 class std::thread you will need to do the
+  following to annotate the std::shared_ptr&lt;&gt; objects used in the
+  implementation of that class:
+<itemizedlist>
+  <listitem>
+    <para>Add the following code at the start of a common header or at the
+    start of each source file, before any C++ header files are included:</para>
+    <programlisting>
+#include &lt;valgrind/drd.h&gt;
+#define _GLIBCXX_SYNCHRONIZATION_HAPPENS_BEFORE(addr) ANNOTATE_HAPPENS_BEFORE(addr)
+#define _GLIBCXX_SYNCHRONIZATION_HAPPENS_AFTER(addr)  ANNOTATE_HAPPENS_AFTER(addr)
+</programlisting>
+  </listitem>
+  <listitem>
+    <para>Download the gcc source code and from source file
+    libstdc++-v3/src/c++11/thread.cc copy the implementation of the
+    <computeroutput>execute_native_thread_routine()</computeroutput>
+    and <computeroutput>std::thread::_M_start_thread()</computeroutput>
+    functions into a source file that is linked with your application. Make
+    sure that also in this source file the
+    _GLIBCXX_SYNCHRONIZATION_HAPPENS_*() macros are defined properly.</para>
+  </listitem>
+</itemizedlist>
+</para>
+<para>For more information, see also <emphasis>The
+GNU C++ Library Manual, Debugging Support</emphasis>
+(<ulink url="http://gcc.gnu.org/onlinedocs/libstdc++/manual/debug.html">http://gcc.gnu.org/onlinedocs/libstdc++/manual/debug.html</ulink>).</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.gnome" xreflabel="GNOME">
+<title>Debugging GNOME Programs</title>
+
+<para>
+GNOME applications use the threading primitives provided by the
+<computeroutput>glib</computeroutput> and
+<computeroutput>gthread</computeroutput> libraries. These libraries
+are built on top of POSIX threads, and hence are directly supported by
+DRD. Please keep in mind that you have to call
+<function>g_thread_init</function> before creating any threads, or
+DRD will report several data races on glib functions. See also the
+<ulink
+url="http://library.gnome.org/devel/glib/stable/glib-Threads.html">GLib
+Reference Manual</ulink> for more information about
+<function>g_thread_init</function>.
+</para>
+
+<para>
+One of the many facilities provided by the <literal>glib</literal>
+library is a block allocator, called <literal>g_slice</literal>. You
+have to disable this block allocator when using DRD by adding the
+following to the shell environment variables:
+<literal>G_SLICE=always-malloc</literal>. See also the <ulink
+url="http://library.gnome.org/devel/glib/stable/glib-Memory-Slices.html">GLib
+Reference Manual</ulink> for more information.
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.boost.thread" xreflabel="Boost.Thread">
+<title>Debugging Boost.Thread Programs</title>
+
+<para>
+The Boost.Thread library is the threading library included with the
+cross-platform Boost Libraries. This threading library is an early
+implementation of the upcoming C++0x threading library.
+</para>
+
+<para>
+Applications that use the Boost.Thread library should run fine under DRD.
+</para>
+
+<para>
+More information about Boost.Thread can be found here:
+<itemizedlist>
+  <listitem>
+    <para>
+      Anthony Williams, <ulink
+      url="http://www.boost.org/doc/libs/1_37_0/doc/html/thread.html">Boost.Thread</ulink>
+      Library Documentation, Boost website, 2007.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Anthony Williams, <ulink
+      url="http://www.ddj.com/cpp/211600441">What's New in Boost
+      Threads?</ulink>, Recent changes to the Boost Thread library,
+      Dr. Dobbs Magazine, October 2008.
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.openmp" xreflabel="OpenMP">
+<title>Debugging OpenMP Programs</title>
+
+<para>
+OpenMP stands for <emphasis>Open Multi-Processing</emphasis>. The OpenMP
+standard consists of a set of compiler directives for C, C++ and Fortran
+programs that allows a compiler to transform a sequential program into a
+parallel program. OpenMP is well suited for HPC applications and allows to
+work at a higher level compared to direct use of the POSIX threads API. While
+OpenMP ensures that the POSIX API is used correctly, OpenMP programs can still
+contain data races. So it definitely makes sense to verify OpenMP programs
+with a thread checking tool.
+</para>
+
+<para>
+DRD supports OpenMP shared-memory programs generated by GCC. GCC
+supports OpenMP since version 4.2.0.  GCC's runtime support
+for OpenMP programs is provided by a library called
+<literal>libgomp</literal>. The synchronization primitives implemented
+in this library use Linux' futex system call directly, unless the
+library has been configured with the
+<literal>--disable-linux-futex</literal> option. DRD only supports
+libgomp libraries that have been configured with this option and in
+which symbol information is present. For most Linux distributions this
+means that you will have to recompile GCC. See also the script
+<literal>drd/scripts/download-and-build-gcc</literal> in the
+Valgrind source tree for an example of how to compile GCC. You will
+also have to make sure that the newly compiled
+<literal>libgomp.so</literal> library is loaded when OpenMP programs
+are started. This is possible by adding a line similar to the
+following to your shell startup script:
+</para>
+<programlisting><![CDATA[
+export LD_LIBRARY_PATH=~/gcc-4.4.0/lib64:~/gcc-4.4.0/lib:
+]]></programlisting>
+
+<para>
+As an example, the test OpenMP test program
+<literal>drd/tests/omp_matinv</literal> triggers a data race
+when the option -r has been specified on the command line. The data
+race is triggered by the following code:
+</para>
+<programlisting><![CDATA[
+#pragma omp parallel for private(j)
+for (j = 0; j < rows; j++)
+{
+  if (i != j)
+  {
+    const elem_t factor = a[j * cols + i];
+    for (k = 0; k < cols; k++)
+    {
+      a[j * cols + k] -= a[i * cols + k] * factor;
+    }
+  }
+}
+]]></programlisting>
+
+<para>
+The above code is racy because the variable <literal>k</literal> has
+not been declared private. DRD will print the following error message
+for the above code:
+</para>
+<programlisting><![CDATA[
+$ valgrind --tool=drd --check-stack-var=yes --read-var-info=yes drd/tests/omp_matinv 3 -t 2 -r
+...
+Conflicting store by thread 1/1 at 0x7fefffbc4 size 4
+   at 0x4014A0: gj.omp_fn.0 (omp_matinv.c:203)
+   by 0x401211: gj (omp_matinv.c:159)
+   by 0x40166A: invert_matrix (omp_matinv.c:238)
+   by 0x4019B4: main (omp_matinv.c:316)
+Location 0x7fefffbc4 is 0 bytes inside local var "k"
+declared at omp_matinv.c:160, in frame #0 of thread 1
+...
+]]></programlisting>
+<para>
+In the above output the function name <function>gj.omp_fn.0</function>
+has been generated by GCC from the function name
+<function>gj</function>. The allocation context information shows that the
+data race has been caused by modifying the variable <literal>k</literal>.
+</para>
+
+<para>
+Note: for GCC versions before 4.4.0, no allocation context information is
+shown. With these GCC versions the most usable information in the above output
+is the source file name and the line number where the data race has been
+detected (<literal>omp_matinv.c:203</literal>).
+</para>
+
+<para>
+For more information about OpenMP, see also 
+<ulink url="http://openmp.org/">openmp.org</ulink>.
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.cust-mem-alloc" xreflabel="Custom Memory Allocators">
+<title>DRD and Custom Memory Allocators</title>
+
+<para>
+DRD tracks all memory allocation events that happen via the
+standard memory allocation and deallocation functions
+(<function>malloc</function>, <function>free</function>,
+<function>new</function> and <function>delete</function>), via entry
+and exit of stack frames or that have been annotated with Valgrind's
+memory pool client requests. DRD uses memory allocation and deallocation
+information for two purposes:
+<itemizedlist>
+  <listitem>
+    <para>
+      To know where the scope ends of POSIX objects that have not been
+      destroyed explicitly. It is e.g. not required by the POSIX
+      threads standard to call
+      <function>pthread_mutex_destroy</function> before freeing the
+      memory in which a mutex object resides.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      To know where the scope of variables ends. If e.g. heap memory
+      has been used by one thread, that thread frees that memory, and
+      another thread allocates and starts using that memory, no data
+      races must be reported for that memory.
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+<para>
+It is essential for correct operation of DRD that the tool knows about
+memory allocation and deallocation events. When analyzing a client program
+with DRD that uses a custom memory allocator, either instrument the custom
+memory allocator with the <literal>VALGRIND_MALLOCLIKE_BLOCK</literal>
+and <literal>VALGRIND_FREELIKE_BLOCK</literal> macros or disable the
+custom memory allocator.
+</para>
+
+<para>
+As an example, the GNU libstdc++ library can be configured
+to use standard memory allocation functions instead of memory pools by
+setting the environment variable
+<literal>GLIBCXX_FORCE_NEW</literal>. For more information, see also
+the <ulink
+url="http://gcc.gnu.org/onlinedocs/libstdc++/manual/bk01pt04ch11.html">libstdc++
+manual</ulink>.
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.drd-versus-memcheck" xreflabel="DRD Versus Memcheck">
+<title>DRD Versus Memcheck</title>
+
+<para>
+It is essential for correct operation of DRD that there are no memory
+errors such as dangling pointers in the client program. Which means that
+it is a good idea to make sure that your program is Memcheck-clean
+before you analyze it with DRD. It is possible however that some of
+the Memcheck reports are caused by data races. In this case it makes
+sense to run DRD before Memcheck.
+</para>
+
+<para>
+So which tool should be run first? In case both DRD and Memcheck
+complain about a program, a possible approach is to run both tools
+alternatingly and to fix as many errors as possible after each run of
+each tool until none of the two tools prints any more error messages.
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.resource-requirements" xreflabel="Resource Requirements">
+<title>Resource Requirements</title>
+
+<para>
+The requirements of DRD with regard to heap and stack memory and the
+effect on the execution time of client programs are as follows:
+<itemizedlist>
+  <listitem>
+    <para>
+      When running a program under DRD with default DRD options,
+      between 1.1 and 3.6 times more memory will be needed compared to
+      a native run of the client program. More memory will be needed
+      if loading debug information has been enabled
+      (<literal>--read-var-info=yes</literal>).
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      DRD allocates some of its temporary data structures on the stack
+      of the client program threads. This amount of data is limited to
+      1 - 2 KB. Make sure that thread stacks are sufficiently large.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Most applications will run between 20 and 50 times slower under
+      DRD than a native single-threaded run. The slowdown will be most
+      noticeable for applications which perform frequent mutex lock /
+      unlock operations.
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+</sect2>
+
+
+<sect2 id="drd-manual.effective-use" xreflabel="Effective Use">
+<title>Hints and Tips for Effective Use of DRD</title>
+
+<para>
+The following information may be helpful when using DRD:
+<itemizedlist>
+  <listitem>
+    <para>
+      Make sure that debug information is present in the executable
+      being analyzed, such that DRD can print function name and line
+      number information in stack traces. Most compilers can be told
+      to include debug information via compiler option
+      <option>-g</option>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Compile with option <option>-O1</option> instead of
+      <option>-O0</option>. This will reduce the amount of generated
+      code, may reduce the amount of debug info and will speed up
+      DRD's processing of the client program. For more information,
+      see also <xref linkend="manual-core.started"/>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      If DRD reports any errors on libraries that are part of your
+      Linux distribution like e.g. <literal>libc.so</literal> or
+      <literal>libstdc++.so</literal>, installing the debug packages
+      for these libraries will make the output of DRD a lot more
+      detailed.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      When using C++, do not send output from more than one thread to
+      <literal>std::cout</literal>. Doing so would not only
+      generate multiple data race reports, it could also result in
+      output from several threads getting mixed up.  Either use
+      <function>printf</function> or do the following:
+      <orderedlist>
+        <listitem>
+          <para>Derive a class from <literal>std::ostreambuf</literal>
+          and let that class send output line by line to
+          <literal>stdout</literal>. This will avoid that individual
+          lines of text produced by different threads get mixed
+          up.</para>
+        </listitem>
+        <listitem>
+          <para>Create one instance of <literal>std::ostream</literal>
+          for each thread. This makes stream formatting settings
+          thread-local. Pass a per-thread instance of the class
+          derived from <literal>std::ostreambuf</literal> to the
+          constructor of each instance. </para>
+        </listitem>
+        <listitem>
+          <para>Let each thread send its output to its own instance of
+          <literal>std::ostream</literal> instead of
+          <literal>std::cout</literal>.</para>
+        </listitem>
+      </orderedlist>
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+</sect2>
+
+
+</sect1>
+
+
+<sect1 id="drd-manual.Pthreads" xreflabel="Pthreads">
+<title>Using the POSIX Threads API Effectively</title>
+
+<sect2 id="drd-manual.mutex-types" xreflabel="mutex-types">
+<title>Mutex types</title>
+
+<para>
+The Single UNIX Specification version two defines the following four
+mutex types (see also the documentation of <ulink
+url="http://www.opengroup.org/onlinepubs/007908799/xsh/pthread_mutexattr_settype.html"><function>pthread_mutexattr_settype</function></ulink>):
+<itemizedlist>
+  <listitem>
+    <para>
+      <emphasis>normal</emphasis>, which means that no error checking
+      is performed, and that the mutex is non-recursive.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      <emphasis>error checking</emphasis>, which means that the mutex
+      is non-recursive and that error checking is performed.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      <emphasis>recursive</emphasis>, which means that a mutex may be
+      locked recursively.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      <emphasis>default</emphasis>, which means that error checking
+      behavior is undefined, and that the behavior for recursive
+      locking is also undefined. Or: portable code must neither
+      trigger error conditions through the Pthreads API nor attempt to
+      lock a mutex of default type recursively.
+    </para>
+  </listitem>
+</itemizedlist>
+</para>
+
+<para>
+In complex applications it is not always clear from beforehand which
+mutex will be locked recursively and which mutex will not be locked
+recursively. Attempts lock a non-recursive mutex recursively will
+result in race conditions that are very hard to find without a thread
+checking tool. So either use the error checking mutex type and
+consistently check the return value of Pthread API mutex calls, or use
+the recursive mutex type.
+</para>
+
+</sect2>
+
+<sect2 id="drd-manual.condvar" xreflabel="condition-variables">
+<title>Condition variables</title>
+
+<para>
+A condition variable allows one thread to wake up one or more other
+threads. Condition variables are often used to notify one or more
+threads about state changes of shared data. Unfortunately it is very
+easy to introduce race conditions by using condition variables as the
+only means of state information propagation. A better approach is to
+let threads poll for changes of a state variable that is protected by
+a mutex, and to use condition variables only as a thread wakeup
+mechanism. See also the source file
+<computeroutput>drd/tests/monitor_example.cpp</computeroutput> for an
+example of how to implement this concept in C++. The monitor concept
+used in this example is a well known and very useful concept -- see
+also Wikipedia for more information about the <ulink
+url="http://en.wikipedia.org/wiki/Monitor_(synchronization)">monitor</ulink>
+concept.
+</para>
+
+</sect2>
+
+<sect2 id="drd-manual.pctw" xreflabel="pthread_cond_timedwait">
+<title>pthread_cond_timedwait and timeouts</title>
+
+<para>
+Historically the function
+<function>pthread_cond_timedwait</function> only allowed the
+specification of an absolute timeout, that is a timeout independent of
+the time when this function was called. However, almost every call to
+this function expresses a relative timeout. This typically happens by
+passing the sum of
+<computeroutput>clock_gettime(CLOCK_REALTIME)</computeroutput> and a
+relative timeout as the third argument. This approach is incorrect
+since forward or backward clock adjustments by e.g. ntpd will affect
+the timeout. A more reliable approach is as follows:
+<itemizedlist>
+  <listitem>
+    <para>
+      When initializing a condition variable through
+      <function>pthread_cond_init</function>, specify that the timeout of
+      <function>pthread_cond_timedwait</function> will use the clock
+      <literal>CLOCK_MONOTONIC</literal> instead of
+      <literal>CLOCK_REALTIME</literal>. You can do this via
+      <computeroutput>pthread_condattr_setclock(...,
+      CLOCK_MONOTONIC)</computeroutput>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      When calling <function>pthread_cond_timedwait</function>, pass
+      the sum of
+      <computeroutput>clock_gettime(CLOCK_MONOTONIC)</computeroutput>
+      and a relative timeout as the third argument.
+    </para>
+  </listitem>
+</itemizedlist>
+See also
+<computeroutput>drd/tests/monitor_example.cpp</computeroutput> for an
+example.
+</para>
+
+</sect2>
+
+</sect1>
+
+
+<sect1 id="drd-manual.limitations" xreflabel="Limitations">
+<title>Limitations</title>
+
+<para>DRD currently has the following limitations:</para>
+
+<itemizedlist>
+  <listitem>
+    <para>
+      DRD, just like Memcheck, will refuse to start on Linux
+      distributions where all symbol information has been removed from
+      <filename>ld.so</filename>. This is e.g. the case for the PPC editions
+      of openSUSE and Gentoo. You will have to install the glibc debuginfo
+      package on these platforms before you can use DRD. See also openSUSE
+      bug <ulink url="http://bugzilla.novell.com/show_bug.cgi?id=396197">
+      396197</ulink> and Gentoo bug <ulink
+      url="http://bugs.gentoo.org/214065">214065</ulink>.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      With gcc 4.4.3 and before, DRD may report data races on the C++
+      class <literal>std::string</literal> in a multithreaded program. This is
+      a know <literal>libstdc++</literal> issue -- see also GCC bug
+      <ulink url="http://gcc.gnu.org/bugzilla/show_bug.cgi?id=40518">40518</ulink>
+      for more information.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      If you compile the DRD source code yourself, you need GCC 3.0 or
+      later. GCC 2.95 is not supported.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      Of the two POSIX threads implementations for Linux, only the
+      NPTL (Native POSIX Thread Library) is supported. The older
+      LinuxThreads library is not supported.
+    </para>
+  </listitem>
+</itemizedlist>
+
+</sect1>
+
+
+<sect1 id="drd-manual.feedback" xreflabel="Feedback">
+<title>Feedback</title>
+
+<para>
+If you have any comments, suggestions, feedback or bug reports about
+DRD, feel free to either post a message on the Valgrind users mailing
+list or to file a bug report. See also <ulink
+url="&vg-url;">&vg-url;</ulink> for more information.
+</para>
+
+</sect1>
+
+
+</chapter>

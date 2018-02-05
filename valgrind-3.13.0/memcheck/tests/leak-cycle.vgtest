@@ -1,0 +1,2 @@
+prog: leak-cycle
+vgopts: -q --leak-check=yes --leak-resolution=high

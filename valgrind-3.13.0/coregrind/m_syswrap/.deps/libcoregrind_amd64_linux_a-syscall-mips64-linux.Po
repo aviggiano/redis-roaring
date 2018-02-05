@@ -1,0 +1,9 @@
+m_syswrap/libcoregrind_amd64_linux_a-syscall-mips64-linux.o: \
+  m_syswrap/syscall-mips64-linux.S pub_core_basics_asm.h \
+  ../include/pub_tool_basics_asm.h ../config.h
+
+pub_core_basics_asm.h:
+
+../include/pub_tool_basics_asm.h:
+
+../config.h:

@@ -1,0 +1,318 @@
+#
+# Suppression patterns for ld, the dynamic loader.
+#
+
+# Suppress all data races triggered by ld.
+{
+   drd-ld
+   drd:ConflictingAccess
+   obj:*/lib*/ld-*.so
+}
+
+#
+# Suppression patterns for libc.
+#
+
+# Suppress all data races where the topmost frame is inside libc.so. Although
+# this could hide some real data races, unfortunately this is the only way to
+# not report any false positives on stdio functions. The glibc functions
+# manipulating FILE objects use locking primitives that cannot be intercepted
+# easily. See also the definitions of _IO_lock_lock() etc. in the file
+# nptl/sysdeps/pthread/bits/stdio-lock.h in the glibc source tree.
+{
+   drd-libc-stdio
+   drd:ConflictingAccess
+   obj:*/lib*/libc-*
+}
+{
+   drd-libc-thread-cancellation-test
+   drd:ConflictingAccess
+   fun:write
+}
+{
+   drd-libc-random
+   drd:ConflictingAccess
+   fun:random_r
+   fun:random
+}
+
+#
+# Suppression patterns for libstdc++, the implementation of the standard C++
+# library included with the gcc compiler.
+#
+# Note: several versions of the libstdc++ library (4.2.2, 4.3.2, 4.4.0, 4.5.0
+# and their predecessors) contain an implementation of the std::string class
+# that triggers conflicting memory accesses. See also
+# http://gcc.gnu.org/bugzilla/show_bug.cgi?id=40518
+#
+
+# {
+#    drd-libstdc++-std::string::string()
+#    drd:ConflictingAccess
+#    fun:_ZNSsC1ERKSs
+# }
+
+{
+   drd-libstdc++-cxa_guard_release
+   drd:CondErr
+   fun:pthread_cond_broadcast@*
+   fun:__cxa_guard_release
+}
+
+
+#
+# Suppression patterns for libpthread.
+#
+
+{
+   drd-libpthread-pthread_create
+   drd:ConflictingAccess
+   ...
+   fun:pthread_create*
+}
+{
+   drd-libpthread-pthread_join
+   drd:ConflictingAccess
+   fun:pthread_join
+   fun:pthread_join
+}
+{
+   drd-libpthread-__deallocate_stack
+   drd:ConflictingAccess
+   ...
+   fun:__deallocate_stack
+}
+{
+   drd-libpthread-__free_stacks
+   drd:ConflictingAccess
+   fun:__free_stacks
+}
+{
+   drd-libpthread-__free_tcb
+   drd:ConflictingAccess
+   ...
+   fun:__free_tcb
+}
+{
+   drd-libpthread-__nptl_deallocate_tsd
+   drd:ConflictingAccess
+   fun:__nptl_deallocate_tsd
+}
+{
+   drd-libpthread-pthread_detach
+   drd:ConflictingAccess
+   fun:pthread_detach
+   fun:pthread_detach
+}
+{
+   drd-libpthread-pthread_once
+   drd:ConflictingAccess
+   fun:pthread_once
+}
+{
+   drd-libpthread-pthread_cancel_init
+   drd:ConflictingAccess
+   fun:pthread_cancel_init
+}
+{
+   drd-libpthread-pthread_cancel
+   drd:ConflictingAccess
+   fun:pthread_cancel
+   fun:pthread_cancel_intercept
+}
+{
+   drd-libpthread-_Unwind_ForcedUnwind
+   drd:ConflictingAccess
+   ...
+   fun:_Unwind_ForcedUnwind
+}
+{
+   drd-libpthread-_Unwind_GetCFA
+   drd:ConflictingAccess
+   fun:_Unwind_GetCFA
+}
+{
+   drd-libpthread-_Unwind_Resume
+   drd:ConflictingAccess
+   ...
+   fun:_Unwind_Resume
+}
+{
+   drd-libpthread-?
+   drd:ConflictingAccess
+   obj:*/lib/libgcc_s.so.1
+}
+{
+   drd-libpthread-nanosleep
+   drd:ConflictingAccess
+   fun:nanosleep
+}
+
+#
+# Suppression patterns for libgomp.
+#
+
+# Unfortunately many statements in libgomp trigger conflicting accesses. It is
+# not clear to me which of these are safe and which ones not. See also
+# http://gcc.gnu.org/bugzilla/show_bug.cgi?id=40362
+{
+   drd-libgomp
+   drd:ConflictingAccess
+   obj:/usr/lib*/libgomp.so*
+}
+
+#
+# Suppression patterns for libX11.
+#
+
+{
+   drd-libX11-XCreateFontSet
+   drd:CondErr
+   fun:pthread_cond_init*
+   fun:_XReply
+   fun:XListFontsWithInfo
+   obj:/usr/lib*/libX11.so*
+   fun:XCreateOC
+   fun:XCreateFontSet
+}
+
+#
+# Suppression patterns for libxcb.
+#
+
+{
+   drd-libxcb-xcb_wait_for_reply
+   drd:CondErr
+   ...
+   fun:pthread_cond_destroy*
+   fun:xcb_wait_for_reply
+}
+
+#
+# Suppression patterns for libglib.
+#
+
+{
+   drd-libglib-access-g_threads_got_initialized
+   drd:ConflictingAccess
+   ...
+   fun:g_slice_alloc
+   fun:g_ptr_array_sized_new
+}
+{
+   drd-libglib-access-g_threads_got_initialized
+   drd:ConflictingAccess
+   ...
+   fun:_ZN27QEventDispatcherGlibPrivateC1EP13_GMainContext
+   fun:_ZN20QEventDispatcherGlibC1EP7QObject
+   obj:/usr/lib*/libQtCore.so.4.*
+   obj:/usr/lib*/libQtCore.so.4.*
+}
+{
+   drd-libglib-access-g_mem_initialized
+   drd:ConflictingAccess
+   fun:g_malloc0
+}
+{
+   drd-libglib-g_private_get_posix_impl
+   drd:ConflictingAccess
+   fun:g_private_get_posix_impl
+}
+{
+   drd-libglib-g_private_set_posix_impl
+   drd:ConflictingAccess
+   fun:g_private_set_posix_impl
+}
+{
+   drd-libglib-g_get_language_names
+   drd:ConflictingAccess
+   fun:g_slice_free_chain_with_offset
+}
+{
+   drd-libglib-g_main_context_new
+   drd:ConflictingAccess
+   fun:fcntl
+   obj:/usr/lib*/libglib-*.so*
+   fun:g_main_context_new
+}
+
+#
+# Suppression patterns for libQtCore.
+#
+
+{
+   drd-libQtCore-deref-that-calls-QThreadData-destructor
+   drd:ConflictingAccess
+   fun:_ZN11QThreadDataD1Ev
+   obj:/usr/lib*/libQtCore.so.4.*
+}
+{
+   drd-libQtCore-4.0/4.1-Q_GLOBAL_STATIC-connectionList
+   drd:ConflictingAccess
+   obj:/usr/lib*/libQtCore.so.4.*
+   fun:_ZN11QMetaObject8activateEP7QObjectiiPPv
+   fun:_ZN11QMetaObject8activateEP7QObjectPKS_iPPv
+}
+{
+   drd-libQtCore-QObjectPrivate::clearGuards(QObject*)
+   drd:ConflictingAccess
+   fun:_ZN14QReadWriteLock12lockForWriteEv
+   fun:_ZN14QObjectPrivate11clearGuardsEP7QObject
+   fun:_ZN7QObjectD2Ev
+}
+{
+   drd-libQtCore-QObjectPrivate::clearGuards(QObject*)
+   drd:ConflictingAccess
+   fun:_ZN14QReadWriteLock12lockForWriteEv
+   fun:_ZN12QWriteLocker6relockEv
+   fun:_ZN12QWriteLockerC1EP14QReadWriteLock
+   fun:_ZN14QObjectPrivate11clearGuardsEP7QObject
+   fun:_ZN7QObjectD2Ev
+   fun:_ZN24QAbstractEventDispatcherD2Ev
+   fun:_ZN20QEventDispatcherGlibD0Ev
+}
+{
+   drd-libQtCore-QMutexPool::get(void const*)
+   drd:ConflictingAccess
+   fun:_ZN10QMutexPool3getEPKv
+}
+{
+   drd-libQtCore-qt_gettime_is_monotonic()
+   drd:ConflictingAccess
+   fun:_Z23qt_gettime_is_monotonicv
+}
+
+#
+# Suppression patterns for libboost.
+#
+
+# Suppress the races on boost::once_flag::epoch and on
+# boost::detail::this_thread_epoch. See also the source file
+# boost/thread/pthread/once.hpp in the Boost source tree
+# (https://svn.boost.org/trac/boost/browser/trunk/boost/thread/pthread/once.hpp).
+{
+   drd-libboost-boost::call_once<void (*)()>(boost::once_flag&, void (*)())
+   drd:ConflictingAccess
+   ...
+   fun:_ZN5boost9call_onceIPFvvEEEvRNS_9once_flagET_
+}
+{
+   drd-libboost-boost::detail::get_once_per_thread_epoch()
+   drd:ConflictingAccess
+   fun:_ZN5boost6detail25get_once_per_thread_epochEv
+}
+# Suppress the race reports on boost::detail::current_thread_tls_key. See also
+# https://svn.boost.org/trac/boost/ticket/3526 for more information about why
+# the access pattern of current_thread_tls_key is safe.
+{
+   drd-libboost-boost::detail::get_current_thread_data()
+   drd:ConflictingAccess
+   ...
+   fun:_ZN5boost6detail23get_current_thread_dataEv
+}
+{
+   drd-libboost-boost::detail::set_current_thread_data(boost::detail::thread_data_base*)
+   drd:ConflictingAccess
+   ...
+   fun:_ZN5boost6detail23set_current_thread_dataEPNS0_16thread_data_baseE
+}

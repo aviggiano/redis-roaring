@@ -1,0 +1,103 @@
+
+All heap blocks were freed -- no leaks are possible
+
+expecting no leaks
+LEAK SUMMARY:
+   definitely lost: 0 bytes in 0 blocks
+   indirectly lost: 0 bytes in 0 blocks
+     possibly lost: 0 bytes in 0 blocks
+   still reachable: 201,000 bytes in 2 blocks
+        suppressed: 0 bytes in 0 blocks
+Reachable blocks (those to which a pointer was found) are not shown.
+To see them, rerun with: --leak-check=full --show-leak-kinds=all
+
+expecting a leak
+1,000 bytes in 1 blocks are definitely lost in loss record ... of ...
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f (leak-segv-jmp.c:271)
+   by 0x........: main (leak-segv-jmp.c:346)
+
+LEAK SUMMARY:
+   definitely lost: 1,000 bytes in 1 blocks
+   indirectly lost: 0 bytes in 0 blocks
+     possibly lost: 0 bytes in 0 blocks
+   still reachable: 200,000 bytes in 1 blocks
+        suppressed: 0 bytes in 0 blocks
+Reachable blocks (those to which a pointer was found) are not shown.
+To see them, rerun with: --leak-check=full --show-leak-kinds=all
+
+mprotect result 0
+expecting a leak again
+1,000 bytes in 1 blocks are definitely lost in loss record ... of ...
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f (leak-segv-jmp.c:271)
+   by 0x........: main (leak-segv-jmp.c:346)
+
+LEAK SUMMARY:
+   definitely lost: 1,000 bytes in 1 blocks
+   indirectly lost: 0 bytes in 0 blocks
+     possibly lost: 0 bytes in 0 blocks
+   still reachable: 200,000 bytes in 1 blocks
+        suppressed: 0 bytes in 0 blocks
+Reachable blocks (those to which a pointer was found) are not shown.
+To see them, rerun with: --leak-check=full --show-leak-kinds=all
+
+full mprotect result 0
+expecting a leak again after full mprotect
+1,000 bytes in 1 blocks are definitely lost in loss record ... of ...
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f (leak-segv-jmp.c:271)
+   by 0x........: main (leak-segv-jmp.c:346)
+
+LEAK SUMMARY:
+   definitely lost: 1,000 bytes in 1 blocks
+   indirectly lost: 0 bytes in 0 blocks
+     possibly lost: 0 bytes in 0 blocks
+   still reachable: 200,000 bytes in 1 blocks
+        suppressed: 0 bytes in 0 blocks
+Reachable blocks (those to which a pointer was found) are not shown.
+To see them, rerun with: --leak-check=full --show-leak-kinds=all
+
+mprotect result 0
+expecting heuristic not to crash after full mprotect
+1,000 bytes in 1 blocks are definitely lost in loss record ... of ...
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f (leak-segv-jmp.c:271)
+   by 0x........: main (leak-segv-jmp.c:346)
+
+200,000 bytes in 1 blocks are possibly lost in loss record ... of ...
+   at 0x........: calloc (vg_replace_malloc.c:...)
+   by 0x........: f (leak-segv-jmp.c:318)
+   by 0x........: main (leak-segv-jmp.c:346)
+
+LEAK SUMMARY:
+   definitely lost: 1,000 bytes in 1 blocks
+   indirectly lost: 0 bytes in 0 blocks
+     possibly lost: 200,000 bytes in 1 blocks
+   still reachable: 200,000 bytes in 1 blocks
+        suppressed: 0 bytes in 0 blocks
+Reachable blocks (those to which a pointer was found) are not shown.
+To see them, rerun with: --leak-check=full --show-leak-kinds=all
+
+finished
+LEAK SUMMARY:
+   definitely lost: 1,000 bytes in 1 blocks
+   indirectly lost: 0 bytes in 0 blocks
+     possibly lost: 200,000 bytes in 1 blocks
+   still reachable: 200,000 bytes in 1 blocks
+        suppressed: 0 bytes in 0 blocks
+Rerun with --leak-check=full to see details of leaked memory
+
+leaked:     1000 bytes in  1 blocks
+dubious:    200000 bytes in  1 blocks
+reachable:  200000 bytes in  1 blocks
+suppressed:   0 bytes in  0 blocks
+
+HEAP SUMMARY:
+    in use at exit: 401,000 bytes in 3 blocks
+  total heap usage: 3 allocs, 0 frees, 401,000 bytes allocated
+
+For a detailed leak analysis, rerun with: --leak-check=full
+
+For counts of detected and suppressed errors, rerun with: -v
+ERROR SUMMARY: 5 errors from 5 contexts (suppressed: 0 from 0)

@@ -1,0 +1,42 @@
+#!/bin/sh
+
+# Shell script with one argument (path of an OpenMP executable) that exits
+# with status 0 if the OpenMP test program should be run and that exits with
+# status 1 if the OpenMP test program should not be run.
+
+test -e "$1" || exit $?
+
+./supported_libpthread || exit $?
+
+# Do not accept any statically linked executable.
+if /usr/bin/file "$1" | grep -q 'statically linked'; then
+  exit 1
+fi
+
+if [ "$(uname)" = Linux ]; then
+
+  # Let the dynamic linker/loader print the path of libgomp. See also man ld.so
+  libgomp_path="$(LD_TRACE_LOADED_OBJECTS=1 "$1" \
+    | while read soname arrow path offset; \
+   do if [ "${soname#libgomp.so}" != "${soname}" ]; then echo $path; fi; done)"
+
+  # Inspect the output of nm. If nm does not find any symbol information,
+  # echo 1. If the symbol gomp_barrier_init is found, echo 0. Otherwise echo
+  # nothing. The second case occurs if gcc has been compiled with 
+  # --disable-linux-futex, and the last case occurs if gcc has been compiled
+  # with --enable-linux-futex.
+  rc="$(nm "${libgomp_path}" 2>&1 \
+        |
+        while read line
+        do
+          if [ "${line%: no symbols}" != "${line}" ]; then
+            echo 1
+            break
+          elif [ "${line% gomp_barrier_init}" != "${line}" ]; then
+            echo 0
+            break
+          fi
+        done)"
+  exit ${rc:-1}
+
+fi

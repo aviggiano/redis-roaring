@@ -1,0 +1,31 @@
+#! /bin/sh
+
+# This filters out all the lines that don't have "Massif:" in them.  For
+# testing the -v option.
+
+dir=`dirname $0`
+
+$dir/filter_stderr | 
+
+# Remove any --pid:0: strings (debuglog level zero output)
+sed "/^--[0-9]\{1,7\}:0:*/d" |
+
+# Only print lines that contain "Massif:".  The -n means don't print any
+# lines by default, and the 'p' means do print those that match the pattern.
+sed -n "/Massif:/p" |
+
+# These ignored heap counts could vary from machine to machine.
+sed "s/\(Massif: ignored heap allocs:\).*/\1   .../" |
+sed "s/\(Massif: ignored heap frees:\).*/\1    .../" |
+sed "s/\(Massif: ignored heap reallocs:\).*/\1 .../" |
+
+# These XPt counts vary from machine to machine, because the size of the
+# stack trace can vary -- eg. some machines have more stack frames below
+# zero than other machines.  So filter them out.
+sed "s/\(Massif: XPts:\).*/\1                 .../" |
+sed "s/\(Massif: top-XPts:\).*/\1             .../" |
+sed "s/\(Massif: XPt init expansions:\).*/\1  .../" |
+sed "s/\(Massif: XPt later expansions:\).*/\1 .../" |
+sed "s/\(Massif: SXPt allocs:\).*/\1          .../" |
+sed "s/\(Massif: SXPt frees:\).*/\1           .../" |
+sed "s/\(Massif: XCon redos:\).*/\1           .../"

@@ -1,0 +1,15 @@
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: main (xor-undef-amd64.c:17)
+
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: main (xor-undef-amd64.c:38)
+
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: main (xor-undef-amd64.c:65)
+
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: main (xor-undef-amd64.c:92)
+
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: main (xor-undef-amd64.c:117)
+

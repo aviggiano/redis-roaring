@@ -1,0 +1,249 @@
+
+This file records register use conventions and info for the 4
+supported platforms (since it is ABI dependent).  This is so as to
+avoid having to endlessly re-look up this info in ABI documents.
+
+                      -----------------------
+
+x86-linux
+~~~~~~~~~
+
+Reg        Callee      Arg
+Name       Saves?      Reg?     Comment              Vex-uses?
+--------------------------------------------------------------
+eax        n           n        int[31:0] retreg     y
+ebx        y           n                             y
+ecx        n           n                             y
+edx        n           n        int[63:32] retreg    y
+esi        y           n                             y
+edi        y           n                             y
+ebp        y           n                             & guest state
+esp        reserved    n/a                           n/a
+eflags     n           n/a                           y
+st0        n ?         n        fp retreg            y
+st1-7      n ?         n                             y
+xmm0-7     n ?         n                             y
+gs                              Thread ptr
+
+In the case where arguments are passed in registers, the arg1,2,3
+registers are EAX, EDX, and ECX respectively.
+
+amd64-linux
+~~~~~~~~~~~
+
+Reg        Callee      Arg
+Name       Saves?      Reg?     Comment              Vex-uses?
+-------------------------------------------------------------------
+rax        n           n        int[63:0] retreg
+rbx        y           n                             y
+rcx        n           int#4
+rdx        n           int#3    int[127:64] retreg
+rsi        n           int#2                         y
+rdi        n           int#1                         y
+rbp        y           n                             & guest state
+rsp        reserved    n/a                           n/a
+r8         n           int#5                         y
+r9         n           int#6                         y
+r10        n ?
+r11        n                                         jmp temporary
+r12-15     y                                         y
+eflags     n           n/a                           y
+st0-7      n           n        long double retreg   y
+xmm0       n           fp#1     fp retreg
+xmm1       n           fp#2     fp-high retreg
+xmm2-7     n           fp#3-8                        y (3-7)
+xmm8-15    n                                         y (8-12)
+fs                              thread ptr
+
+ppc32-linux
+~~~~~~~~~~~
+
+Reg        Callee      Arg
+Name       Saves?      Reg?     Comment              Vex-uses?
+-------------------------------------------------------------------
+r0         n           n        sometimes RAZ
+r1         y           n        stack pointer
+r2         n           n        thread ptr
+r3         n           int#1    int[31:0] retreg     y
+r4         n           int#2    also int retreg      y
+r5         n           int#3                         y
+r6         n           int#4                         y
+r7         n           int#5                         y
+r8         n           int#6                         y
+r9         n           int#7                         y
+r10        n           int#8                         y
+r11        n                                         y
+r12        n                                         y
+r13        ?
+r14-28     y                                         y
+r29        y                                reserved for dispatcher
+r30        y                                altivec spill temporary
+r31        y                                         & guest state
+f0         n
+f1         n           fp#1     fp retreg
+f2-8       n           fp#2-8
+f9-13      n
+f14-31     y                                         y (14-21)
+v0-v19     ?
+v20-31     y                                         y (20-27,29)
+cr0-7
+lr         y                    return address
+ctr        n
+xer        n
+fpscr
+
+
+ppc64-linux
+~~~~~~~~~~~
+Reg        Callee      Arg
+Name       Saves?      Reg?     Comment              Vex-uses?
+-------------------------------------------------------------------
+r13        n           n        thread ptr
+TBD
+
+
+arm-linux
+~~~~~~~~~
+
+Reg        Callee      Arg
+Name       Saves?      Reg?     Comment              Vex-uses?
+--------------------------------------------------------------
+r0                     int#1    int[31:0] retreg?    avail
+r1                     int#2    int[63:32] retreg?   avail
+r2                     int#3                         avail
+r3                     int#4                         avail
+r4         y                                         avail
+r5         y                                         avail
+r6         y                                         avail
+r7         y                                         avail
+r8         y                                         GSP
+r9         y (but only on Linux; not in general)     avail
+r10        y                                         avail
+r11        y                                         avail
+r12                         possibly used by linker? unavail
+r13(sp)                                              unavail
+r14(lr)                                              unavail
+r15(pc)                                              unavail
+cp15/c3/r2                  thread ptr (see libvex_guest_arm.h, guest_TPIDRURO)
+
+VFP: d8-d15 are callee-saved
+r12 (IP) is probably available for use as a caller-saved
+register; but instead we use it as an intermediate for
+holding the address for F32/F64 spills, since the VFP load/store
+insns have reg+offset forms for offsets only up to 1020, which
+often isn't enough.
+
+
+arm64-linux
+~~~~~~~~~~~
+
+Reg        Callee     Arg
+Name       Saves?     Reg?       Comment              Vex-uses?
+---------------------------------------------------------------
+r0                    int#0      ret#0 (??)
+r1                    int#1      ret#1 (??)
+r2-7                  int#2..7
+r8                              "Indirect res loc reg" ProfInc scratch
+r9                              "Temporary regs"      chaining scratch
+r10-15                          "Temporary regs"      avail
+r16(IP0)
+r17(IP1)
+r18                             "Platform reg"
+r19-20                          "Temporary regs"
+r21        y                    "Callee saved"        GSP
+r22-28     y                    "Callee saved"
+r29(FP)    y
+r30(LR)    y
+
+NZCV                            "Status register"
+
+Is there a TLS register?
+
+x21 is the GSP.  x9 is a scratch chaining/spill temp.  Neither
+are available to the register allocator.
+
+Q registers:
+It's a little awkward. Basically, D registers are the same as ARM,
+so d0-d7 and d16-d31 are caller-saved, but d8-d15 are callee-saved.
+
+Q registers are the same, except that the upper 64 bits of q8-q15
+are caller-saved.
+
+The idea is that you only need to preserve D registers, not Q
+registers.
+
+
+
+s390x-linux
+~~~~~~~~~~~
+
+Reg        Callee      Arg
+Name       Saves?      Reg?     Comment              Vex-uses?
+--------------------------------------------------------------
+r0         n                    see below            unavail
+r1         n                                         avail
+r2         n           int#1    return value         avail
+r3         n           int#2                         avail
+r4         n           int#3                         avail
+r5         n           int#4                         avail
+r6         y           int#5                         avail
+r7         y                                         avail
+r8         y                                         avail
+r9         y                                         avail
+r10        y                    see below            avail
+r11        y                    see below            avail
+r12        y                                         unavail VG_(dispatch_ctr)
+r13        y                                         unavail gsp
+r14(lr)    n                                         unavail lr
+r15(sp)    y                                         unavail sp
+
+f0         n                    return value         avail
+f1-f7      n                                         avail
+f8-f11     y                                         avail
+f12-f15    y                    see below            avail
+a0         n                    thread ptr high word
+a1         n                    thread ptr low word
+
+When r0 is used as a base or index register its contents is
+ignored and the value 0 is used instead. This is the reason
+why VEX cannot use it.
+
+r10, r11 as well as f12-f15 are used as real regs during insn
+selection when register pairs are required.
+
+ppc32-aix5
+~~~~~~~~~~
+
+Reg        Callee      Arg
+Name       Saves?      Reg?     Comment              Vex-uses?
+-------------------------------------------------------------------
+r0         n           n        sometimes RAZ
+r1         y           n        stack pointer
+r2         n           n        TOC pointer
+r3         n           int#1    int[31:0] retreg     y
+r4         n           int#2    also int retreg      y
+r5         n           int#3                         y
+r6         n           int#4                         y
+r7         n           int#5                         y
+r8         n           int#6                         y
+r9         n           int#7                         y
+r10        n           int#8                         y
+r11        n                    "env pointer?!"      y
+r12        n                    "exn handling"       y
+r13        ?                    "reserved in 64-bit env"
+r14-28     y                                         y
+r29        y                                reserved for dispatcher
+r30        y                                altivec spill temporary
+r31        y                                         & guest state
+f0         n
+f1         n           fp#1     fp retreg
+f2-13      n           fp#2-13
+f14-31     y                                         y (14-21)
+v0-v19     ?
+v20-31     y                                         y (20-27,29)
+cr0-7
+lr         y                    return address
+ctr        n
+xer        n
+fpscr
+

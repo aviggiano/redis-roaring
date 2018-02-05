@@ -1,0 +1,2 @@
+m_sigframe/libcoregrind_amd64_linux_a-sigframe-arm64-linux.o: \
+  m_sigframe/sigframe-arm64-linux.c

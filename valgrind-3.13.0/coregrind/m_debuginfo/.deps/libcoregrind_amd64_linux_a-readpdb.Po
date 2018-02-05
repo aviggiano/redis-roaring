@@ -1,0 +1,130 @@
+m_debuginfo/libcoregrind_amd64_linux_a-readpdb.o: m_debuginfo/readpdb.c \
+  pub_core_basics.h ../include/pub_tool_basics.h \
+  ../VEX/pub/libvex_basictypes.h \
+  /usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h \
+  pub_core_debuginfo.h ../include/pub_tool_debuginfo.h \
+  ../include/pub_tool_xarray.h pub_core_vki.h ../include/pub_tool_vki.h \
+  ../include/vki/vki-linux.h ../include/vki/vki-posixtypes-amd64-linux.h \
+  ../include/vki/vki-amd64-linux.h ../include/vki/vki-linux-drm.h \
+  ../include/vki/vki-xen.h ../include/vki/vki-xen-x86.h \
+  ../include/vki/vki-xen-domctl.h ../include/vki/vki-xen-sysctl.h \
+  ../include/vki/vki-xen-mmuext.h ../include/vki/vki-xen-schedop.h \
+  ../include/vki/vki-xen-memory.h ../include/vki/vki-xen-evtchn.h \
+  ../include/vki/vki-xen-gnttab.h ../include/vki/vki-xen-version.h \
+  ../include/vki/vki-xen-hvm.h ../include/vki/vki-xen-tmem.h \
+  ../include/vki/vki-xen-xsm.h ../include/vki/vki-xen-physdev.h \
+  pub_core_libcbase.h ../include/pub_tool_libcbase.h \
+  pub_core_libcassert.h ../include/pub_tool_libcassert.h \
+  pub_core_libcfile.h ../include/pub_tool_libcfile.h \
+  pub_core_libcprint.h ../include/pub_tool_libcprint.h \
+  pub_core_libcproc.h ../config.h ../include/pub_tool_libcproc.h \
+  pub_core_options.h ../include/pub_tool_options.h ../VEX/pub/libvex.h \
+  ../VEX/pub/libvex_ir.h pub_core_xarray.h pub_core_redir.h \
+  ../include/pub_tool_redir.h m_debuginfo/priv_misc.h \
+  m_debuginfo/priv_image.h m_debuginfo/priv_d3basics.h \
+  m_debuginfo/priv_storage.h pub_core_deduppoolalloc.h \
+  ../include/pub_tool_deduppoolalloc.h m_debuginfo/priv_readpdb.h
+
+pub_core_basics.h:
+
+../include/pub_tool_basics.h:
+
+../VEX/pub/libvex_basictypes.h:
+
+/usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h:
+
+pub_core_debuginfo.h:
+
+../include/pub_tool_debuginfo.h:
+
+../include/pub_tool_xarray.h:
+
+pub_core_vki.h:
+
+../include/pub_tool_vki.h:
+
+../include/vki/vki-linux.h:
+
+../include/vki/vki-posixtypes-amd64-linux.h:
+
+../include/vki/vki-amd64-linux.h:
+
+../include/vki/vki-linux-drm.h:
+
+../include/vki/vki-xen.h:
+
+../include/vki/vki-xen-x86.h:
+
+../include/vki/vki-xen-domctl.h:
+
+../include/vki/vki-xen-sysctl.h:
+
+../include/vki/vki-xen-mmuext.h:
+
+../include/vki/vki-xen-schedop.h:
+
+../include/vki/vki-xen-memory.h:
+
+../include/vki/vki-xen-evtchn.h:
+
+../include/vki/vki-xen-gnttab.h:
+
+../include/vki/vki-xen-version.h:
+
+../include/vki/vki-xen-hvm.h:
+
+../include/vki/vki-xen-tmem.h:
+
+../include/vki/vki-xen-xsm.h:
+
+../include/vki/vki-xen-physdev.h:
+
+pub_core_libcbase.h:
+
+../include/pub_tool_libcbase.h:
+
+pub_core_libcassert.h:
+
+../include/pub_tool_libcassert.h:
+
+pub_core_libcfile.h:
+
+../include/pub_tool_libcfile.h:
+
+pub_core_libcprint.h:
+
+../include/pub_tool_libcprint.h:
+
+pub_core_libcproc.h:
+
+../config.h:
+
+../include/pub_tool_libcproc.h:
+
+pub_core_options.h:
+
+../include/pub_tool_options.h:
+
+../VEX/pub/libvex.h:
+
+../VEX/pub/libvex_ir.h:
+
+pub_core_xarray.h:
+
+pub_core_redir.h:
+
+../include/pub_tool_redir.h:
+
+m_debuginfo/priv_misc.h:
+
+m_debuginfo/priv_image.h:
+
+m_debuginfo/priv_d3basics.h:
+
+m_debuginfo/priv_storage.h:
+
+pub_core_deduppoolalloc.h:
+
+../include/pub_tool_deduppoolalloc.h:
+
+m_debuginfo/priv_readpdb.h:

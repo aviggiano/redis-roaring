@@ -1,0 +1,21 @@
+priv/libvex_amd64_linux_a-host_mips_isel.o: priv/host_mips_isel.c \
+  ../VEX/pub/libvex_basictypes.h ../VEX/pub/libvex_ir.h \
+  ../VEX/pub/libvex.h priv/main_util.h priv/main_globals.h \
+  priv/host_generic_regs.h priv/host_generic_simd64.h \
+  priv/host_mips_defs.h
+
+../VEX/pub/libvex_basictypes.h:
+
+../VEX/pub/libvex_ir.h:
+
+../VEX/pub/libvex.h:
+
+priv/main_util.h:
+
+priv/main_globals.h:
+
+priv/host_generic_regs.h:
+
+priv/host_generic_simd64.h:
+
+priv/host_mips_defs.h:

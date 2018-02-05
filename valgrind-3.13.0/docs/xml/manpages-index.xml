@@ -1,0 +1,47 @@
+<?xml version="1.0"?> <!-- -*- sgml -*- -->
+<!DOCTYPE set PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+
+<!-- This file is not part of the distributed docs, it's just here so we can
+     point $(XSTLPROC) at a single file and get all the man pages. -->
+
+<set>
+
+<!-- valgrind -->
+<xi:include href="valgrind-manpage.xml" parse="xml"  
+    xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<!-- cg_annotate -->
+<xi:include href="../../cachegrind/docs/cg_annotate-manpage.xml" parse="xml"  
+    xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<!-- cg_diff -->
+<xi:include href="../../cachegrind/docs/cg_diff-manpage.xml" parse="xml"
+    xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<!-- cg_merge -->
+<xi:include href="../../cachegrind/docs/cg_merge-manpage.xml" parse="xml"
+    xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<!-- callgrind_annotate -->
+<xi:include href="../../callgrind/docs/callgrind_annotate-manpage.xml" parse="xml"  
+    xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<!-- callgrind_control -->
+<xi:include href="../../callgrind/docs/callgrind_control-manpage.xml" parse="xml"  
+    xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<!-- ms_print -->
+<xi:include href="../../massif/docs/ms_print-manpage.xml" parse="xml"  
+    xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<!-- valgrind-listener -->
+<xi:include href="../../auxprogs/docs/valgrind-listener-manpage.xml"
+    parse="xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+<!-- vgdb -->
+<xi:include href="../../coregrind/docs/vgdb-manpage.xml"
+    parse="xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</set>
+

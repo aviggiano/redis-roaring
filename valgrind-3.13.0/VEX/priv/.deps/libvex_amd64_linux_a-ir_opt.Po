@@ -1,0 +1,15 @@
+priv/libvex_amd64_linux_a-ir_opt.o: priv/ir_opt.c \
+  ../VEX/pub/libvex_basictypes.h ../VEX/pub/libvex_ir.h \
+  ../VEX/pub/libvex.h priv/main_util.h priv/main_globals.h priv/ir_opt.h
+
+../VEX/pub/libvex_basictypes.h:
+
+../VEX/pub/libvex_ir.h:
+
+../VEX/pub/libvex.h:
+
+priv/main_util.h:
+
+priv/main_globals.h:
+
+priv/ir_opt.h:

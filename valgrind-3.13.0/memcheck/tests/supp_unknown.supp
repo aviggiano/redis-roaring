@@ -1,0 +1,22 @@
+# This contains a match against a "???" entry
+{
+   <insert a suppression name here>
+   Memcheck:Jump
+   obj:*
+   fun:(below main)
+}
+
+{
+   <insert a suppression name here>
+   Memcheck:Jump
+   obj:*
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Jump
+   obj:*
+   fun:generic_start_main.isra.0
+   fun:(below main)
+}

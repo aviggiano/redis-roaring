@@ -1,0 +1,3 @@
+prog: varinfo5
+vgopts: -q --read-inline-info=no --suppressions=suppvarinfo5.supp
+

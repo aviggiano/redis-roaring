@@ -1,0 +1,243 @@
+<?xml version="1.0"?> <!-- -*- sgml -*- -->
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd"
+[ <!ENTITY % vg-entities SYSTEM "vg-entities.xml"> %vg-entities; ]>
+
+<book id="QuickStart" xreflabel="Valgrind Quick Start Guide">
+
+<bookinfo>
+  <title>The Valgrind Quick Start Guide</title>
+  <releaseinfo>&rel-type; &rel-version; &rel-date;</releaseinfo>
+  <copyright>
+    <year>&vg-lifespan;</year>
+    <holder><ulink url="&vg-devs-url;">Valgrind Developers</ulink></holder>
+  </copyright>
+  <legalnotice>
+    <para>Email: <ulink url="mailto:&vg-vemail;">&vg-vemail;</ulink></para>
+  </legalnotice>
+</bookinfo>
+
+
+<article id="quick-start">
+<title>The Valgrind Quick Start Guide</title>
+
+
+<sect1 id="quick-start.intro" xreflabel="Introduction">
+<title>Introduction</title>
+
+<para>The Valgrind tool suite provides a number of debugging and
+profiling tools that help you make your programs faster and more correct.
+The most popular of these tools is called Memcheck.  It can detect many
+memory-related errors that are common in C and C++ programs and that can
+lead to crashes and unpredictable behaviour.</para>
+
+<para>The rest of this guide gives the minimum information you need to start
+detecting memory errors in your program with Memcheck.  For full
+documentation of Memcheck and the other tools, please read the User Manual.
+</para>
+
+</sect1>
+
+
+<sect1 id="quick-start.prepare" xreflabel="Preparing your program">
+<title>Preparing your program</title>
+
+<para>Compile your program with <option>-g</option> to include debugging
+information so that Memcheck's error messages include exact line
+numbers.  Using <option>-O0</option> is also a good
+idea, if you can tolerate the slowdown.  With
+<option>-O1</option> line numbers in error messages can
+be inaccurate, although generally speaking running Memcheck on code compiled
+at <option>-O1</option> works fairly well, and the speed improvement
+compared to running <option>-O0</option> is quite significant.
+Use of
+<option>-O2</option> and above is not recommended as
+Memcheck occasionally reports uninitialised-value errors which don't
+really exist.</para>
+
+</sect1>
+
+
+<sect1 id="quick-start.mcrun" xreflabel="Running your program under Memcheck">
+<title>Running your program under Memcheck</title>
+
+<para>If you normally run your program like this:</para>
+<programlisting>  myprog arg1 arg2
+</programlisting>
+
+<para>Use this command line:</para>
+<programlisting>  valgrind --leak-check=yes myprog arg1 arg2
+</programlisting>
+
+<para>Memcheck is the default tool.  The <option>--leak-check</option>
+option turns on the detailed memory leak detector.</para>
+
+<para>Your program will run much slower (eg. 20 to 30 times) than
+normal, and use a lot more memory.  Memcheck will issue messages about
+memory errors and leaks that it detects.</para>
+
+</sect1>
+
+
+<sect1 id="quick-start.interpret" 
+       xreflabel="Interpreting Memcheck's output">
+<title>Interpreting Memcheck's output</title>
+<para>Here's an example C program, in a file called a.c, with a memory error
+and a memory leak.</para>
+
+<programlisting>
+  #include &lt;stdlib.h&gt;
+
+  void f(void)
+  {
+     int* x = malloc(10 * sizeof(int));
+     x[10] = 0;        // problem 1: heap block overrun
+  }                    // problem 2: memory leak -- x not freed
+
+  int main(void)
+  {
+     f();
+     return 0;
+  }
+</programlisting>
+
+<para>Most error messages look like the following, which describes
+problem 1, the heap block overrun:</para>
+
+<programlisting>
+  ==19182== Invalid write of size 4
+  ==19182==    at 0x804838F: f (example.c:6)
+  ==19182==    by 0x80483AB: main (example.c:11)
+  ==19182==  Address 0x1BA45050 is 0 bytes after a block of size 40 alloc'd
+  ==19182==    at 0x1B8FF5CD: malloc (vg_replace_malloc.c:130)
+  ==19182==    by 0x8048385: f (example.c:5)
+  ==19182==    by 0x80483AB: main (example.c:11)
+</programlisting>
+
+<para>Things to notice:</para>
+
+<itemizedlist>
+  <listitem>
+   <para>There is a lot of information in each error message; read it
+   carefully.</para>
+  </listitem>
+  <listitem>
+    <para>The 19182 is the process ID;  it's usually unimportant.</para>
+  </listitem>
+  <listitem>
+   <para>The first line ("Invalid write...") tells you what kind of
+   error it is.  Here, the program wrote to some memory it should not
+   have due to a heap block overrun.</para>
+  </listitem>
+  <listitem>
+    <para>Below the first line is a stack trace telling you where the
+    problem occurred.  Stack traces can get quite large, and be
+    confusing, especially if you are using the C++ STL.  Reading them
+    from the bottom up can help.  If the stack trace is not big enough,
+    use the <option>--num-callers</option> option to make it
+    bigger.</para>
+  </listitem>
+  <listitem>
+   <para>The code addresses (eg. 0x804838F) are usually unimportant, but
+   occasionally crucial for tracking down weirder bugs.</para>
+  </listitem>
+  <listitem>
+    <para>Some error messages have a second component which describes
+    the memory address involved.  This one shows that the written memory
+    is just past the end of a block allocated with malloc() on line 5 of
+    example.c.</para>
+  </listitem>
+</itemizedlist>
+
+<para>It's worth fixing errors in the order they are reported, as
+later errors can be caused by earlier errors.  Failing to do this is a
+common cause of difficulty with Memcheck.</para>
+
+<para>Memory leak messages look like this:</para>
+
+<programlisting>
+  ==19182== 40 bytes in 1 blocks are definitely lost in loss record 1 of 1
+  ==19182==    at 0x1B8FF5CD: malloc (vg_replace_malloc.c:130)
+  ==19182==    by 0x8048385: f (a.c:5)
+  ==19182==    by 0x80483AB: main (a.c:11)
+</programlisting>
+
+<para>The stack trace tells you where the leaked memory was allocated.
+Memcheck cannot tell you why the memory leaked, unfortunately.
+(Ignore the "vg_replace_malloc.c", that's an implementation
+detail.)</para>
+
+<para>There are several kinds of leaks; the two most important
+categories are:</para>
+
+<itemizedlist>
+  <listitem>
+    <para>"definitely lost": your program is leaking memory -- fix
+    it!</para>
+  </listitem>
+  <listitem>
+    <para>"probably lost": your program is leaking memory, unless you're
+    doing funny things with pointers (such as moving them to point to
+    the middle of a heap block).</para>
+  </listitem>
+</itemizedlist>
+
+<para>Memcheck also reports uses of uninitialised values, most commonly with
+the message "Conditional jump or move depends on uninitialised
+value(s)".  It can be difficult to determine the root cause of these errors.
+Try using the <option>--track-origins=yes</option> to get extra information.
+This makes Memcheck run slower, but the extra information you get often
+saves a lot of time figuring out where the uninitialised values are coming
+from.</para>
+
+<para>If you don't understand an error message, please consult
+<xref linkend="mc-manual.errormsgs"/> in the <xref linkend="manual"/>
+which has examples of all the error messages Memcheck produces.</para>
+
+</sect1>
+
+
+<sect1 id="quick-start.caveats" xreflabel="Caveats">
+<title>Caveats</title>
+
+<para>Memcheck is not perfect;  it occasionally produces false positives,
+and there are mechanisms for suppressing these (see 
+<xref linkend="manual-core.suppress"/> in the <xref linkend="manual"/>).
+However, it is typically right 99% of the time, so you should be wary of
+ignoring its error messages.  After all, you wouldn't ignore warning
+messages produced by a compiler, right?  The suppression mechanism is
+also useful if Memcheck is reporting errors in library code that you
+cannot change.  The default suppression set hides a lot of these, but you
+may come across more.</para>
+
+<para>Memcheck cannot detect every memory error your program has.
+For example, it can't detect out-of-range reads or writes to arrays
+that are allocated statically or on the stack.  But it should detect many
+errors that could crash your program (eg. cause a segmentation
+fault).</para>
+
+<para>Try to make your program so clean that Memcheck reports no
+errors.  Once you achieve this state, it is much easier to see when
+changes to the program cause Memcheck to report new errors.
+Experience from several years of Memcheck use shows that it is
+possible to make even huge programs run Memcheck-clean.  For example,
+large parts of KDE, OpenOffice.org and Firefox are Memcheck-clean, or very
+close to it.</para>
+
+
+</sect1>
+
+
+<sect1 id="quick-start.info" xreflabel="More Information">
+<title>More information</title>
+
+<para>Please consult the <xref linkend="FAQ"/> and the 
+<xref linkend="manual"/>, which have much more information.  Note that
+the other tools in the Valgrind distribution can be invoked with the
+<option>--tool</option> option.</para>
+
+</sect1>
+
+
+</article>
+</book>

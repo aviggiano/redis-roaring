@@ -1,0 +1,800 @@
+
+-----------------------------------------------------------
+LOAD CASE 0
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 1
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 2
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 3
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 4
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:365)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:365)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 5
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:367)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:367)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 6
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:369)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:369)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 7
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:371)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:371)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 8
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:373)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 9
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:375)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 10
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:377)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 11
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:379)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 12
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:381)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:381)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:381)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 13
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:383)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:383)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:383)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 14
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:385)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:385)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:385)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 15
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:387)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:387)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:387)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 16
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 17
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 18
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 19
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 20
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 21
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 22
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 23
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 24
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 25
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 26
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 27
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 28
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 29
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 30
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 31
+PASS: 0 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 32
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:421)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 33
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:423)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 34
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:425)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 35
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:427)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 36
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:429)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:429)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:429)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 37
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:431)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:431)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:431)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 38
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:433)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:433)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:433)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 39
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:435)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:435)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:435)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 40
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:437)
+   by 0x........: main (cond_ld_st.c:639)
+
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:437)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 41
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:439)
+   by 0x........: main (cond_ld_st.c:639)
+
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:439)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 42
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:441)
+   by 0x........: main (cond_ld_st.c:639)
+
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:441)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 43
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:443)
+   by 0x........: main (cond_ld_st.c:639)
+
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:443)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 2 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 44
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:445)
+   by 0x........: main (cond_ld_st.c:639)
+
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:445)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:445)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:445)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 3 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 45
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:447)
+   by 0x........: main (cond_ld_st.c:639)
+
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:447)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:447)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:447)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 3 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 46
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:449)
+   by 0x........: main (cond_ld_st.c:639)
+
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:449)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:449)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:449)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 3 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 47
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:451)
+   by 0x........: main (cond_ld_st.c:639)
+
+Use of uninitialised value of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:451)
+   by 0x........: main (cond_ld_st.c:639)
+
+Invalid read of size 4
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:451)
+   by 0x........: main (cond_ld_st.c:639)
+ Address 0x........ is 0 bytes inside a block of size 4 free'd
+   at 0x........: free (vg_replace_malloc.c:...)
+   by 0x........: setup_test_data (cond_ld_st.c:257)
+   by 0x........: do_test_case (cond_ld_st.c:284)
+   by 0x........: do_test_case_steer (cond_ld_st.c:451)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 3 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 48
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:453)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 49
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:455)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 50
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:457)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 51
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:459)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 52
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:461)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 53
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:463)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 54
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:465)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 55
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:467)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 56
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:469)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 57
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:471)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 58
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:473)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 59
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:475)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 60
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:477)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 61
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:479)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 62
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:481)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result
+
+-----------------------------------------------------------
+LOAD CASE 63
+Conditional jump or move depends on uninitialised value(s)
+   at 0x........: do_conditional_load32 (cond_ld_st.c:61)
+   by 0x........: do_test_case (cond_ld_st.c:319)
+   by 0x........: do_test_case_steer (cond_ld_st.c:483)
+   by 0x........: main (cond_ld_st.c:639)
+
+PASS: 1 errors
+PASS: correct result

@@ -1,0 +1,3 @@
+prereq: test -e matinv && ./supported_libpthread
+prog: matinv
+args: -t 15 -q 30

@@ -1,0 +1,2 @@
+prog: sigqueue
+args: -q

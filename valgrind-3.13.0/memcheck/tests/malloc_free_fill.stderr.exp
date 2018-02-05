@@ -1,0 +1,15 @@
+test simple malloc/free:
+PASSED: malloc-filled
+PASSED:   free-filled
+
+test realloc-larger:
+PASSED: malloc-filled
+PASSED:   free-filled
+PASSED: malloc-filled
+
+test realloc-smaller:
+PASSED: malloc-filled
+PASSED:   free-filled
+
+test calloc:
+PASSED: zero

@@ -1,0 +1,2 @@
+prog: ../../../none/tests/amd64/insn_basic
+vgopts: -q

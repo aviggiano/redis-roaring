@@ -1,0 +1,74 @@
+<?xml version="1.0"?> <!-- -*- sgml -*- -->
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd"
+[ <!ENTITY % vg-entities SYSTEM "../../docs/xml/vg-entities.xml"> %vg-entities; ]>
+
+
+<refentry id="cg_annotate">
+
+<refmeta>
+  <refentrytitle>cg_annotate</refentrytitle>
+  <manvolnum>1</manvolnum>
+  <refmiscinfo>Release &rel-version;</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+  <refname>cg_annotate</refname>
+  <refpurpose>post-processing tool for Cachegrind</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv>
+<cmdsynopsis>
+  <command>cg_annotate</command>
+  <arg><replaceable>options</replaceable></arg>
+  <arg choice="plain"><replaceable>cachegrind-out-file</replaceable></arg>
+  <arg choice="opt" rep="repeat"><replaceable>source-files</replaceable></arg>
+</cmdsynopsis>
+</refsynopsisdiv>
+
+
+<refsect1 id="description">
+<title>Description</title>
+
+<para><command>cg_annotate</command> takes an output file produced by the
+Valgrind tool Cachegrind and prints the information in an easy-to-read form.
+</para>
+
+</refsect1>
+
+
+
+<refsect1 id="options">
+<title>Options</title>
+
+<xi:include href="cg-manual.xml" xpointer="cg_annotate.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
+
+
+<refsect1 id="see_also">
+<title>See Also</title>
+
+<para>
+valgrind(1),
+<filename>&vg-docs-path;</filename> or
+<filename>&vg-docs-url;</filename>.
+</para>
+
+</refsect1>
+
+
+<refsect1 id="author">
+<title>Author</title>
+
+<para>Nicholas Nethercote.</para>
+
+</refsect1>
+
+
+</refentry>
+
+

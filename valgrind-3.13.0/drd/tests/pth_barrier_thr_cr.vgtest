@@ -1,0 +1,5 @@
+prereq: test -e pth_barrier_thr_cr && ./supported_libpthread
+vgopts: --suppressions=pth_barrier_thr_cr.supp
+prog: pth_barrier_thr_cr
+args: 50
+stdout_filter: ../../tests/filter_sink

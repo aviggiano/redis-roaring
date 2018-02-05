@@ -1,0 +1,205 @@
+#!/usr/bin/ksh
+#
+# Builds a Solaris IPS package called "valgrind" from the source
+# directory. The Valgrind and VEX revisions are taken from that
+# source directory and written to solaris/valgrind.p5m IPS manifest.
+#
+# Requires the following packages to be installed on Solaris 11:
+# - data/xml-common		(install first before any docbook ones!)
+# - data/docbook/docbook-style-xsl
+# - data/docbook/docbook-dtds
+# - developer/build/autoconf
+# - developer/build/automake-111
+# - developer/debug/gdb
+# - developer/gnu-binutils
+# - developer/versioning/mercurial
+# - system/header
+# - and the latest developer/gcc package.
+#
+# Requires a pre-established IPS repository.
+# For example to create a file-based repository, do:
+# - pkgrepo create $repo_uri
+# - pkgrepo set -s $repo_uri publisher/prefix=valgrind
+#
+
+TMPDIR=/var/tmp/valgrind-build
+SRCDIR=$TMPDIR/sources
+INSTALLDIR=$TMPDIR/install
+IPS_MANIFEST=solaris/valgrind.p5m
+
+usage() {
+    echo "Usage:"
+    echo "build_solaris_package -p source_dir -s repo_uri [-r lint_repo_uri]"
+    echo "\t-p source_dir contains working copy of the Valgrind sources"
+    echo "\t-s repo_uri publishes to the repository located at the given URI"
+    echo "\t            or file system path"
+    echo "\t-r lint_repo_uri location of lint reference repository"
+}
+
+fail() {
+    msg=$1
+
+    echo "\n$msg"
+    echo "Additional information could be found in directory $TMPDIR."
+    exit 1
+}
+
+remove_dirs() {
+    rm -rf $TMPDIR
+}
+
+create_dirs() {
+    mkdir -p $TMPDIR
+    (( $? != 0 )) && fail "Failed to create directory $TMPDIR."
+
+    mkdir -p $INSTALLDIR
+    (( $? != 0 )) && fail "Failed to create directory $INSTALLDIR."
+}
+
+export_sources() {
+    printf "Exporting sources... "
+    svn export --quiet --ignore-externals $source_directory $SRCDIR \
+        2> $TMPDIR/svn-export-valgrind.log.stderr
+    (( $? != 0 )) && fail "Failed to export working copy from $source_directory."
+    svn export --quiet --ignore-externals $source_directory/VEX $SRCDIR/VEX \
+        2> $TMPDIR/svn-export-vex.log.stderr
+    (( $? != 0 )) && fail "Failed to export working copy from $source_directory/VEX."
+    printf "done.\n"
+}
+
+modify_ips_manifest() {
+    valgrind_rev=$( svn info $source_directory | grep Revision | sed -e 's/Revision: //' )
+    vex_rev=$( svn info $source_directory/VEX | grep Revision | sed -e 's/Revision: //' )
+
+    [[ -z $valgrind_rev ]] && fail "Failed to find Valgrind revision."
+    [[ -z $vex_rev ]] && fail "Failed to find VEX revision."
+
+    echo "Valgrind revision: $valgrind_rev, VEX revision $vex_rev."
+
+    sed -i -e "s/VVVVV-XXXX/${valgrind_rev}-${vex_rev}/" $SRCDIR/$IPS_MANIFEST
+}
+
+run_autogen() {
+    printf "Creating autotools support files... "
+    ./autogen.sh > $TMPDIR/autogen.log.stdout 2> $TMPDIR/autogen.log.stderr
+    (( $? != 0 )) && fail "Failed to generate autotools support files."
+    printf "done.\n"
+}
+
+run_configure() {
+    printf "Running configure... "
+    ./configure CC='gcc -m64' CXX='g++ -m64' --prefix=/usr > $TMPDIR/configure.log
+    (( $? != 0 )) && fail "Failed to run configure."
+    printf "done.\n"
+}
+
+run_make_docs() {
+   printf "Making docs... "
+   make --directory=docs html-docs > $TMPDIR/make-docs.log.stdout 2> $TMPDIR/make-docs.log.stderr
+   (( $? != 0 )) && fail "Failed to make html-docs."
+   printf "done.\n"
+}
+
+run_make_man_pages() {
+   printf "Making man pages... "
+   make --directory=docs man-pages > $TMPDIR/make-man-pages.log.stdout 2> $TMPDIR/make-man-pages.log.stderr
+   (( $? != 0 )) && fail "Failed to make man-pages."
+   printf "done.\n"
+}
+
+run_make() {
+    printf "Running make... "
+    make --quiet > $TMPDIR/make.log
+    (( $? != 0 )) && fail "Failed to run make."
+    printf "done.\n"
+}
+
+run_make_install() {
+    printf "Running 'make install'... "
+    make --quiet install DESTDIR=$INSTALLDIR > $TMPDIR/make-install.log
+    (( $? != 0 )) && fail "Failed to run 'make install'."
+
+    cp AUTHORS COPYING* NEWS NEWS.old README* $INSTALLDIR/usr/share/doc/valgrind
+    (( $? != 0 )) && fail "Failed to copy additional files to $INSTALLDIR."
+
+    printf "done.\n"
+}
+
+run_pkglint() {
+    printf "Running pkglint... "
+    pkglint -c $TMPDIR/lint-cache -r $lint_repo_uri $SRCDIR/$IPS_MANIFEST > $TMPDIR/pkglint.log
+    (( $? != 0 )) && fail "pkglint failed."
+    printf "done.\n"
+}
+
+publish_package() {
+    printf "Publishing package... "
+    pkgsend publish -s $repo_uri -d $INSTALLDIR $SRCDIR/solaris/valgrind.p5m > $TMPDIR/pkgsend.log
+    (( $? != 0 )) && fail "Failed to publish the package."
+    printf "done.\n"
+}
+
+while getopts "p:r:s:" args; do
+    case $args in
+    p)
+        source_directory=$OPTARG
+        ;;
+    r)
+        lint_repo_uri=$OPTARG
+        ;;
+    s)
+        repo_uri=$OPTARG
+        ;;
+    *)
+        usage
+        exit 1
+        ;;
+    esac
+done
+
+if [[ -z $source_directory ]]; then
+    echo "No source directory specified.\n"
+    usage
+    exit 1
+fi
+
+if [[ -z $repo_uri ]]; then
+    echo "No repo_uri specified.\n"
+    usage
+    exit 1
+fi
+
+# Determine the lint repo_uri to use from the current 'solaris' one
+# if not specified explicitly.
+if [[ -z $lint_repo_uri ]]; then
+    publisher=$( pkg publisher | grep solaris | tr -s ' ' )
+    if [[ $publisher == *sticky* ]]; then
+        lint_repo_uri=$( echo "$publisher" | cut -d ' ' -f 6 )
+    else
+        lint_repo_uri=$( echo "$publisher" | cut -d ' ' -f 5 )
+    fi
+    [[ -z $lint_repo_uri ]] && fail "Failed to determine solaris IPS publisher."
+    echo "lint_repo_uri determined as $lint_repo_uri"
+fi
+
+
+remove_dirs
+create_dirs
+cd $TMPDIR
+
+export_sources
+modify_ips_manifest
+cd $SRCDIR
+run_autogen
+run_configure
+run_make_docs
+run_make_man_pages
+run_make
+run_make_install
+
+cd $TMPDIR
+run_pkglint
+publish_package
+
+remove_dirs
+return 0

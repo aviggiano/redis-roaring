@@ -1,0 +1,99 @@
+'\" t
+.\"     Title: cg_annotate
+.\"    Author: [see the "Author" section]
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 06/15/2017
+.\"    Manual: Release 3.13.0
+.\"    Source: Release 3.13.0
+.\"  Language: English
+.\"
+.TH "CG_ANNOTATE" "1" "06/15/2017" "Release 3.13.0" "Release 3.13.0"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+cg_annotate \- post\-processing tool for Cachegrind
+.SH "SYNOPSIS"
+.HP \w'\fBcg_annotate\fR\ 'u
+\fBcg_annotate\fR [\fIoptions\fR] \fIcachegrind\-out\-file\fR [\fIsource\-files\fR...]
+.SH "DESCRIPTION"
+.PP
+\fBcg_annotate\fR
+takes an output file produced by the Valgrind tool Cachegrind and prints the information in an easy\-to\-read form\&.
+.SH "OPTIONS"
+.PP
+\fB\-h \-\-help \fR
+.RS 4
+Show the help message\&.
+.RE
+.PP
+\fB\-\-version \fR
+.RS 4
+Show the version number\&.
+.RE
+.PP
+\fB\-\-show=A,B,C [default: all, using order in cachegrind\&.out\&.<pid>] \fR
+.RS 4
+Specifies which events to show (and the column order)\&. Default is to use all present in the
+cachegrind\&.out\&.<pid>
+file (and use the order in the file)\&. Useful if you want to concentrate on, for example, I cache misses (\fB\-\-show=I1mr,ILmr\fR), or data read misses (\fB\-\-show=D1mr,DLmr\fR), or LL data misses (\fB\-\-show=DLmr,DLmw\fR)\&. Best used in conjunction with
+\fB\-\-sort\fR\&.
+.RE
+.PP
+\fB\-\-sort=A,B,C [default: order in cachegrind\&.out\&.<pid>] \fR
+.RS 4
+Specifies the events upon which the sorting of the function\-by\-function entries will be based\&.
+.RE
+.PP
+\fB\-\-threshold=X [default: 0\&.1%] \fR
+.RS 4
+Sets the threshold for the function\-by\-function summary\&. A function is shown if it accounts for more than X% of the counts for the primary sort event\&. If auto\-annotating, also affects which files are annotated\&.
+.sp
+Note: thresholds can be set for more than one of the events by appending any events for the
+\fB\-\-sort\fR
+option with a colon and a number (no spaces, though)\&. E\&.g\&. if you want to see each function that covers more than 1% of LL read misses or 1% of LL write misses, use this option:
+.sp
+\fB\-\-sort=DLmr:1,DLmw:1\fR
+.RE
+.PP
+\fB\-\-auto=<no|yes> [default: no] \fR
+.RS 4
+When enabled, automatically annotates every file that is mentioned in the function\-by\-function summary that can be found\&. Also gives a list of those that couldn\*(Aqt be found\&.
+.RE
+.PP
+\fB\-\-context=N [default: 8] \fR
+.RS 4
+Print N lines of context before and after each annotated line\&. Avoids printing large sections of source files that were not executed\&. Use a large number (e\&.g\&. 100000) to show all source lines\&.
+.RE
+.PP
+\fB\-I<dir> \-\-include=<dir> [default: none] \fR
+.RS 4
+Adds a directory to the list in which to search for files\&. Multiple
+\fB\-I\fR/\fB\-\-include\fR
+options can be given to add multiple directories\&.
+.RE
+.SH "SEE ALSO"
+.PP
+valgrind(1),
+$INSTALL/share/doc/valgrind/html/index\&.html
+or
+http://www\&.valgrind\&.org/docs/manual/index\&.html\&.
+.SH "AUTHOR"
+.PP
+Nicholas Nethercote\&.

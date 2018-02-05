@@ -1,0 +1,72 @@
+-------------------------------------------------------------------
+Guide to the directory structure
+-------------------------------------------------------------------
+[This should be merged with coregrind/README_MODULES.txt]
+
+Valgrind has 2 main levels of genericity.
+ 
+ 1. Multiple tools, plus the core.
+ 2. Multiple architectures, OSes, and platforms (arch/OS combinations).
+
+This file is a guide to where different things live.
+
+
+Basic layout
+------------
+1. Core stuff lives in:
+    - include/              for declarations that must be seen by tools
+    - coregrind/            for code that need not be seen by tools
+
+   Some subdirs of coregrind/ hold modules that consist of multiple files.
+
+   Tool stuff lives in:
+    - $TOOL/                main files
+    - $TOOL/tests           regression tests
+    - $TOOL/docs            documentation
+
+   Other stuff lives in:
+    - docs/                 main, non-tool-specific docs
+    - tests/                regression test machinery
+    - nightly/              overnight test stuff (should be in tests/)
+    - auxprogs/             auxiliary programs
+
+2. Generic things go in the directory specified in (1).  
+
+   Arch-specific, OS-specific, or platform-specific things are sprinkled
+   throughout the code -- there is no single place for all the
+   architecture-specific things, for example.  
+   
+   Sometimes we have a whole file holding things specific to a particular
+   arch/OS/platform.  Such files have an appropriate suffix, eg.
+   sigframe-x86-linux.c.
+
+   More often we use #ifdefs inside source files to specify the different
+   cases for different archs/OSes/platforms.  It's pretty straightforward.
+
+   A final case:  arch-specific regression tests for tools go in a
+   subdirectory, eg. cachegrind/tests/x86/.
+
+   
+Guide to headers
+----------------
+See coregrind/README_MODULES.txt for details of the core/tool header file
+split.
+
+Note that every single C file will #include pub_basics.h.  Every single asm
+file will #include pub_basics_asm.h.
+
+Our versions of kernel types are in the vki*.h headers.
+
+When searching for something, rgrep is very useful.  If you don't have a
+version of rgrep, use a command something like this:
+
+   find . -name '*.h' | xargs grep <pattern>
+
+   find . -name '*.h' \
+          -type f \
+          -not -path '*.svn\/*' | xargs grep "$1"
+
+The -name option gives the file wildcard, the -type says "look in normal
+files only" and the -not -path tells it to not look in Subversions hidden
+directories.
+

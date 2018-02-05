@@ -1,0 +1,529 @@
+
+Bugs reported after the release of 3.8.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file lists bugs that were reported after 3.8.0 was released, both
+in 3.8.0 and trunk, and that have not been closed.  Bugs that have
+been closed as "fixed" are listed in the top level NEWS file instead.
+In other words they get listed here first and moved to NEWS if they
+get fixed.
+
+This file also tracks commits & fixes that should be pushed to the 3.8
+branch.
+
+-- PUSH TO 3_8_BRANCH
+
+(B38=2500)  2469   Fix a mixup ..
+(B38=12930) 12873  n-i-bz: Use -s USR1 instead of -10 to send SIGUSR1 signal
+(B38=12931) 12874  n-i-bz: shmat of a segment > 4Gb does not work
+(B38=12933) 12878  n-i-bz: On Darwin, use __NR_poll_nocancel rather than __NR_poll
+(B38=12934) 12879 + 12882 + 12883 (301281, OSX hang on "system")
+(B38=12936) 12881  ptrace mips stuff
+(B38=12938) 12885  (Iop_DPBtoBCD and Iop_BCDtoDPB fix)
+(B38=2502)  2475   (289584: Handle a reg-reg encoding of MOVAPS)
+(B38=2503)  2476   (305042: Implement 0F 7F encoding of movq reg-reg)
+(B38=12940) 12887  (n-i-bz: libmpiwrap.c fixes)
+(B38=2504)  2477   (305321: Re-enable 'prefetch m8' and 'prefetchw m8')
+(B38=2505)  2478   (295808: Fix LZCNT and TZCNT properly)
+(B38=2506)  2479   (305199: Implement QDADD and QDSUB)
+(B38=2507)  2480   (304867: Implement MOVBE in 32 bit mode)
+(B38=12941) 12891  (304980: Fix up range checking in ML_(addLineInfo))
+(B38=12942) 12892  (305513: Fix skipping of block forms)
+(B38=12943) 12893  (298281: Implement a wrapper for wcslen on Linux)
+(B38=12944) 12894  (n-i-bz, exp-sgcheck memcpy)
+(B38=12945) 12897/8 (305690: Handle non-zero sem_*wait() return values correctly)
+(B38=2508)  2499   (305926: Invalid alignment checks for some AVX instructions)
+(B38=12946) 12923  (304980: Guard against negative symbol sizes)
+(B38=12948) 12947  (n-i-bz: volatile in stack check, re clang)
+(B38=12984) 12964  (306310  3.8.0 release tarball missing some files)
+(B38=2534)  2517/8 (n-i-bz: fix a couple of union tag-vs-field mixups)
+(B38=2535)  2531   (306297: ARM: STM<c>.W <Rn>{!}, <registers> too strict)
+(B38=2536)  2532   (306664: AMD64: Fix PCMPxSTRx variant $0x46)
+(B38=12985) 12982  (306612: Intercept __GI_memmove)
+(B38=2537,12986)
+            2533,12980
+                   (304035: ARM: uqsub16 shadd16 uhsub8 uhsub16)
+
+-------- Bugs brought forward from 3_7_BUGSTATUS.txt --------
+
+291310  FXSAVE instruction marks memory as undefined on amd64
+  x86 vs amd64 inconsistency?
+  **is fixed in 3.8.0, but was not marked as such
+  ** no it's not; v38BRANCH shows error, vTRUNK doesn't -- investigate
+  REOP
+
+-------- Unfixed in 3.8.0
+
+303741  sockaddr* parameter of recvfrom not handled correctly
+        (corruption not detected later on)
+  SYSCALL, HAS_TESTCASE
+
+303877  valgrind doesn't support compressed debuginfo sections.
+  QUERIED
+
+304259  support Darwin 12 (Mac OS 10.8, Mountain Lion)
+  OSX108 (Canonical)
+
+304321  m_signals.c:2314 (sync_signalhandler_from_kernel):
+        Assertion 'tid != 0' failed
+  CLOSED as UNMAINTAINED.
+
+304450  time logging tools ?
+  WISHLIST
+
+304675  make install-strip fails when cross-compiling
+  w/ one-liner patch; but needs checking (should be more general?
+  assumes auto* version?)
+
+304676  regtest hangs on mac OS X (mchelp, coolo_sigaction, system)
+  probably related to 301281 et al.  Still valid.
+  OSX
+
+305170  linux: add FIOCLEX and FIONCLEX ioctls
+  SYSCALL.  w/ patch, looks pretty harmless
+
+n-i-bz  exp-sgcheck asserts on gcc-4.6.2 generated Dwarf3
+
+305957  m_debuginfo/d3basics.c:965 (vgModuleLocal_evaluate_GX):
+        Assertion 'aMin == (Addr)0' failed.
+        QUERIED -- no info so far -- close?
+
+306004  Wishlist: port valgrind to sparc
+   WISHLIST
+
+-- Sat 1 Sept 2012 10pm
+
+306171  Boost.Context appears to cause Valgrind to crash
+   Stack switching; should fix.  (Conservative unwind?)
+
+306235  unhandled syscall: 429 (freebsd)
+   Need to forward to FreeBSD port maintainers.
+
+306299  Internal error when running a winelib application
+   Conservative unwind?
+
+306340  parse_var_DIE confused by DWARF from clang-3.1
+   Might be quite simple to fix; need to investigate.
+   No action so far
+
+306535  massif: force dump result every X minutes
+   Queried
+
+306587  data cache line size is 128 and instruction cache line size is 32
+   PPC; obscure, needs investigatoin
+
+306590  not support e500v2 spe 0x216 command
+   PPC SPE insns; with plausible looking patch?  Need test cases, and
+   cc Mehafy.
+
+286864 strlen function redirection error
+   Gentoo glibc "miscompilation"; is this important?
+
+-- Mon 17 Sept 2012, 10 am
+
+valgrind.spec diff at https://bugzilla.mozilla.org/show_bug.cgi?id=750856#c20
+r13008 to 382 ?  check
+change of leak-check-counting?  307465
+gkw extra suppression?
+gcp libnss3.so debuginfo read hang
+
+306947  s390x: BFP rounding mode improvements
+        Proposal, no action
+
+306949  s390x: BFP condition code improvements
+        Proposal, no action
+
+211352  helgrind races in helgrind's own mythread_wrapper
+        NEEDINFO
+
+307367  amd64->IR: 0xF2 0x48 0xF 0x5F 0x3E 0xF2 0x48 0xF
+        redundant-REX, should be easy to fix
+
+307399  amd64->IR: 0xC4 0x62 0x55 0x2E 0x18 0x44 0x39 0x87
+        (vmaskmovps %ymm11,%ymm5,(%rax))
+        CONDITIONAL STORES -- probably fixed?
+
+307415  3.8.1 build error - OSX Lion 10.7.4 duplicate symbol
+        _mach_make_memory_entry
+        OSX or XCode 4.5
+
+307500  Valgrind docs have two <title> tags
+        QUERIED (unclear how to fix)
+        Severity: low
+
+308027  Warning: negative range in .debug_loc section
+        QUERIED -- not sure this needs fixing or not
+
+79362   Debug info is lost for .so files when they are dlclose'd
+        Still alive!
+
+308158  running with --leack-check=full makes valgrind exit
+        FreeBSD -- although FreeBSD maintainers may not be aware
+
+------ Thu Oct 11 18:51:26 CEST 2012
+
+197915  80-bit floats are not supported on x86 and x86-64
+        indeed, yes.
+
+299316  Helgrind: hg_main.c:628 (map_threads_lookup): Assertion 'thr'
+        failed.
+        OSX Helgrind
+
+308582  massif: wrong stack usage at exit of threaded program
+        No action so far
+
+308668  pthread rwlock_rdlock doesn't understand modifications in
+        some cases (Helgrind)
+        Real; no action so far
+
+308729  vex x86->IR: unhandled instruction bytes 0xf 0x5
+        HAS_PATCH, but NEEDINFO
+
+243232 *Inconsistent Lock Orderings report with trylock (PBOS?)
+        Almost certainly real (+ probably a dup).  No action so far.
+
+237920  valgrind segfault on fork failure
+        Uninvestigated; filed by JJ
+
+308816  valgrind GPF in signal handler context 3.8.1 (allignment 
+        Needs investigation
+        Maybe fixed?
+
+309100  s390x: Testcases for extended BFP
+        No action so far
+
+309430  Self hosting ppc64 encounters a vassert error on operand type
+        No action so far.  Sounds a bit strange.
+
+309554  Unhandled syscall remap_file_pages (216)
+        No action so far
+        Possibly difficult to implement
+
+309721  add client request returning current value of a statistic (e.g. Ir)
+        Wishlist.  No action yet.
+
+309783  Valgrind does not support separate source and build directories
+        Has patch, but needs further checking
+        Does not appear to be much enthusiasm for this
+
+309827 *add support for nvidia (nvmem) ioctls
+        A bunch of Android hackery from VladV; needs pulling apart
+        FIX 3.9 (commit)
+
+309831  3.8.1: disInstr(arm): unhandled instruction: 0xECECA102
+        (stcl, gdb disassembles to stfp) .. IWMMXT
+        ==309604
+
+310188  need better diagnostic when mmap() fails with EINVAL
+        No patch so far
+        Severity: low
+
+310692  [coregrind] Thread scheduling regression?
+        Spinlockery
+        Severity: med  Audience: low
+
+311093  massif and memcheck fail to redirect malloc calls on
+        statically linked application
+        Probably INVALID
+
+-- Wed Dec  5 23:41:20 CET 2012
+
+311544  sys_fork() calls VG_(do_atfork_pre)() AFTER forking()
+        FIX 3.9 (easy)
+
+311649  exhausting fds can leak created files
+        Probably true; NEEDINFO; possible WONTFIX; QUERIED
+
+311655  --log-file=FILE leads to apparent fd leak ("Open file
+        descriptor 3: $LOGFILE")
+        Probably true; should fix.
+        Severity: med  Audience: low
+
+311827  OS X 10.8.2 (eq_SyscallStatus): the 'impossible' happened.
+        OSX10.8  Maybe fixed in the trunk already.  QUERIED
+
+312989  ioctl handling needs to do POST handling on generic ioctls and
+        needs to handle BPF ioctls
+        OSX10.8 FIX 3.9 (commit)
+
+313275  False positives for shared memory semaphores/mutexes/conditions
+        No action so far.  Has testcase patches.
+        Potentially important to fix, but does not look easy.
+
+313276  helgrind does not recognize shared memory initialized
+        semaphores, mutexes, conditions
+        == 313275, pretty much
+        Severity: med  Audience: low
+
+313875  cr_libinit.c:183 cri_init: sigaction() failed: Invalid argument
+        No action so far
+        Severity: high  Audience: low
+
+** [Bug 291310] FXSAVE instruction marks memory as undefined on amd64
+        Severity: med  Audience: low
+
+314236  OS X 10.8 testsuite build failure: test million.o
+        OSX108  No action so far.
+        Severity: low  Audience: med
+
+314365  enable VEX to run asm helpers that do callee register saving
+        In progress; not sure whether this is a good idea
+
+-- Thu Feb 28 09:54:56 CET 2013
+
+315936  UNKNOWN task message [id 3403, to mach_task_self(), reply
+        0x2603] when running fork()ing tests on Mac OS X
+        OSX10.8
+
+315952  tun/tap ioctls are not supported
+        QUERIED; leaving open for now
+        Severity: med  Audience: low
+
+316034  Building valgrind with gcc (4.7, trunk) fails on MacOS X 10.8
+        Probably WONTFIX.
+
+-- Mon Mar  4 11:36:17 CET 2013
+
+294285  --partial-loads-ok does not work for 16-byte SSE loads
+        FIXED (multiple commits)
+        Requires regtest hookup on ppc
+
+316382  Support for AMDs FMA4 instructions seem to be missing
+        No action so far
+        Severity: high  Audience: low
+
+316528  Dump for cachegrind
+        Wishlist
+
+316612  A -Wunused-value warning from Clang when including memcheck.h
+        Probably needs doc update
+        Severity: low  Audience: med
+
+316696  fluidanimate program of parsec 2.1 stuck (do not finish
+        for more than 5 hours)
+        No action so far (DRD specific)
+        NEEDINFO
+        Severity: high  Audience: low
+
+316874  amd64->IR: 0xC4 0xE2 0xF8 0xF2 0x85 0x30 0xFF 0xFF
+        Probably some AMD FMA insn?
+        Severity: high  Audience: low
+
+316903  memcheck/tests/origin5-bz2 FAIL with gcc-4.5+
+        Possibly a real bug
+        Severity: med  Audience: med
+
+317078  _mm_madd_epi16, undefined * 0 should not give uninitialised result
+        True, but probably difficult to fix without perf hit
+        Prio: low
+
+317127  Fedora18/x86_64 --sanity-level=3 : aspacem segment mismatch
+        Diagnosed (BTRFS specific); unclear what to do, if anything
+
+317208  vex x86->IR: unhandled instruction bytes: 0xC8 0x0 0x0 0x0
+        "enter $0,$0" created by D language compiler
+        Severity: high  Audience: low
+
+317381  helgrind warns about xchg vs suppressed store
+        No action so far.  Not sure there's an easy fix for this.
+        Severity: med  Audience: low
+
+317390  Patch for FBLD/FBSTP/FTST
+        Needs cleanup+test cases.  Queried.
+        Severity: high  Audience: low
+
+317441  Add support for AMD's LWP (LightWeight Profiling) architecture
+        extension
+        Contains plausible infrastructure patch; no insns so far tho
+        This is going to need some working through.  Probably OK.
+        Not sure if can make 3.9.
+        Severity: high  Audience: low
+
+317698  parse_var_DIE: confused by: DW_TAG_compile_unit using
+        Intel 13.0 update 3 compiler
+        Reporter has queried Intel since this might be an ICC bug
+        NEEDINFO
+        Severity: med  Audience: low
+
+317893  massif terminates without any message
+        Probably just a memory limit thing.  Close as a dup, but of what?
+        NEEDINFO
+
+318030  addHRegUse takes a lot of CPU time; band-aid speedup
+        patch within
+        No action so far
+        Needs review; would be nice to redo this with a more robust API
+
+Thu Apr 11 18:16:04 CEST 2013
+
+319237  [PATCH] Added support for ELF injection
+        FreeBSD-specific
+
+319274  unhandled syscall: unix:410
+        OSX108-specific
+
+319306  gdbserver tests call vgdb without path; patch within
+        Needs further discussion?
+
+319307  Patches to let test suite run in parallel
+        Looks plausible
+        Wishlist, effectively (has patch)
+
+319393  bad rounding in cvtsi2ss instruction
+        Not started.  Looks valid.  (double rounding)
+        Severity: med  Audience: low
+
+319419  unhandled syscall: unix:369
+        OSX108-specific
+
+319547  helgrind gives false positives on rwlocks
+        Needs investigation.  Quite possibly a real bug.
+        Severity: med  Audience: med
+
+319896  vex amd64->IR: 0x8C 0xE0
+        Probably requires proper segment support, but need to check.
+        Severity: high  Audience: low
+
+320082  disInstr(thumb): unhandled instruction on instruction LDRB
+        Has patch
+        LDRB; surely already supported?  Queried.
+        MMhmh, untestable?
+        Severity: high  Audience: low
+
+320100  Add nanosecond timer support
+        A bigger patch depends on it, but that has not appeared yet
+        Wishlist, + as yet incomplete
+
+320546  valgrind exits with "Assertion 'in_rx' failed"
+        for /system/lib/libva-android.so on Android 4.0.4
+        Need more info (the .so); queried.
+        MAYBE FIX 3.9 (potentially serious)
+
+320965  Unrecognised instruction __ieee754_pow_sse2
+        Not sure what this is.  Queried.
+        Severity: high  Audience: low (??)
+
+321396  Add Support for Freescale e500v2 SPE Architecture.
+        Is metabug? -- no patch, no details
+
+321400  Add Support for Freescale e5500 Architecture.
+        No patch, no details
+
+321401  Add Support for Freescale e6500 Architecture.
+        No patch, no details
+
+321681  printf false positive
+        Severity: med  Audience: low
+
+321836  valgrind cross compilation failure on Ubuntu machine
+        MIPS specific?
+
+Tue Jul  2 12:15:07 CEST 2013
+
+321888 *Unhandled instruction: LDRH (Thumb)
+        Has patch; plausible (needs checking)
+        FIX 3.9 (commit)
+
+321892 *Unhandled instruction: LDRSH (Thumb)
+        Has patch; plausible (needs checking)
+        FIX 3.9 (commit)
+
+321902 *disInstr(ARM): 0xECECA102
+321903  == 321902
+        MAYBE 3.9 (query vgolubev)
+
+322150  Add Support for Cavium Octeon Instructions
+        MIPS64; has patch; assigned to Petar
+        MAYBE 3.9 (query Petar)
+
+322256  Provide more callstacks on memory pool related errors
+        Contains plausible patch; needs looking at
+        Severity: low  Audience: low
+
+322258  No thread notification is printed if new thread reused tid of 
+        old thread that triggered last error
+        Contains plausible patch.  Is bug fix.  (should take)
+        FIX 3.9 (commit)
+
+322586  Unknown instruction (bextr) in ld-2.15.so with --march=native on AMD FX-8350
+        AMD specific.  Uninvestigated.
+        Severity: high  Audience: low (??)
+
+322593  Power 8 code to implement Transactional support
+        Implements pass-to-host scheme; not intended to land.
+        Severity: low (right now)  Audience: low
+
+322621  False positives with pthread_barrier_wait / helgrind
+        Severity: med  Audience: low
+
+323020  more mysteries in valgrind thread stack handling
+        QUERIED
+        Severity: med  Audience: low
+
+323046  Implement ANNOTATE_THREAD_NAME() Hellgrind annotation
+        Request for implementation
+        QUERIED .. is 322254 good enough?
+        Severity: low  Audience: med
+
+323178 *Unhandled instruction: PLDW register (ARM)
+        Has patch; plausible (needs checking)
+        FIX 3.9 (commit)
+
+323179 *Unhandled instruction: PLDW immediate (ARM)
+        Has patch; plausible (needs checking)
+        FIX 3.9 (commit)
+
+323268  New calls for custom memory allocators
+        Obscure; needs investigation
+        Severity: low  Audience: low
+
+323431  vex amd64->IR: 0x8F 0xE8 0x78 0xA2 0xC1 0x40 0xC5 0xFB
+        AMD-specific?
+        Severity: high  Audience: low (??)
+        FIX 3.9 if can do it at no risk and no CPUID hassle
+        -- ask mjw
+
+323448  Check for memory overlap in sprintf()-like functions
+        Severity: low  Wishlist
+
+323464  VALGRIND_MEMPOOL_ALLOC problems with size >= 2^32
+        64-bit uncleanness; no action so far; QUERIED
+        Severity: med  Audience: low
+
+323777 *Documentation does not warn of sgcheck+darwin incompatibility
+        FIX 3.9
+
+324050  Helgrind: SEGV because of unaligned stack when using movdqa
+        Needs to be looked at.  Is this real, or some Gentoo-caused
+        breakage?
+        Severity: high (hg crash)  Audience: low
+
+324078  Track and show in logs which thread allocated memory
+        Probably sync-event-loss in Helgrind
+        Severity: high  (hg correctness bug?)  Audience: low
+
+324081  3.8.1 Valgrind periodically hangs in long-running application
+        NEEDINFO (requested)
+
+324261  errorcount in xml output remains empty (no error pairs mentioned)
+        Hmm, looks like a real bug.
+        Severity: med  Audience: low
+
+324486  WARNING: unhandled syscall: 310
+        == 166355
+        Hmm, tricky, sys_unshare.
+        Severity: high  Audience: low
+
+324525  valgrind can not detect any leak
+        PROBABLE INVALID; needs closing.
+        Severity: med  Audience: low
+
+324809  show nightly regression tests results (and later performance) in a
+        nice html page on valgrind.org
+        In progress
+        Severity: low  Audience: low
+
+324882  CPUID should depend on VEX capabilities, not on underlying CPU
+        Middle-term cleanup; not urgent
+
+Thu Sep 19 10:34:49 CEST 2013

@@ -1,0 +1,136 @@
+#! /bin/sh
+
+# filter the output of gdb.
+
+dir=`dirname $0`
+
+$dir/filter_stderr                                                  |
+
+# Anonymise addresses
+$dir/../tests/filter_addresses                                      |
+
+# memcheck stuff
+$dir/filter_memcheck_monitor "$@"                                   |
+
+# memcheck filter might leave some "..." lines, we are not interested
+sed -e '/^\ \ \ \ \.\.\.$/d'                                        |
+
+# Anonymise or remove :
+#       delete the initial lines between the launch of vgdb and the
+#         output of the echo command telling it is launched.
+#         This removes a whole lot of uninteresting lines varying
+#         with OS/glibc/gdb dep
+#       then have a general way to delete uninteresting and vayring
+#         lines.
+#       suppress lines telling file _exit.c does not exist
+#       initial tty control character sent by gdb 7.0
+#       remove missing debuginfos
+#       vgdb message
+#       pid numbers
+#       Thread numbers
+#       delete thread switches
+#       info threads output (e.g. which thread is running and syscall)
+#       delete Reading symbols file lines
+#       delete Loaded symbols file lines
+#       delete language switch messages.
+#       remove gdb prompts.
+#       remove gdb continuation prompts.
+#       remove gdb done prompts.
+#       a 'general' system calls stack trace part
+#       a more specialised system call select stack trace part
+#             (on 32 bits, we have an int_80, on 64 bits, directly select)
+#       and yet another (gdb 7.0 way) to get a system call
+#       and yet another (gdb 7.0 arm way) to get a system call
+#       and cleanup some lines for a system call (on ubuntu 10 64 bits)
+#           (pay attention : there are tab characters there in)
+#           + yet another way to get a select system call
+#       and yet another (Solaris way) to get a poll system call
+#             (on 32 bits, we have /lib/libc.so.*, on 64 bits, /lib/64/libc.so.*)
+#       which registers can't be modified
+#       special transform for arm/ppc watchpoints which have an additional address
+#              at the beginning
+#       SIGFPE backtrace is varying so much that we just remove all lines
+#       after the signal trapping using an expr in this sed, followed by another sed.
+#       transform info thread of 7.3 into the layout of 7.2 and before.
+#       delete lines telling that some memory can't be accessed: this is
+#         a.o. produced by gdb 7.2 on arm (same with standard gdbserver)
+#       delete empty lines (the last line (only made of prompts) sometimes
+#           finishes with a new line, sometimes not ???).
+#       'exited with code' and 'exited normally' are printed slightly
+#       differently between gdb versions, normalize to "Program exited...".
+#       for hgtls the breakpoint p=... address might show var location.
+#	gdb might also try to show the "entry value" p=p@entry=0x...
+#	Some gdb versions don't show the source line:number after switching
+#		threads in #0  0x........ in do_burn ().
+#	Newer gdb say Thread .... hit Breakpoint, we expect just Breakpoint.
+#	We expect "Program received" instead of "Thread .... received"
+#	Ordering of '  Thread .... (tid .' might differ between gdb version,
+#	so remove all such lines except the "current" one (starts with '*').
+sed -e '/Remote debugging using/,/vgdb launched process attached/d'                                   \
+    -e '/filter_gdb BEGIN drop/,/filter_gdb END drop/d'                                               \
+    -e 's/^\[?1034hReading symbols/Reading symbols/'                                                \
+    -e '/^Missing separate debuginfo/d'                                                               \
+    -e '/\/_exit.c: No such file or directory/d'                                                      \
+    -e '/^Try: zypper install -C/d'                                                                   \
+    -e 's/\(relaying data between gdb and process \)[0-9][0-9]*/\1..../'                              \
+    -e 's/pid [0-9][0-9]*/pid ..../g'                                                                 \
+    -e 's/Thread [0-9][0-9]*/Thread ..../g'                                                           \
+    -e '/\[Switching to Thread ....\]/d'                                                              \
+    -e 's/\(\[Switching to thread [1234] (Thread ....)\]\)#0/\1\n#0/'                                 \
+    -e 's/^\([ \* ] [0-9] Thread .... (tid [0-9] VgTs_WaitSys)  0x........ in\).*$/\1 syscall .../'   \
+    -e 's/^Thread .... hit Breakpoint /Breakpoint /'                                                  \
+    -e 's/^Thread .... received /Program received /'                                                  \
+    -e 's/#[0-9]\(  0x........ in sleeper_or_burner\)/#.\1/'                                          \
+    -e 's/\(#0  0x........ in do_burn ()\) at sleepers.c:41/\1/'                                      \
+    -e '/^Reading symbols from .*\.\.\.done\./d'                                                      \
+    -e '/^Loaded symbols for .*$/d'                                                                   \
+    -e '/^Current language.*/d'                                                                       \
+    -e '/^The current source language is.*/d'                                                         \
+    -e 's/^.*\( exited with code [0-9]\+\).$/Program\1\./g'                                           \
+    -e 's/^.*\( exited normally\).$/Program\1\./g'                                                    \
+    -e 's/(gdb) //g'                                                                                  \
+    -e 's/^>[> ]*//'                                                                                  \
+    -e '/^done\.$/d'                                                                                  \
+    -e 's/in _dl_sysinfo_int80 () from \/lib\/ld-linux.so.*/in syscall .../'                          \
+    -e 's/in kill ().*$/in syscall .../'                                                              \
+    -e 's/in .*kill ().*$/in syscall .../'                                                            \
+    -e 's/in _dl_sysinfo_int80 ()/in syscall .../'                                                    \
+    -e '/^   from \/lib\/ld-linux.so.*$/d'                                                            \
+    -e 's/\(0x........\) in ?? () from \/lib.*$/\1 in syscall .../'                                   \
+    -e 's/\(0x........\) in ?? ()$/\1 in syscall .../'                                                \
+    -e 's/in \(.__\)\{0,1\}select () from \/.*$/in syscall .../'                                      \
+    -e '/^   from \/lib\/libc.so.*$/d'                                                                \
+    -e '/^   from \/lib64\/libc.so.*$/d'                                                              \
+    -e '/^   from \/lib64\/.*\/libc.so.*$/d'                                                          \
+    -e 's/in select ()$/in syscall .../'                                                              \
+    -e 's/in \.__select ()$/in syscall .../'                                                          \
+    -e 's/in select () at \.\.\/sysdeps\/unix\/syscall-template\.S.*$/in syscall .../'                \
+    -e '/^[ 	]*at \.\.\/sysdeps\/unix\/syscall-template\.S/d'                                      \
+    -e '/^[ 	]*in \.\.\/sysdeps\/unix\/syscall-template\.S/d'                                      \
+    -e '/^[1-9][0-9]*[ 	]*\.\.\/sysdeps\/unix\/syscall-template\.S/d'                                 \
+    -e '/^[1-9][0-9]*[ 	]in *\.\.\/sysdeps\/unix\/syscall-template\.S/d'                              \
+    -e '/^[1-9][0-9]*[ 	]T_PSEUDO (SYSCALL_SYMBOL, SYSCALL_NAME, SYSCALL_NARGS)/d'                    \
+    -e 's/in __pollsys () from \/.*$/in syscall .../'                                                 \
+    -e '/^   from \/lib\/64\/libc.so.*$/d'                                                            \
+    -e 's/\(Could not write register \)".*"/\1 "xxx"/'                                                \
+    -e 's/\(ERROR changing register \).*$/\1 xxx regno y/'                                            \
+    -e 's/0x........ in \(main (argc=1, argv=0x........) at watchpoints.c:[24][3689]\)/\1/'           \
+    -e 's/0x........ in \(main () at clean_after_fork.c:34\)/\1/'                                     \
+    -e 's/\(^.*signal SIGFPE.*$\)/\1\nafter trap SIGFPE/'                                             \
+    -e 's/p=p@entry=0x/p=0x/'									      \
+    -e 's/\(^Breakpoint 1, tls_ptr (p=0x........\) <tests[0-9+]*>\() at tls.c:55\)/\1\2/'         \
+    -e '/Id   Target Id         Frame/d'                                                              \
+    -e 's/^\([ \*] [1234] \) *Thread /\1Thread /'                                                     \
+    -e 's/^  [0-9] Thread .... (tid [0-9] .*$//'                                                      \
+    -e 's/VgTs_WaitSys) 0x/VgTs_WaitSys)  0x/'                                                        \
+    -e '/Cannot access memory at address 0x......../d'                                                \
+    -e '/\[New Thread/d'                                                                              \
+    -e '/^$/d'                                                                                     |
+
+# remove all the lines telling where the SIGFPE was trapped.
+sed -e '/after trap SIGFPE/,/after continue SIGFPE/d'                                              |
+
+# join together two lines that gdb 7.1 splits in two (???)
+# (in a separate sed, as the below influences the behaviour of the other expressions)
+sed    -e :a -e '$!N;s/\n    at sleepers.c:39/ at sleepers.c:39/;ta' -e 'P;D' 
+

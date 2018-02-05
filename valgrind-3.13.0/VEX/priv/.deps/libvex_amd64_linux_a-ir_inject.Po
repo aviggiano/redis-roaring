@@ -1,0 +1,11 @@
+priv/libvex_amd64_linux_a-ir_inject.o: priv/ir_inject.c \
+  ../VEX/pub/libvex_basictypes.h ../VEX/pub/libvex_ir.h \
+  ../VEX/pub/libvex.h priv/main_util.h
+
+../VEX/pub/libvex_basictypes.h:
+
+../VEX/pub/libvex_ir.h:
+
+../VEX/pub/libvex.h:
+
+priv/main_util.h:

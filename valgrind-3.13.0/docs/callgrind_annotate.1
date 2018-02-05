@@ -1,0 +1,104 @@
+'\" t
+.\"     Title: Callgrind Annotate
+.\"    Author: [see the "Author" section]
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 06/15/2017
+.\"    Manual: Release 3.13.0
+.\"    Source: Release 3.13.0
+.\"  Language: English
+.\"
+.TH "CALLGRIND ANNOTATE" "1" "06/15/2017" "Release 3.13.0" "Release 3.13.0"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+callgrind_annotate \- post\-processing tool for the Callgrind
+.SH "SYNOPSIS"
+.HP \w'\fBcallgrind_annotate\fR\ 'u
+\fBcallgrind_annotate\fR [\fIoptions\fR] [\fIcallgrind\-out\-file\fR\ [\fIsource\-files\fR...]]
+.SH "DESCRIPTION"
+.PP
+\fBcallgrind_annotate\fR
+takes an output file produced by the Valgrind tool Callgrind and prints the information in an easy\-to\-read form\&.
+.SH "OPTIONS"
+.PP
+\fB\-h \-\-help\fR
+.RS 4
+Show summary of options\&.
+.RE
+.PP
+\fB\-\-version\fR
+.RS 4
+Show version of callgrind_annotate\&.
+.RE
+.PP
+\fB\-\-show=A,B,C [default: all]\fR
+.RS 4
+Only show figures for events A,B,C\&.
+.RE
+.PP
+\fB\-\-sort=A,B,C\fR
+.RS 4
+Sort columns by events A,B,C [event column order]\&.
+.sp
+Optionally, each event is followed by a : and a threshold, to specify different thresholds depending on the event\&.
+.RE
+.PP
+\fB\-\-threshold=<0\-\-100> [default: 99%] \fR
+.RS 4
+Percentage of counts (of primary sort event) we are interested in\&.
+.RE
+.PP
+\fB\-\-auto=<yes|no> [default: no] \fR
+.RS 4
+Annotate all source files containing functions that helped reach the event count threshold\&.
+.RE
+.PP
+\fB\-\-context=N [default: 8] \fR
+.RS 4
+Print N lines of context before and after annotated lines\&.
+.RE
+.PP
+\fB\-\-inclusive=<yes|no> [default: no] \fR
+.RS 4
+Add subroutine costs to functions calls\&.
+.RE
+.PP
+\fB\-\-tree=<none|caller|calling|both> [default: none] \fR
+.RS 4
+Print for each function their callers, the called functions or both\&.
+.RE
+.PP
+\fB\-I, \-\-include=<dir> \fR
+.RS 4
+Add
+\fBdir\fR
+to the list of directories to search for source files\&.
+.RE
+.SH "SEE ALSO"
+.PP
+valgrind(1),
+$INSTALL/share/doc/valgrind/html/index\&.html
+or
+http://www\&.valgrind\&.org/docs/manual/index\&.html\&.
+.SH "AUTHOR"
+.PP
+Josef Weidendorfer <Josef\&.Weidendorfer@gmx\&.de>\&.
+.PP
+This manual page was written by Philipp Frauenfelder <pfrauenf@debian\&.org>\&.

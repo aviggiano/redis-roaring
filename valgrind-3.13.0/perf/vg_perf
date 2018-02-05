@@ -1,0 +1,498 @@
+#! /usr/bin/perl
+##--------------------------------------------------------------------##
+##--- Valgrind performance testing script                  vg_perf ---##
+##--------------------------------------------------------------------##
+
+#  This file is part of Valgrind, a dynamic binary instrumentation
+#  framework.
+#
+#  Copyright (C) 2005-2017 Nicholas Nethercote
+#     njn@valgrind.org
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License as
+#  published by the Free Software Foundation; either version 2 of the
+#  License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful, but
+#  WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+#  02111-1307, USA.
+#
+#  The GNU General Public License is contained in the file COPYING.
+
+#----------------------------------------------------------------------------
+# usage: see usage message.
+#
+# You can specify individual files to test, or whole directories, or both.
+# Directories are traversed recursively, except for ones named, for example, 
+# CVS/ or docs/.
+#
+# Each test is defined in a file <test>.vgperf, containing one or more of the
+# following lines, in any order:
+#   - prog:   <prog to run>                         (compulsory)
+#   - args:   <args for prog>                       (default: none)
+#   - vgopts: <Valgrind options>                    (default: none)
+#   - prereq: <prerequisite command>                (default: none)
+#   - cleanup: <post-test cleanup cmd to run>       (default: none)
+#
+# The prerequisite command, if present, must return 0 otherwise the test is
+# skipped.
+# Sometimes it is useful to run all the tests at a high sanity check
+# level or with arbitrary other flags.  To make this simple, extra 
+# options, applied to all tests run, are read from $EXTRA_REGTEST_OPTS,
+# and handed to valgrind prior to any other flags specified by the 
+# .vgperf file. Note: the env var is the same as vg_regtest.
+#----------------------------------------------------------------------------
+
+use warnings;
+use strict;
+
+#----------------------------------------------------------------------------
+# Global vars
+#----------------------------------------------------------------------------
+my $usage = <<END
+usage: vg_perf [options] [files or dirs]
+
+  options for the user, with defaults in [ ], are:
+    -h --help             show this message
+    --reps=<n>            number of repeats for each program [1]
+    --tools=<t1,t2,t3>    tools to run [Nulgrind and Memcheck]
+    --vg=<dir>            top-level directory containing Valgrind to measure
+                          [Valgrind in the current directory, i.e. --vg=.]
+                          Can be specified multiple times.
+                          The "in-place" build is used.
+
+    --outer-valgrind: run these Valgrind(s) under the given outer valgrind.
+      These Valgrind(s) must be configured with --enable-inner.
+    --outer-tool: tool to use by the outer valgrind (default cachegrind).
+    --outer-args: use this as outer tool args. If the outer args are starting
+      with +, the given outer args are appended to the outer args predefined
+      by vg_perf.
+
+  Any tools named in --tools must be present in all directories specified
+  with --vg.  (This is not checked.)
+  Use EXTRA_REGTEST_OPTS to supply extra args for all tests
+END
+;
+
+# Test variables
+my $vgopts;             # valgrind options
+my $prog;               # test prog
+my $args;               # test prog args
+my $prereq;             # prerequisite test to satisfy before running test
+my $cleanup;            # cleanup command to run
+
+# Command line options
+my $n_reps = 1;         # Run each test $n_reps times and choose the best one.
+my @vgdirs;             # Dirs of the various Valgrinds being measured.
+my @tools = ("none", "memcheck");   # tools being measured
+
+# Outer valgrind to use, and args to use for it.
+# If this is set, --valgrind should be set to the installed inner valgrind,
+# and --valgrind-lib will be ignore
+my $outer_valgrind;
+my $outer_tool = "cachegrind";
+my $outer_args;
+
+
+my $num_tests_done   = 0;
+my $num_timings_done = 0;
+
+# Starting directory
+chomp(my $tests_dir = `pwd`);
+
+#----------------------------------------------------------------------------
+# Process command line, setup
+#----------------------------------------------------------------------------
+
+# If $prog is a relative path, it prepends $dir to it.  Useful for two reasons:
+#
+# 1. Can prepend "." onto programs to avoid trouble with users who don't have
+#    "." in their path (by making $dir = ".")
+# 2. Can prepend the current dir to make the command absolute to avoid
+#    subsequent trouble when we change directories.
+#
+# Also checks the program exists and is executable.
+sub validate_program ($$$$) 
+{
+    my ($dir, $prog, $must_exist, $must_be_executable) = @_;
+
+    # If absolute path, leave it alone.  If relative, make it
+    # absolute -- by prepending current dir -- so we can change
+    # dirs and still use it.
+    $prog = "$dir/$prog" if ($prog !~ /^\//);
+    if ($must_exist) {
+        (-f $prog) or die "vg_perf: '$prog' not found or not a file ($dir)\n";
+    }
+    if ($must_be_executable) { 
+        (-x $prog) or die "vg_perf: '$prog' not executable ($dir)\n";
+    }
+
+    return $prog;
+}
+
+sub add_vgdir($)
+{
+    my ($vgdir) = @_;
+    if ($vgdir !~ /^\//) { $vgdir = "$tests_dir/$vgdir"; }
+    push(@vgdirs, $vgdir);
+}
+
+sub process_command_line() 
+{
+    my @fs;
+    
+    for my $arg (@ARGV) {
+        if ($arg =~ /^-/) {
+            if ($arg =~ /^--reps=(\d+)$/) {
+                $n_reps = $1;
+                if ($n_reps < 1) { die "bad --reps value: $n_reps\n"; }
+            } elsif ($arg =~ /^--vg=(.+)$/) {
+                # Make dir absolute if not already
+                add_vgdir($1);
+            } elsif ($arg =~ /^--tools=(.+)$/) {
+                @tools = split(/,/, $1);
+            } elsif ($arg =~ /^--outer-valgrind=(.*)$/) {
+                $outer_valgrind = $1;
+            } elsif ($arg =~ /^--outer-tool=(.*)$/) {
+                $outer_tool = $1;
+            } elsif ($arg =~ /^--outer-args=(.*)$/) {
+                $outer_args = $1;
+            } else {
+                die $usage;
+            }
+        } else {
+            push(@fs, $arg);
+        }
+    }
+
+    # If no --vg options were specified, use the current tree.
+    if (0 == @vgdirs) {
+        add_vgdir($tests_dir);
+    }
+
+    (0 != @fs) or die "No test files or directories specified\n";
+
+    return @fs;
+}
+
+#----------------------------------------------------------------------------
+# Read a .vgperf file
+#----------------------------------------------------------------------------
+sub read_vgperf_file($)
+{
+    my ($f) = @_;
+
+    # Defaults.
+    ($vgopts, $prog, $args, $prereq, $cleanup)
+      = ("", undef, "", undef, undef, undef, undef);
+
+    open(INPUTFILE, "< $f") || die "File $f not openable\n";
+
+    while (my $line = <INPUTFILE>) {
+        if      ($line =~ /^\s*#/ || $line =~ /^\s*$/) {
+	    next;
+	} elsif ($line =~ /^\s*vgopts:\s*(.*)$/) {
+            $vgopts = $1;
+        } elsif ($line =~ /^\s*prog:\s*(.*)$/) {
+            $prog = validate_program(".", $1, 1, 1);
+        } elsif ($line =~ /^\s*args:\s*(.*)$/) {
+            $args = $1;
+        } elsif ($line =~ /^\s*prereq:\s*(.*)$/) {
+            $prereq = $1;
+        } elsif ($line =~ /^\s*cleanup:\s*(.*)$/) {
+            $cleanup = $1;
+        } else {
+            die "Bad line in $f: $line\n";
+        }
+    }
+    close(INPUTFILE);
+
+    if (!defined $prog) {
+        $prog = "";     # allow no prog for testing error and --help cases
+    }
+    if (0 == @tools) {
+        die "vg_perf: missing 'tools' line in $f\n";
+    }
+}
+
+#----------------------------------------------------------------------------
+# Do one test
+#----------------------------------------------------------------------------
+# Since most of the program time is spent in system() calls, need this to
+# propagate a Ctrl-C enabling us to quit.
+sub mysystem($) 
+{
+    my ($cmd) = @_;
+    my $retval = system($cmd);
+    if ($retval == 2) { 
+        exit 1; 
+    } else {
+        return $retval;
+    }
+}
+
+# Run program N times, return the best user time.  Use the POSIX
+# -p flag on /usr/bin/time so as to get something parseable on AIX.
+sub time_prog($$)
+{
+    my ($cmd, $n) = @_;
+    my $tmin = 999999;
+    for (my $i = 0; $i < $n; $i++) {
+        mysystem("echo '$cmd' > perf.cmd");
+        my $retval = mysystem("$cmd > perf.stdout 2> perf.stderr");
+        (0 == $retval) or 
+            die "\n*** Command returned non-zero ($retval)"
+              . "\n*** See perf.{cmd,stdout,stderr} to determine what went wrong.\n";
+        my $out = `cat perf.stderr`;
+        ($out =~ /[Uu]ser +([\d\.]+)/) or 
+            die "\n*** missing usertime in perf.stderr\n";
+        $tmin = $1 if ($1 < $tmin);
+    }
+
+    # Successful run; cleanup
+    unlink("perf.cmd");
+    unlink("perf.stderr");
+    unlink("perf.stdout");
+
+    # Avoid divisions by zero!
+    return (0 == $tmin ? 0.01 : $tmin);
+}
+
+sub do_one_test($$) 
+{
+    my ($dir, $vgperf) = @_;
+    $vgperf =~ /^(.*)\.vgperf/;
+    my $name = $1;
+    my %first_tTool;    # For doing percentage speedups when comparing
+                        # multiple Valgrinds
+
+    read_vgperf_file($vgperf);
+
+    if (defined $prereq) {
+        if (system("$prereq") != 0) {
+            printf("%-16s (skipping, prereq failed: $prereq)\n", "$name:");
+            return;
+        }
+    }
+
+    my $timecmd = "/usr/bin/time -p";
+
+    # Do the native run(s).
+    printf("-- $name --\n") if (@vgdirs > 1);
+    my $cmd     = "$timecmd $prog $args";
+    my $tNative = time_prog($cmd, $n_reps);
+
+    if (defined $outer_valgrind) {
+        $outer_valgrind = validate_program($tests_dir, $outer_valgrind, 1, 1);
+        foreach my $vgdir (@vgdirs) {
+            validate_program($vgdir, "./coregrind/valgrind", 1, 1);
+        }
+    } else {
+        foreach my $vgdir (@vgdirs) {
+            validate_program($vgdir, "./coregrind/valgrind", 1, 1);
+        }
+    }
+
+    # Pull any extra options (for example, --sanity-level=4)
+    # from $EXTRA_REGTEST_OPTS.
+    my $maybe_extraopts = $ENV{"EXTRA_REGTEST_OPTS"};
+    my $extraopts = $maybe_extraopts ?  $maybe_extraopts  : "";
+
+    foreach my $vgdir (@vgdirs) {
+        # Benchmark name
+        printf("%-8s ", $name);
+
+        # Print the Valgrind version if we are measuring more than one.
+        my $vgdirname = $vgdir;
+        chomp($vgdirname = `basename $vgdir`);
+        printf("%-10s:", $vgdirname);
+        
+        # Native execution time
+        printf("%4.2fs", $tNative);
+
+        foreach my $tool (@tools) {
+            # First two chars of toolname for abbreviation
+            my $tool_abbrev = $tool;
+            $tool_abbrev =~ s/(..).*/$1/;
+            printf("  %s:", $tool_abbrev);
+            my $run_outer_args = "";
+            if ((not defined $outer_args) || ($outer_args =~ /^\+/)) {
+                $run_outer_args = 
+                      " -v --command-line-only=yes"
+                    . " --run-libc-freeres=no --sim-hints=enable-outer"
+                    . " --smc-check=all-non-file"
+                    . " --vgdb=no --trace-children=yes --read-var-info=no"
+                    . " --suppressions=../tests/outer_inner.supp"
+                    . " --memcheck:leak-check=full --memcheck:show-reachable=no"
+                    . " --cachegrind:cache-sim=yes --cachegrind:branch-sim=yes"
+                    . " --cachegrind:cachegrind-out-file=cachegrind.out.$vgdirname.$tool_abbrev.$name.%p"
+                    . " --callgrind:cache-sim=yes --callgrind:branch-sim=yes"
+                    . " --callgrind:dump-instr=yes --callgrind:collect-jumps=yes"
+                    . " --callgrind:callgrind-out-file=callgrind.out.$vgdirname.$tool_abbrev.$name.%p"
+                    . " ";
+                 if (defined $outer_args) {
+                    $outer_args =~ s/^\+(.*)/$1/;
+                    $run_outer_args = $run_outer_args . $outer_args;
+                 }
+            } else {
+                $run_outer_args = $outer_args;
+            }
+
+            my $vgsetup = "";
+            my $vgcmd   = "$vgdir/coregrind/valgrind "
+                        . "--command-line-only=yes --tool=$tool  $extraopts -q "
+                        . "--memcheck:leak-check=no "
+                        . "--trace-children=yes "
+                        . "$vgopts ";
+            # Do the tool run(s).
+            if (defined $outer_valgrind ) {
+                # in an outer-inner setup, only set VALGRIND_LIB_INNER
+                $vgsetup = "VALGRIND_LIB_INNER=$vgdir/.in_place ";
+                $vgcmd   = "$outer_valgrind "
+                         . "--tool=" . $outer_tool . " "
+                         . "--log-file=" . "$outer_tool.outer.log.$vgdirname.$tool_abbrev.$name.%p "
+                         . "$run_outer_args "
+                         . $vgcmd;
+            } else {
+                # Set both VALGRIND_LIB and VALGRIND_LIB_INNER
+                # in case this Valgrind was configured with --enable-inner.  And
+                # also VALGRINDLIB, which was the old name for the variable, to
+                # allow comparison against old Valgrind versions (eg. 2.4.X).
+                $vgsetup = "VALGRINDLIB=$vgdir/.in_place "
+                         . "VALGRIND_LIB=$vgdir/.in_place "
+                         . "VALGRIND_LIB_INNER=$vgdir/.in_place ";
+            }
+            my $cmd     = "$vgsetup $timecmd $vgcmd $prog $args";
+            my $tTool   = time_prog($cmd, $n_reps);
+            printf("%4.1fs (%4.1fx,", $tTool, $tTool/$tNative);
+
+            # If it's the first timing for this tool on this benchmark,
+            # record the time so we can get the percentage speedup of the
+            # subsequent Valgrinds.  Otherwise, compute and print
+            # the speedup.
+            if (not defined $first_tTool{$tool}) {
+                $first_tTool{$tool} = $tTool;
+                print(" -----)");
+            } else {
+                my $speedup = 100 - (100 * $tTool / $first_tTool{$tool});
+                printf("%5.1f%%)", $speedup);
+            }
+
+            $num_timings_done++;
+
+            if (defined $cleanup) {
+                (system("$cleanup") == 0) or 
+                    print("  ($name cleanup operation failed: $cleanup)\n");
+            }
+        }
+        printf("\n");
+    }
+
+    $num_tests_done++;
+}
+
+#----------------------------------------------------------------------------
+# Test one directory (and any subdirs)
+#----------------------------------------------------------------------------
+sub test_one_dir($$);    # forward declaration
+
+sub test_one_dir($$) 
+{
+    my ($dir, $prev_dirs) = @_;
+    $dir =~ s/\/$//;    # trim a trailing '/'
+
+    chomp(my $initial_dir = `pwd`);     # record where we started
+
+    # Ignore dirs into which we should not recurse.
+    if ($dir =~ /^(BitKeeper|CVS|SCCS|docs|doc)$/) { return; }
+
+    chdir($dir) or die "Could not change into $dir\n";
+
+    # Nb: Don't prepend a '/' to the base directory
+    my $full_dir = $prev_dirs . ($prev_dirs eq "" ? "" : "/") . $dir;
+    my $dashes = "-" x (50 - length $full_dir);
+
+    my @fs = glob "*";
+    my $found_tests = (0 != (grep { $_ =~ /\.vgperf$/ } @fs));
+
+    if ($found_tests) {
+        print "-- Running  tests in $full_dir $dashes\n";
+    }
+    foreach my $f (@fs) {
+        if (-d $f) {
+            test_one_dir($f, $full_dir);
+        } elsif ($f =~ /\.vgperf$/) {
+            do_one_test($full_dir, $f);
+        }
+    }
+    if ($found_tests) {
+        print "-- Finished tests in $full_dir $dashes\n";
+    }
+
+    chdir("$initial_dir");
+}
+
+#----------------------------------------------------------------------------
+# Summarise results
+#----------------------------------------------------------------------------
+sub summarise_results 
+{
+    printf("\n== %d programs, %d timings =================\n\n", 
+           $num_tests_done, $num_timings_done);
+}
+
+#----------------------------------------------------------------------------
+# main()
+#----------------------------------------------------------------------------
+sub warn_about_EXTRA_REGTEST_OPTS()
+{
+    print "WARNING: \$EXTRA_REGTEST_OPTS is set.  You probably don't want\n";
+    print "to run the perf tests with it set, unless you are doing some\n";
+    print "strange experiment, and/or you really know what you are doing.\n";
+    print "\n";
+}
+
+# nuke VALGRIND_OPTS
+$ENV{"VALGRIND_OPTS"} = "";
+
+if ($ENV{"EXTRA_REGTEST_OPTS"}) {
+    print "\n";
+    warn_about_EXTRA_REGTEST_OPTS();
+}
+
+my @fs = process_command_line();
+foreach my $f (@fs) {
+    if (-d $f) {
+        test_one_dir($f, "");
+    } else { 
+        # Allow the .vgperf suffix to be given or omitted
+        if ($f =~ /.vgperf$/ && -r $f) {
+            # do nothing
+        } elsif (-r "$f.vgperf") {
+            $f = "$f.vgperf";
+        } else {
+            die "`$f' neither a directory nor a readable test file/name\n"
+        }
+        my $dir  = `dirname  $f`;   chomp $dir;
+        my $file = `basename $f`;   chomp $file;
+        chdir($dir) or die "Could not change into $dir\n";
+        do_one_test($dir, $file);
+        chdir($tests_dir);
+    }
+}
+summarise_results();
+
+if ($ENV{"EXTRA_REGTEST_OPTS"}) {
+    warn_about_EXTRA_REGTEST_OPTS();
+}
+
+##--------------------------------------------------------------------##
+##--- end                                                          ---##
+##--------------------------------------------------------------------##

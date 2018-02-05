@@ -1,0 +1,3 @@
+prereq: test -e ./insn-pcmpistri
+prog: insn-pcmpistri
+vgopts: -q

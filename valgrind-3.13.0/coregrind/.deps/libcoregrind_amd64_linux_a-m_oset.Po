@@ -1,0 +1,36 @@
+libcoregrind_amd64_linux_a-m_oset.o: m_oset.c pub_core_basics.h \
+  ../include/pub_tool_basics.h ../VEX/pub/libvex_basictypes.h \
+  /usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h \
+  pub_core_libcbase.h ../include/pub_tool_libcbase.h \
+  pub_core_libcassert.h ../include/pub_tool_libcassert.h \
+  pub_core_libcprint.h ../include/pub_tool_libcprint.h pub_core_oset.h \
+  ../include/pub_tool_oset.h pub_core_poolalloc.h \
+  ../include/pub_tool_poolalloc.h
+
+pub_core_basics.h:
+
+../include/pub_tool_basics.h:
+
+../VEX/pub/libvex_basictypes.h:
+
+/usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h:
+
+pub_core_libcbase.h:
+
+../include/pub_tool_libcbase.h:
+
+pub_core_libcassert.h:
+
+../include/pub_tool_libcassert.h:
+
+pub_core_libcprint.h:
+
+../include/pub_tool_libcprint.h:
+
+pub_core_oset.h:
+
+../include/pub_tool_oset.h:
+
+pub_core_poolalloc.h:
+
+../include/pub_tool_poolalloc.h:

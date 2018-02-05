@@ -1,0 +1,2 @@
+prog: xor-undef-amd64
+vgopts: -q

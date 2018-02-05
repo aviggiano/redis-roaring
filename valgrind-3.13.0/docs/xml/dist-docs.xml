@@ -1,0 +1,134 @@
+<?xml version="1.0"?> <!-- -*- sgml -*- -->
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd"
+[ <!ENTITY % vg-entities SYSTEM "vg-entities.xml"> %vg-entities; ]>
+
+
+<book id="dist" xreflabel="Distribution Documents">
+
+<bookinfo>
+  <title>Valgrind Distribution Documents</title>
+  <releaseinfo>&rel-type; &rel-version; &rel-date;</releaseinfo>
+  <copyright>
+    <year>&vg-lifespan;</year>
+    <holder><ulink url="&vg-devs-url;">Valgrind Developers</ulink></holder>
+  </copyright>
+  <legalnotice>
+    <para>Email: <ulink url="mailto:&vg-vemail;">&vg-vemail;</ulink></para>
+  </legalnotice>
+</bookinfo>
+
+  <!-- Nb: because these are all text files, we have to wrap -->
+  <!-- them in suitable XML.  Hence the chapter/title stuff  -->
+
+  <chapter id="dist.authors" xreflabel="Valgrind Developers">
+    <title id="dist.authors.title">AUTHORS</title>
+    <literallayout>
+        <xi:include href="../../AUTHORS" parse="text"  
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+    </chapter>
+
+  <chapter id="dist.news" xreflabel="News">
+    <title>NEWS</title>
+    <literallayout>
+      <xi:include href="../../NEWS" parse="text"  
+          xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+  </chapter>
+  <chapter id="dist.news.old" xreflabel="Old News">
+    <title>OLDER NEWS</title>
+    <literallayout>
+      <xi:include href="../../NEWS.old" parse="text"  
+          xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+  </chapter>
+
+  <chapter id="dist.readme" xreflabel="Readme">
+    <title>README</title>
+    <literallayout>
+      <xi:include href="../../README" parse="text"  
+          xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+    </chapter>
+
+  <chapter id="dist.readme-missing" 
+             xreflabel="Readme Missing Syscall or Ioctl">
+    <title>README_MISSING_SYSCALL_OR_IOCTL</title>
+    <literallayout>
+      <xi:include href="../../README_MISSING_SYSCALL_OR_IOCTL" 
+          parse="text"  
+          xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+    </chapter>
+
+  <chapter id="dist.readme-developers" 
+             xreflabel="Readme Developer">
+    <title>README_DEVELOPERS</title>
+    <literallayout>
+      <xi:include href="../../README_DEVELOPERS" 
+          parse="text" 
+          xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+    </chapter>
+
+  <chapter id="dist.readme-packagers" 
+             xreflabel="Readme Packagers">
+    <title>README_PACKAGERS</title>
+    <literallayout>
+      <xi:include href="../../README_PACKAGERS" 
+          parse="text" 
+          xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+    </chapter>
+
+  <chapter id="dist.readme-s390" 
+             xreflabel="Readme S390">
+    <title>README.S390</title>
+    <literallayout>
+      <xi:include href="../../README.s390" 
+          parse="text" 
+          xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+    </chapter>
+
+  <chapter id="dist.readme-android" 
+             xreflabel="Readme Android">
+    <title>README.android</title>
+    <literallayout>
+      <xi:include href="../../README.android" 
+          parse="text" 
+          xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+    </chapter>
+
+  <chapter id="dist.readme-android_emulator" 
+             xreflabel="Readme Android Emulator">
+    <title>README.android_emulator</title>
+    <literallayout>
+      <xi:include href="../../README.android_emulator" 
+          parse="text" 
+          xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+    </chapter>
+
+  <chapter id="dist.readme-mips" 
+             xreflabel="Readme MIPS">
+    <title>README.mips</title>
+    <literallayout>
+      <xi:include href="../../README.mips" 
+          parse="text" 
+          xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+    </chapter>
+
+  <chapter id="dist.readme-solaris"
+             xreflabel="Readme Solaris">
+    <title>README.solaris</title>
+    <literallayout>
+      <xi:include href="../../README.solaris"
+          parse="text"
+          xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </literallayout>
+    </chapter>
+</book>

@@ -1,0 +1,55 @@
+
+Requirements
+------------
+- You need GCC 3.4 or later to compile the s390 port.
+- To run valgrind a z10 machine or any later model is recommended.
+  Older machine models down to and including z990 may work but have
+  not been tested extensively.
+
+
+Limitations
+-----------
+- 31-bit client programs are not supported.
+- Hexadecimal floating point is not supported.
+- Transactional memory is not supported.
+- Instructions operating on vector registers are not supported.
+- memcheck, cachegrind, drd, helgrind, massif, lackey, and none are
+  supported. 
+- On machine models predating z10, cachegrind will assume a z10 cache
+  architecture. Otherwise, cachegrind will query the hosts cache system
+  and use those parameters.
+- callgrind and all experimental tools are currently not supported.
+- Some gcc versions use mvc to copy 4/8 byte values. This will affect
+  certain debug messages. For example, memcheck will complain about
+  4 one-byte reads/writes instead of just a single read/write.
+- The transactional-execution facility is not supported; it is masked
+  off from HWCAP.
+- The vector facility is not supported; it is masked off from HWCAP.
+
+
+Hardware facilities
+-------------------
+Valgrind does not require that the host machine has the same hardware
+facilities as the machine for which the client program was compiled.
+This is convenient. If possible, the JIT compiler will translate the
+client instructions according to the facilities available on the host.
+This means, though, that probing for hardware facilities by issuing
+instructions from that facility and observing whether SIGILL is thrown
+may not work. As a consequence, programs that attempt to do so may
+behave differently. It is believed that this is a rare use case.
+
+
+Recommendations
+---------------
+Applications should be compiled with -fno-builtin to avoid
+false positives due to builtin string operations when running memcheck.
+
+
+Reading Material
+----------------
+(1) Linux for zSeries ELF ABI Supplement
+    http://refspecs.linuxfoundation.org/ELF/zSeries/index.html
+(2) z/Architecture Principles of Operation
+    http://publibfi.boulder.ibm.com/epubs/pdf/dz9zr010.pdf
+(3) z/Architecture Reference Summary
+    http://publibfi.boulder.ibm.com/epubs/pdf/dz9zs008.pdf

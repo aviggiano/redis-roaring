@@ -1,0 +1,42 @@
+vgpreload_drd_amd64_linux_so-drd_qtcore_intercepts.o: \
+  drd_qtcore_intercepts.c /usr/include/assert.h /usr/include/features.h \
+  /usr/include/stdc-predef.h /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+  /usr/include/x86_64-linux-gnu/bits/wordsize.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs-64.h drd_clientreq.h drd.h \
+  ../include/valgrind.h \
+  /usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h drd_basics.h \
+  ../include/pub_tool_basics.h ../VEX/pub/libvex_basictypes.h \
+  ../include/pub_tool_redir.h ../config.h
+
+/usr/include/assert.h:
+
+/usr/include/features.h:
+
+/usr/include/stdc-predef.h:
+
+/usr/include/x86_64-linux-gnu/sys/cdefs.h:
+
+/usr/include/x86_64-linux-gnu/bits/wordsize.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
+
+drd_clientreq.h:
+
+drd.h:
+
+../include/valgrind.h:
+
+/usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h:
+
+drd_basics.h:
+
+../include/pub_tool_basics.h:
+
+../VEX/pub/libvex_basictypes.h:
+
+../include/pub_tool_redir.h:
+
+../config.h:

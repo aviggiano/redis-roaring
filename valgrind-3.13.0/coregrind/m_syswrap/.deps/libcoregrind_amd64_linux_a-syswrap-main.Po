@@ -1,0 +1,219 @@
+m_syswrap/libcoregrind_amd64_linux_a-syswrap-main.o: \
+  m_syswrap/syswrap-main.c ../VEX/pub/libvex_guest_offsets.h \
+  ../VEX/pub/libvex_trc_values.h pub_core_basics.h \
+  ../include/pub_tool_basics.h ../VEX/pub/libvex_basictypes.h \
+  /usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h \
+  pub_core_aspacemgr.h ../include/pub_tool_aspacemgr.h pub_core_vki.h \
+  ../include/pub_tool_vki.h ../include/vki/vki-linux.h \
+  ../include/vki/vki-posixtypes-amd64-linux.h \
+  ../include/vki/vki-amd64-linux.h ../include/vki/vki-linux-drm.h \
+  ../include/vki/vki-xen.h ../include/vki/vki-xen-x86.h \
+  ../include/vki/vki-xen-domctl.h ../include/vki/vki-xen-sysctl.h \
+  ../include/vki/vki-xen-mmuext.h ../include/vki/vki-xen-schedop.h \
+  ../include/vki/vki-xen-memory.h ../include/vki/vki-xen-evtchn.h \
+  ../include/vki/vki-xen-gnttab.h ../include/vki/vki-xen-version.h \
+  ../include/vki/vki-xen-hvm.h ../include/vki/vki-xen-tmem.h \
+  ../include/vki/vki-xen-xsm.h ../include/vki/vki-xen-physdev.h \
+  pub_core_vkiscnums.h pub_core_vkiscnums_asm.h \
+  ../include/pub_tool_vkiscnums_asm.h \
+  ../include/vki/vki-scnums-amd64-linux.h \
+  ../include/pub_tool_vkiscnums.h pub_core_threadstate.h \
+  ../include/pub_tool_threadstate.h pub_core_libcsetjmp.h \
+  ../include/pub_tool_libcsetjmp.h /usr/include/setjmp.h \
+  /usr/include/features.h /usr/include/stdc-predef.h \
+  /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+  /usr/include/x86_64-linux-gnu/bits/wordsize.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
+  /usr/include/x86_64-linux-gnu/bits/setjmp.h \
+  /usr/include/x86_64-linux-gnu/bits/sigset.h pub_core_guest.h \
+  ../include/pub_tool_guest.h ../VEX/pub/libvex_guest_amd64.h \
+  ../VEX/pub/libvex_emnote.h ../VEX/pub/libvex.h ../VEX/pub/libvex_ir.h \
+  pub_core_libcbase.h ../include/pub_tool_libcbase.h \
+  pub_core_libcassert.h ../include/pub_tool_libcassert.h \
+  pub_core_libcprint.h ../include/pub_tool_libcprint.h \
+  pub_core_libcproc.h ../config.h ../include/pub_tool_libcproc.h \
+  pub_core_libcsignal.h ../include/pub_tool_libcsignal.h \
+  pub_core_scheduler.h pub_core_stacktrace.h \
+  ../include/pub_tool_stacktrace.h pub_core_tooliface.h \
+  ../include/pub_tool_tooliface.h ../include/pub_tool_errormgr.h \
+  ../include/pub_tool_execontext.h pub_core_options.h \
+  ../include/pub_tool_options.h pub_core_xarray.h \
+  ../include/pub_tool_xarray.h pub_core_signals.h \
+  ../include/pub_tool_signals.h pub_core_syscall.h pub_core_machine.h \
+  ../include/pub_tool_machine.h pub_core_mallocfree.h \
+  ../include/pub_tool_mallocfree.h pub_core_syswrap.h \
+  pub_core_gdbserver.h ../include/pub_tool_gdbserver.h \
+  m_syswrap/priv_types_n_macros.h m_syswrap/priv_syswrap-main.h
+
+../VEX/pub/libvex_guest_offsets.h:
+
+../VEX/pub/libvex_trc_values.h:
+
+pub_core_basics.h:
+
+../include/pub_tool_basics.h:
+
+../VEX/pub/libvex_basictypes.h:
+
+/usr/local/clang-5.0.0/lib/clang/5.0.0/include/stdarg.h:
+
+pub_core_aspacemgr.h:
+
+../include/pub_tool_aspacemgr.h:
+
+pub_core_vki.h:
+
+../include/pub_tool_vki.h:
+
+../include/vki/vki-linux.h:
+
+../include/vki/vki-posixtypes-amd64-linux.h:
+
+../include/vki/vki-amd64-linux.h:
+
+../include/vki/vki-linux-drm.h:
+
+../include/vki/vki-xen.h:
+
+../include/vki/vki-xen-x86.h:
+
+../include/vki/vki-xen-domctl.h:
+
+../include/vki/vki-xen-sysctl.h:
+
+../include/vki/vki-xen-mmuext.h:
+
+../include/vki/vki-xen-schedop.h:
+
+../include/vki/vki-xen-memory.h:
+
+../include/vki/vki-xen-evtchn.h:
+
+../include/vki/vki-xen-gnttab.h:
+
+../include/vki/vki-xen-version.h:
+
+../include/vki/vki-xen-hvm.h:
+
+../include/vki/vki-xen-tmem.h:
+
+../include/vki/vki-xen-xsm.h:
+
+../include/vki/vki-xen-physdev.h:
+
+pub_core_vkiscnums.h:
+
+pub_core_vkiscnums_asm.h:
+
+../include/pub_tool_vkiscnums_asm.h:
+
+../include/vki/vki-scnums-amd64-linux.h:
+
+../include/pub_tool_vkiscnums.h:
+
+pub_core_threadstate.h:
+
+../include/pub_tool_threadstate.h:
+
+pub_core_libcsetjmp.h:
+
+../include/pub_tool_libcsetjmp.h:
+
+/usr/include/setjmp.h:
+
+/usr/include/features.h:
+
+/usr/include/stdc-predef.h:
+
+/usr/include/x86_64-linux-gnu/sys/cdefs.h:
+
+/usr/include/x86_64-linux-gnu/bits/wordsize.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
+
+/usr/include/x86_64-linux-gnu/bits/setjmp.h:
+
+/usr/include/x86_64-linux-gnu/bits/sigset.h:
+
+pub_core_guest.h:
+
+../include/pub_tool_guest.h:
+
+../VEX/pub/libvex_guest_amd64.h:
+
+../VEX/pub/libvex_emnote.h:
+
+../VEX/pub/libvex.h:
+
+../VEX/pub/libvex_ir.h:
+
+pub_core_libcbase.h:
+
+../include/pub_tool_libcbase.h:
+
+pub_core_libcassert.h:
+
+../include/pub_tool_libcassert.h:
+
+pub_core_libcprint.h:
+
+../include/pub_tool_libcprint.h:
+
+pub_core_libcproc.h:
+
+../config.h:
+
+../include/pub_tool_libcproc.h:
+
+pub_core_libcsignal.h:
+
+../include/pub_tool_libcsignal.h:
+
+pub_core_scheduler.h:
+
+pub_core_stacktrace.h:
+
+../include/pub_tool_stacktrace.h:
+
+pub_core_tooliface.h:
+
+../include/pub_tool_tooliface.h:
+
+../include/pub_tool_errormgr.h:
+
+../include/pub_tool_execontext.h:
+
+pub_core_options.h:
+
+../include/pub_tool_options.h:
+
+pub_core_xarray.h:
+
+../include/pub_tool_xarray.h:
+
+pub_core_signals.h:
+
+../include/pub_tool_signals.h:
+
+pub_core_syscall.h:
+
+pub_core_machine.h:
+
+../include/pub_tool_machine.h:
+
+pub_core_mallocfree.h:
+
+../include/pub_tool_mallocfree.h:
+
+pub_core_syswrap.h:
+
+pub_core_gdbserver.h:
+
+../include/pub_tool_gdbserver.h:
+
+m_syswrap/priv_types_n_macros.h:
+
+m_syswrap/priv_syswrap-main.h:
