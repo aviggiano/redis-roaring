@@ -1,3 +1,0 @@
-prog: clreq
-vgopts: -q
-cleanup: rm cachegrind.out.*

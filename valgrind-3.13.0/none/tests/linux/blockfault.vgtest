@@ -1,2 +1,0 @@
-prog: blockfault
-cleanup: rm -f vgcore.*

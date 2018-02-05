@@ -1,3 +1,0 @@
-vgopts: --num-callers=2 -q
-prog:   badfree
-stderr_filter_args: badfree.c

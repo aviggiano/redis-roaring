@@ -1,2 +1,0 @@
-prog: free_is_write
-vgopts: --free-is-write=yes

@@ -1,3 +1,0 @@
-prog: threadname
-prereq: test -e ./threadname
-vgopts: -q

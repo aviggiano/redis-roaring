@@ -1,3 +1,0 @@
-# This one is currently disabled because it fails frequently and randomly
-# and so is no use at all.
-prog: yield

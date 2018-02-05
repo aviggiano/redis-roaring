@@ -1,3 +1,0 @@
-prog: clreq
-vgopts:
-cleanup: rm callgrind.out.*

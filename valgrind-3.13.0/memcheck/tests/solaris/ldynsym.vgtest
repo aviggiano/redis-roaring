@@ -1,3 +1,0 @@
-prog: ldynsym
-vgopts: -q --leak-check=yes
-stderr_filter: filter_ldynsym

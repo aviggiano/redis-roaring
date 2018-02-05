@@ -1,2 +1,0 @@
-prog: memory_allocation
-prereq: ./supported_libpthread

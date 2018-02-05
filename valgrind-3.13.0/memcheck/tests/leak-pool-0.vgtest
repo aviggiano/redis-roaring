@@ -1,3 +1,0 @@
-prog: leak-pool
-args: 0
-stderr_filter: filter_allocs

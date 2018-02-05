@@ -1,3 +1,0 @@
-prog: load_indexed_instructions
-prereq: ../../../tests/mips_features cavium-octeon2
-vgopts: -q

@@ -1,2 +1,0 @@
-prereq: ./supported_libpthread
-prog: threaded-fork

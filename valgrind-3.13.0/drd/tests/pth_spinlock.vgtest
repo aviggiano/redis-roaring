@@ -1,3 +1,0 @@
-prereq: test -e pth_spinlock && ./supported_libpthread && ! grep '#define DISABLE_PTHREAD_SPINLOCK_INTERCEPT 1' ../../config.h > /dev/null
-vgopts: --read-var-info=yes --check-stack-var=yes
-prog: pth_spinlock

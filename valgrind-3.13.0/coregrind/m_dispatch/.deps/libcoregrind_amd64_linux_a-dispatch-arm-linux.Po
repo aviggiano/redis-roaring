@@ -1,9 +1,0 @@
-m_dispatch/libcoregrind_amd64_linux_a-dispatch-arm-linux.o: \
-  m_dispatch/dispatch-arm-linux.S pub_core_basics_asm.h \
-  ../include/pub_tool_basics_asm.h ../config.h
-
-pub_core_basics_asm.h:
-
-../include/pub_tool_basics_asm.h:
-
-../config.h:

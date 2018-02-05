@@ -1,5 +1,0 @@
-{
-  name_of_this_suppression
-  Memcheck:Cond
-  fun:main
-}

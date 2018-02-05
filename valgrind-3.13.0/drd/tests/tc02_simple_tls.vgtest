@@ -1,2 +1,0 @@
-prereq: ./supported_libpthread
-prog: ../../helgrind/tests/tc02_simple_tls

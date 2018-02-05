@@ -1,3 +1,0 @@
-prereq: test -e bar_bad
-prog: bar_bad
-vgopts: -q --fair-sched=try

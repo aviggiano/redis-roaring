@@ -1,2 +1,0 @@
-prog: calloc-overflow
-vgopts: -q

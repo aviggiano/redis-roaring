@@ -1,2 +1,0 @@
-prog: tc06_two_races
-vgopts: --read-var-info=yes

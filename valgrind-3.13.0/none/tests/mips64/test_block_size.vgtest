@@ -1,2 +1,0 @@
-prog: test_block_size
-vgopts: -q

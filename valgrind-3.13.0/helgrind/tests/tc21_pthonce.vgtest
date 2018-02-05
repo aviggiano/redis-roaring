@@ -1,2 +1,0 @@
-prog: tc21_pthonce
-vgopts: --read-var-info=yes

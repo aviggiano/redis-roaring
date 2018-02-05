@@ -1,3 +1,0 @@
-prereq: test -e spawn
-prog: spawn
-vgopts: -q --trace-children=yes

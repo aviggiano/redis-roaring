@@ -1,2 +1,0 @@
-vgopts: --version
-stdout_filter: filter_cmdline0

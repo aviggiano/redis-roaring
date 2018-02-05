@@ -1,2 +1,0 @@
-prog: pointer-trace
-vgopts: -q --leak-check=yes

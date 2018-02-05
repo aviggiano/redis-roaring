@@ -1,2 +1,0 @@
-prog: unaligned_load_store
-vgopts: -q

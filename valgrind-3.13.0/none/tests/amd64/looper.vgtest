@@ -1,2 +1,0 @@
-prereq: test -e looper
-prog: looper

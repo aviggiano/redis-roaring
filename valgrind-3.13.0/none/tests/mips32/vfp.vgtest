@@ -1,3 +1,0 @@
-prog: vfp
-prereq: ../../../tests/mips_features fpu
-vgopts: -q

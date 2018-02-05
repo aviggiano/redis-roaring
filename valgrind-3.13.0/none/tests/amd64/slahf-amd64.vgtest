@@ -1,3 +1,0 @@
-prereq: test -e slahf-amd64
-prog: slahf-amd64
-vgopts: -q

@@ -1,2 +1,0 @@
-prereq: ../../../tests/is_ppc64_BE
-prog: lsw

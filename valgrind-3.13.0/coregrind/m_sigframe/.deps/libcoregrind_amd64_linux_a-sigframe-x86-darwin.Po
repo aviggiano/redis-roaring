@@ -1,2 +1,0 @@
-m_sigframe/libcoregrind_amd64_linux_a-sigframe-x86-darwin.o: \
-  m_sigframe/sigframe-x86-darwin.c

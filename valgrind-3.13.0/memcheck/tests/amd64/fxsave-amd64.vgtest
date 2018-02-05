@@ -1,3 +1,0 @@
-prog: fxsave-amd64
-vgopts: -q
-args: x

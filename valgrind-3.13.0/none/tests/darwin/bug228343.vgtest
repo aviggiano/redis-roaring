@@ -1,2 +1,0 @@
-prog: bug228343
-vgopts: -q --tool=none

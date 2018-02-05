@@ -1,3 +1,0 @@
-prog: cvm_ins
-prereq: ../../../tests/mips_features cavium-octeon
-vgopts: -q

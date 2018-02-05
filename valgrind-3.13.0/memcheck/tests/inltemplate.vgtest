@@ -1,2 +1,0 @@
-prog: inltemplate
-vgopts: -q --read-inline-info=yes

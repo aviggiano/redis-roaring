@@ -1,4 +1,0 @@
-prereq: test -e scalar_frealpathat
-prog: scalar_frealpathat
-vgopts: -q
-stderr_filter_args:

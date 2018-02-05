@@ -1,2 +1,0 @@
-prog: origin3-no
-vgopts: -q --track-origins=yes

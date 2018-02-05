@@ -1,2 +1,0 @@
-prog: leak-delta
-vgopts: -q --leak-check=yes --show-reachable=yes --leak-resolution=high

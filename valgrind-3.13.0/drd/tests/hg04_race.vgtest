@@ -1,3 +1,0 @@
-prereq: ./supported_libpthread
-vgopts: --read-var-info=yes --num-callers=2
-prog: ../../helgrind/tests/hg04_race

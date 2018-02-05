@@ -1,3 +1,0 @@
-prog: pselect_alarm
-vgopts: -q
-stderr_filter: filter_stderr

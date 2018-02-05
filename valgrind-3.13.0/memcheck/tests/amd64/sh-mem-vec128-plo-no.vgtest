@@ -1,3 +1,0 @@
-prog: sh-mem-vec128
-args: -q
-vgopts: --partial-loads-ok=no

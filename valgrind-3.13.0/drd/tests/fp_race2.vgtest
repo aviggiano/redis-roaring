@@ -1,3 +1,0 @@
-prereq: ./supported_libpthread
-prog: fp_race
-args: -m

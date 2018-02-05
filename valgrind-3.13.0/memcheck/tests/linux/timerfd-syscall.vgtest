@@ -1,2 +1,0 @@
-prereq: ../../../tests/os_test linux 2.6.25
-prog: timerfd-syscall

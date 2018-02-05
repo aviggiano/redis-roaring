@@ -1,3 +1,0 @@
-prog: mallinfo
-args: -q
-stderr_filter: filter_allocs

@@ -1,2 +1,0 @@
-prog: mmap_fcntl_bug
-vgopts: -q

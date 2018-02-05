@@ -1,2 +1,0 @@
-prog: describe-block
-stderr_filter: filter_allocs

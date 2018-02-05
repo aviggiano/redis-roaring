@@ -1,2 +1,0 @@
-prog: big_debuginfo_symbol
-vgopts: -q

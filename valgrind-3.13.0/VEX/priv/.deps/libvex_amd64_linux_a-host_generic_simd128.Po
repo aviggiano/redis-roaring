@@ -1,7 +1,0 @@
-priv/libvex_amd64_linux_a-host_generic_simd128.o: \
-  priv/host_generic_simd128.c ../VEX/pub/libvex_basictypes.h \
-  priv/host_generic_simd128.h
-
-../VEX/pub/libvex_basictypes.h:
-
-priv/host_generic_simd128.h:

@@ -1,2 +1,0 @@
-prog: thr_daemon_exit_standalone
-vgopts: -q

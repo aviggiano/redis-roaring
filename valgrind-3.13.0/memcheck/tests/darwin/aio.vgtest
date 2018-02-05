@@ -1,3 +1,0 @@
-prog: aio
-vgopts: --leak-check=no
-stderr_filter: ../filter_allocs

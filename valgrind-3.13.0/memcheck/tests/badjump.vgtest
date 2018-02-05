@@ -1,3 +1,0 @@
-prog: badjump
-cleanup: rm -f vgcore.*
-stderr_filter: filter_allocs

@@ -1,3 +1,0 @@
-prereq: ./supported_libpthread
-vgopts: --read-var-info=yes --check-stack-var=yes
-prog: pth_cancel_locked

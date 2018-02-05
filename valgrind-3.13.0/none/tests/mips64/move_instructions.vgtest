@@ -1,3 +1,0 @@
-prog: move_instructions
-prereq: ../../../tests/mips_features fpu
-vgopts: -q

@@ -1,3 +1,0 @@
-prog: simwork
-vgopts: --simulate-hwpref=yes
-cleanup: rm callgrind.out.*

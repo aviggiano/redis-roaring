@@ -1,2 +1,0 @@
-prog: ansi
-prereq: test -x ansi

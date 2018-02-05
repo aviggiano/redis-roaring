@@ -1,4 +1,0 @@
-prog: sendfilev
-vgopts: -q
-stderr_filter: filter_sendfilev
-stderr_filter_args: sendfilev.c

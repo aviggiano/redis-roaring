@@ -1,3 +1,0 @@
-prereq: test -e circular_buffer && ./supported_libpthread
-prog: circular_buffer
-args: -q

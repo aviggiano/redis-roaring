@@ -1,4 +1,0 @@
-prereq: test -e scalar_auditon_stat
-prog: scalar_auditon_stat
-vgopts: -q
-stderr_filter_args:

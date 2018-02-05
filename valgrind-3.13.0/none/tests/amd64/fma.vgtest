@@ -1,3 +1,0 @@
-prog: fma
-prereq: test -x fma && ../../../tests/x86_amd64_features amd64-avx
-vgopts: -q

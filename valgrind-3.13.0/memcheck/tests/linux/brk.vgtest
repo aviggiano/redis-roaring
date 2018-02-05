@@ -1,2 +1,0 @@
-prog: brk
-stderr_filter: ../filter_allocs

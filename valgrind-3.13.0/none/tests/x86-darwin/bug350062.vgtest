@@ -1,3 +1,0 @@
-prog: bug350062
-vgopts: -q
-cleanup: rm -f vgcore.*

@@ -1,2 +1,0 @@
-prog: mmapobj_bssonly
-vgopts: -q

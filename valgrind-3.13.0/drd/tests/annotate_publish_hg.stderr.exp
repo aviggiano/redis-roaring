@@ -1,7 +1,0 @@
-
-The annotation macro ANNOTATE_PUBLISH_MEMORY_RANGE has not yet been implemented in <valgrind/helgrind.h>
-   at 0x........: main (annotate_publish_hg.c:?)
-
-Done.
-
-ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)

@@ -1,3 +1,0 @@
-prog: mpx
-prereq: test -x mpx
-vgopts: -q

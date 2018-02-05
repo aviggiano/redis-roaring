@@ -1,2 +1,0 @@
-prog: threads_exitall
-vgopts: -q

@@ -1,2 +1,0 @@
-prog: malloc_free_fill
-vgopts: -q --malloc-fill=0x55 --free-fill=0x77

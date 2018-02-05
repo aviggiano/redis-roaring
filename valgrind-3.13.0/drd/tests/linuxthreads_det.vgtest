@@ -1,2 +1,0 @@
-prog: linuxthreads_det
-vgopts: --read-var-info=yes

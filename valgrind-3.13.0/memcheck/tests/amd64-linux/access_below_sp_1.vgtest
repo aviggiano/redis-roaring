@@ -1,2 +1,0 @@
-prog: access_below_sp
-vgopts: -q --ignore-range-below-sp=8192-8189

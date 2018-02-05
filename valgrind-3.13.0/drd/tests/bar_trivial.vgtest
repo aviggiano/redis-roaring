@@ -1,2 +1,0 @@
-prereq: test -e ../../helgrind/tests/bar_trivial && ./supported_libpthread
-prog: ../../helgrind/tests/bar_trivial

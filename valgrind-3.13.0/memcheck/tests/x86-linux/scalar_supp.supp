@@ -1,9 +1,0 @@
-# This suppression suppresses both of the buf errors.
-{
-   foo2
-   Memcheck:Param
-   write(buf)
-   ...
-   fun:(below main)
-}
-

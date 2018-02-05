@@ -1,2 +1,0 @@
-prereq: ./supported_libpthread && ! ../../tests/libc_test glibc 2.24.90
-prog: pth_cond_destroy_busy

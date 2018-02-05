@@ -1,2 +1,0 @@
-prog: shell.vgtest
-vgopts: -q

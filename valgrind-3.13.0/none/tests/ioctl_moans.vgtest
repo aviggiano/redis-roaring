@@ -1,3 +1,0 @@
-prog: ioctl_moans
-vgopts: -q
-stderr_filter: filter_ioctl_moans

@@ -1,2 +1,0 @@
-m_syswrap/libcoregrind_amd64_linux_a-syswrap-arm-linux.o: \
-  m_syswrap/syswrap-arm-linux.c

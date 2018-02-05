@@ -1,3 +1,0 @@
-prereq: ./supported_libpthread
-vgopts: --sigill-diagnostics=no
-prog: ../../helgrind/tests/tc12_rwl_trivial

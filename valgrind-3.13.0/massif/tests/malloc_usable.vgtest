@@ -1,3 +1,0 @@
-prog: malloc_usable
-vgopts: -q --massif-out-file=massif.out
-cleanup: rm massif.out

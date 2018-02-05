@@ -1,3 +1,0 @@
-prog: threads
-vgopts: --separate-threads=yes --collect-bus=yes
-cleanup: rm callgrind.out.*

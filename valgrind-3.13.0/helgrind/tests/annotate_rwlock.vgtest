@@ -1,3 +1,0 @@
-prereq: test -e annotate_rwlock
-vgopts: -q
-prog: annotate_rwlock

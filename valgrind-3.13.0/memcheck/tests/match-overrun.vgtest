@@ -1,3 +1,0 @@
-prog: match-overrun
-vgopts: -q --suppressions=match-overrun.supp
-stderr_filter: filter_allocs

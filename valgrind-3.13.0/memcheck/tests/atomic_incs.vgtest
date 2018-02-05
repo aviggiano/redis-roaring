@@ -1,2 +1,0 @@
-prog: atomic_incs
-vgopts: -q --track-origins=yes

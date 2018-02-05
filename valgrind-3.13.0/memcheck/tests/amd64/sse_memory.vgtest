@@ -1,3 +1,0 @@
-prog: sse_memory
-vgopts: -q
-args: all

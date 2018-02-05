@@ -1,3 +1,0 @@
-prog: pkcs11
-vgopts: -q
-stderr_filter_args:

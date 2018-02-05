@@ -1,2 +1,0 @@
-prog: pfpo
-prereq: test -e pfpo && ../../../tests/s390x_features s390x-pfpo

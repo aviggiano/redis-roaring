@@ -1,4 +1,0 @@
-prog: strchr
-vgopts: -q
-stderr_filter: filter_strchr
-stderr_filter_args: strchr.c

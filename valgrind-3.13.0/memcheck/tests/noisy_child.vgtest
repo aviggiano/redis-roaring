@@ -1,3 +1,0 @@
-prog: noisy_child
-vgopts: --child-silent-after-fork=yes
-stderr_filter: filter_allocs

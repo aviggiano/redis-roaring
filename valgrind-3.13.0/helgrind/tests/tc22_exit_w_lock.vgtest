@@ -1,2 +1,0 @@
-prereq: test -e tc22_exit_w_lock
-prog: tc22_exit_w_lock

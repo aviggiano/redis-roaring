@@ -1,2 +1,0 @@
-prog: syslog-syscall
-stderr_filter: ../filter_allocs

@@ -1,3 +1,0 @@
-prereq: ../../../tests/check_ppc64_auxv_cap altivec
-prog: bug129390-ppc32
-vgopts: -q

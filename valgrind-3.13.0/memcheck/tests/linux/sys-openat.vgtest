@@ -1,2 +1,0 @@
-prereq: test -e ./sys-openat
-prog: sys-openat

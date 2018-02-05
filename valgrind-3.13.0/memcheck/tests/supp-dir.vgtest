@@ -1,3 +1,0 @@
-# This tests the fix for bug 197456.
-prog: ../../tests/true
-vgopts: --suppressions=x86/

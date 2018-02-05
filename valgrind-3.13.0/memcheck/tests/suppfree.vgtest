@@ -1,2 +1,0 @@
-prog: suppfree
-vgopts: --suppressions=suppfree.supp -q

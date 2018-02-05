@@ -1,2 +1,0 @@
-vgopts: --leak-check=yes --gen-suppressions=all --show-reachable=no -q
-prog: nanoleak2

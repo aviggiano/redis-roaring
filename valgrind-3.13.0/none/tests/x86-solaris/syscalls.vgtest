@@ -1,2 +1,0 @@
-prog: syscalls
-vgopts: -q

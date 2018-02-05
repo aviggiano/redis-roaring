@@ -1,3 +1,0 @@
-prereq: test -e getzoneoffset
-prog: getzoneoffset
-vgopts: -q

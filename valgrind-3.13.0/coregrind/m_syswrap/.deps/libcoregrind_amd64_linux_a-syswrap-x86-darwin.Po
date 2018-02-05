@@ -1,2 +1,0 @@
-m_syswrap/libcoregrind_amd64_linux_a-syswrap-x86-darwin.o: \
-  m_syswrap/syswrap-x86-darwin.c

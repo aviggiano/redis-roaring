@@ -1,3 +1,0 @@
-prog: defcfaexpr
-stderr_filter: filter_defcfaexpr
-vgopts: -q

@@ -1,9 +1,0 @@
-m_syswrap/libcoregrind_amd64_linux_a-syscall-amd64-darwin.o: \
-  m_syswrap/syscall-amd64-darwin.S pub_core_basics_asm.h \
-  ../include/pub_tool_basics_asm.h ../config.h
-
-pub_core_basics_asm.h:
-
-../include/pub_tool_basics_asm.h:
-
-../config.h:

@@ -1,2 +1,0 @@
-prog: varinforestrict
-vgopts: -q --read-var-info=yes

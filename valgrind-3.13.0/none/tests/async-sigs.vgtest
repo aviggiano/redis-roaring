@@ -1,3 +1,0 @@
-prog: async-sigs
-vgopts: -q
-cleanup: rm -f vgcore.*

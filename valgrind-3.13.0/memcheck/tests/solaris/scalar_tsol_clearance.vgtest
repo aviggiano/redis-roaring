@@ -1,4 +1,0 @@
-prereq: test -e scalar_tsol_clearance
-prog: scalar_tsol_clearance
-vgopts: -q
-stderr_filter_args:

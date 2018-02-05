@@ -1,3 +1,0 @@
-prereq: ./supported_libpthread
-vgopts: --read-var-info=yes
-prog: fp_race

@@ -1,3 +1,0 @@
-prog: lsframe2
-vgopts: -q --main-stacksize=68500000
-stderr_filter: ../filter_allocs

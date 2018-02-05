@@ -1,2 +1,0 @@
-prog: chdir
-cleanup: rm cachegrind.out.*

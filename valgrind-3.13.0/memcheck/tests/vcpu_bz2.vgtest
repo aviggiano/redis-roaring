@@ -1,3 +1,0 @@
-prog: ../../perf/bz2
-args: x
-vgopts: -q

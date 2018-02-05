@@ -1,3 +1,0 @@
-prog: scalar
-vgopts: -q --error-limit=no
-stderr_filter_args:

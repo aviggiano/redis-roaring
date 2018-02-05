@@ -1,2 +1,0 @@
-vgopts: --help-debug --tool=none
-stdout_filter: filter_cmdline1

@@ -1,2 +1,0 @@
-prereq: test -e ./nestedfns
-prog: nestedfns

@@ -1,2 +1,0 @@
-prog: fadvise64
-vgopts: -q

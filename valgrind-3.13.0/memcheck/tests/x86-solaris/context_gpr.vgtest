@@ -1,2 +1,0 @@
-prog: context_gpr
-vgopts: -q --track-origins=yes

@@ -1,2 +1,0 @@
-prog: smc1
-vgopts: --smc-check=all

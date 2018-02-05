@@ -1,4 +1,0 @@
-prereq: test -e scalar_shm_new
-prog: scalar_shm_new
-vgopts: -q
-stderr_filter_args:

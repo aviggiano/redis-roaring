@@ -1,2 +1,0 @@
-prog: vcpu_fbench
-vgopts: -q

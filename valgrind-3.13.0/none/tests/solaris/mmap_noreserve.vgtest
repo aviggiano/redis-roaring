@@ -1,3 +1,0 @@
-prog: mmap_noreserve
-vgopts: -q --sanity-level=3
-stderr_filter: filter_stderr

@@ -1,2 +1,0 @@
-prog: tc16_byterace
-vgopts: --read-var-info=yes

@@ -1,3 +1,0 @@
-prog: change_fp_mode
-prereq: ../../../tests/mips_features fpu
-vgopts: -q

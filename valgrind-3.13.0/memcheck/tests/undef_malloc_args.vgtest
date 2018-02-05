@@ -1,2 +1,0 @@
-vgopts: --leak-check=yes -q
-prog: undef_malloc_args

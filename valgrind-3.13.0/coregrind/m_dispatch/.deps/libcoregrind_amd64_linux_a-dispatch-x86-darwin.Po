@@ -1,9 +1,0 @@
-m_dispatch/libcoregrind_amd64_linux_a-dispatch-x86-darwin.o: \
-  m_dispatch/dispatch-x86-darwin.S pub_core_basics_asm.h \
-  ../include/pub_tool_basics_asm.h ../config.h
-
-pub_core_basics_asm.h:
-
-../include/pub_tool_basics_asm.h:
-
-../config.h:

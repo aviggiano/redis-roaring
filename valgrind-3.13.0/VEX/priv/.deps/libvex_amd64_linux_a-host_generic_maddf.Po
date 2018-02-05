@@ -1,9 +1,0 @@
-priv/libvex_amd64_linux_a-host_generic_maddf.o: priv/host_generic_maddf.c \
-  ../VEX/pub/libvex_basictypes.h priv/host_generic_maddf.h \
-  priv/main_util.h
-
-../VEX/pub/libvex_basictypes.h:
-
-priv/host_generic_maddf.h:
-
-priv/main_util.h:

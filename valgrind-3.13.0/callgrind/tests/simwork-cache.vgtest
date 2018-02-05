@@ -1,3 +1,0 @@
-prog: simwork
-vgopts: --cache-sim=yes
-cleanup: rm callgrind.out.*

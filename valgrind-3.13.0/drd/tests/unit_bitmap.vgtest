@@ -1,3 +1,0 @@
-prog: unit_bitmap
-args: -s 93 -t 97 -q
-vgopts: -q --tool=memcheck --leak-check=full --show-reachable=yes

@@ -1,2 +1,0 @@
-vgopts: --leak-check=yes --suppressions=nanoleak.supp -q
-prog: nanoleak_supp

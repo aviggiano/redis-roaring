@@ -1,2 +1,0 @@
-prog: origin1-yes
-vgopts: -q --track-origins=yes

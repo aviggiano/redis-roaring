@@ -1,2 +1,0 @@
-prereq: test -e ifunc
-prog: ifunc

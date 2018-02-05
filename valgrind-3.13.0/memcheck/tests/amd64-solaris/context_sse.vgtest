@@ -1,2 +1,0 @@
-prog: context_sse
-vgopts: -q --track-origins=yes

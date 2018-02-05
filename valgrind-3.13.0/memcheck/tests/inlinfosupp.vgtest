@@ -1,3 +1,0 @@
-# test suppressions with inlined fn calls.
-prog: inlinfo
-vgopts: -q --read-inline-info=yes --suppressions=inlinfosupp.supp

@@ -1,3 +1,0 @@
-prog: MoveIns
-prereq: ../../../tests/mips_features fpu
-vgopts: -q

@@ -1,2 +1,0 @@
-prereq: test -e bug156404-amd64
-prog: bug156404-amd64

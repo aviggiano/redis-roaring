@@ -1,2 +1,0 @@
-prereq: test -e pth_barrier_reinit && ./supported_libpthread
-prog: pth_barrier_reinit

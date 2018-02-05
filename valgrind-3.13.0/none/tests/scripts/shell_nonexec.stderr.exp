@@ -1,1 +1,0 @@
-valgrind: ./shell.vgtest: Permission denied

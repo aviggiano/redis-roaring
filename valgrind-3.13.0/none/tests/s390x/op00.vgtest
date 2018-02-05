@@ -1,2 +1,0 @@
-prog: op00
-cleanup: rm -f vgcore.*

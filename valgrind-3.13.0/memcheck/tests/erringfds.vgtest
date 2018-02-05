@@ -1,2 +1,0 @@
-prog: erringfds
-stderr_filter: filter_allocs

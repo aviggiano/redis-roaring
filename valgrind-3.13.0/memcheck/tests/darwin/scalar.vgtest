@@ -1,3 +1,0 @@
-prog: scalar
-vgopts: -q --error-limit=no
-args: < scalar.c

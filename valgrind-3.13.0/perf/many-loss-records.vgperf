@@ -1,2 +1,0 @@
-prog: many-loss-records
-vgopts: --memcheck:leak-check=yes --memcheck:leak-resolution=high

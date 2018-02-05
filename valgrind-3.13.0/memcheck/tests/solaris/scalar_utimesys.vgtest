@@ -1,4 +1,0 @@
-prereq: test -e scalar_utimesys
-prog: scalar_utimesys
-vgopts: -q
-stderr_filter_args:

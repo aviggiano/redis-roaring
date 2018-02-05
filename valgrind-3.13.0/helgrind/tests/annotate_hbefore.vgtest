@@ -1,2 +1,0 @@
-vgopts: -q --fair-sched=try
-prog: annotate_hbefore

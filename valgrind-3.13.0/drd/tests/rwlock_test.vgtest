@@ -1,2 +1,0 @@
-vgopts: --check-stack-var=yes --read-var-info=yes --show-confl-seg=no
-prog: rwlock_test
