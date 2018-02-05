@@ -6,7 +6,7 @@ before_install:
 
 install:
   - sudo apt-get update
-  - sudo apt-get install -y valgrind
+  - sudo apt-get install -y valgrind=3.3.0-1
 
 compiler:
   - clang
