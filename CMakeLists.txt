@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.0)
 project(redis-roaring)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
