@@ -6,8 +6,8 @@ before_install:
 
 install:
   - sudo apt-get update
-  - PWD=$(pwd) && cd /tmp && wget ftp://sourceware.org/pub/valgrind/valgrind-3.13.0.tar.bz2 && tar -xjf valgrind-3.13.0.tar.bz2 && cd valgrind-3.13.0 && ./configure --prefix=/usr/local && make && sudo make install && ccache --clear && valgrind --version && cd $PWD
-  - sudo apt-get install libc6-dbg
+  - PWD=$(pwd) && cd /tmp && wget ftp://sourceware.org/pub/valgrind/valgrind-3.13.0.tar.bz2 && tar -xjf valgrind-3.13.0.tar.bz2 && cd valgrind-3.13.0 && ./configure --prefix=/usr/local && make && sudo make install && ccache --clear && valgrind --version && echo $PWD && cd $PWD
+  - sudo apt-get install -y libc6-dbg
 
 compiler:
   - clang
