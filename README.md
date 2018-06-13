@@ -2,6 +2,20 @@ redis-roaring [![Build Status](https://travis-ci.org/aviggiano/redis-roaring.svg
 ===========
 Roaring Bitmaps for Redis
 
+## why fork!
+Simplify compilation
+
+You only：
+
+```bash
+$ git clone https://github.com/aviggiano/redis-roaring.git
+$ cd redis-roaring/
+$ git submodule update --init --recursive
+$ mkdir build
+$ cd build
+$ cmake .. && make
+```
+
 ## Intro
 
 This project uses the [CRoaring](https://github.com/RoaringBitmap/CRoaring) library to implement roaring bitmap commands for Redis.
