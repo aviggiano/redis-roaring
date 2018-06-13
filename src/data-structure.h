@@ -1,7 +1,7 @@
 #ifndef REDIS_ROARING_DATA_STRUCTURE_H
 #define REDIS_ROARING_DATA_STRUCTURE_H
 
-#include "roaring.h"
+#include "roaring/roaring.h"
 
 typedef roaring_bitmap_t Bitmap;
 

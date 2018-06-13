@@ -2,21 +2,50 @@ cmake_minimum_required(VERSION 3.0)
 project(redis-roaring)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Werror")
 set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(DEPS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/deps)
 set(TEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-set(CROARING_PATH ${DEPS_PATH}/CRoaring)
+
+
+####### make CRoaring #######
+
+message(STATUS "make CRoaring")
+EXECUTE_PROCESS(COMMAND "cmake" "."
+    COMMAND "make" 
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps/CRoaring")
+message(STATUS "make CRoaring finish")
+
+####### make redis #######
+message(STATUS "make redis")
+EXECUTE_PROCESS(COMMAND "make" "clean" 
+    COMMAND "make"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps/redis")
+message(STATUS "make redis finish")
+
+####### make hiredis #######
+message(STATUS "make hiredis")
+EXECUTE_PROCESS(COMMAND "make" "clean"
+    COMMAND  "make" 
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps/hiredis")
+message(STATUS "make hiredis finish")
+
+
+set(CROARING_PATH ${DEPS_PATH}/CRoaring/include)
 set(HIREDIS_PATH ${DEPS_PATH}/hiredis)
-set(CROARING_BUILD_PATH ${DEPS_PATH}/CRoaring/build/src)
+set(CROARING_BUILD_PATH ${DEPS_PATH}/CRoaring/src)
 set(CMAKE_C_FLAGS_RELEASE "") # removes -NDEBUG
 set(CMAKE_BUILD_TYPE Debug)
 
 link_directories(${CROARING_BUILD_PATH})
 link_directories(${HIREDIS_PATH})
+
 include_directories(${CROARING_PATH})
+include_directories(${DEPS_PATH}/CRoaring)
 include_directories(${HIREDIS_PATH})
 include_directories(${SRC_PATH})
+
 enable_testing()
 
 ####### unit tests #######
