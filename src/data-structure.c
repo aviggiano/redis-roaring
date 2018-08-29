@@ -106,6 +106,11 @@ uint32_t* bitmap_get_int_array(Bitmap* bitmap, size_t* n) {
   roaring_bitmap_to_uint32_array(bitmap, ans);
   return ans;
 }
+uint32_t* bitmap_range_int_array(Bitmap* bitmap, size_t offset,  size_t n) {
+  uint32_t* ans = malloc(sizeof(*ans) * n);
+  roaring_bitmap_range_uint32_array(bitmap, offset, n, ans);
+  return ans;
+}
 
 void bitmap_free_int_array(uint32_t* array) {
   free(array);

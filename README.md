@@ -10,6 +10,10 @@ calls, according to microbenchmarks, while consuming less memory than their unco
 
 Pull requests are welcome.
 
+## why fork?
+- 1 add <a href="#newAPI">new APIs</a>  
+- 2 add a <a href="#quickstart">quick start</a>
+
 ## Dependencies
 
 - CRoaring (bitmap compression library used by this redis module)
@@ -76,9 +80,36 @@ Currently the following operations are supported
 - `R.SETBITARRAY` (create a roaring bitmap from a bit array string)
 - `R.GETBITARRAY` (get a bit array string from a roaring bitmap)
 
+<a name="newAPI">new API</a>
+
+- `R.APPENDINTARRAY` (append integers to a roaring bitmap)
+- `R.RANGEINTARRAY` (get an integer array from a roaring bitmap with `offset` and `limit`, so can implements paging)
+- `R.SETRANGE` (set or append integer range to a roaring bitmap)
+- `R.STAT` (get statistical information of a roaring bitmap)
+- `R.OPTIMIZE` (optimize a roaring bitmap)
+
 Missing commands:
 
 - `R.BITFIELD` (same as [BITFIELD](https://redis.io/commands/bitfield))
+
+## <a name="quickstart">quick start</a>
+```
+$ git clone https://github.com/aviggiano/redis-roaring.git
+$ cd redis-roaring/
+$ configure.sh
+$ mkdir build && cd build
+$ cmake ..
+$ make
+$ cd .. && mkdir dist
+$ cp build/libredis-roaring.dylib dist
+$ cp deps/redis/redis.conf dist
+$ cp deps/redis/src/{redis-benchmark,redis-check-aof,redis-check-rdb,redis-cli,redis-sentinel,redis-server} dist
+$ echo "loadmodule `pwd`/dist/libredis-roaring.dylib" >> dist/redis.conf
+$ cd dist 
+$ ./redis-server ./redis.conf  
+```
+then you can open another terminal and use `./redis-cli` to connect to the redis server
+
 
 ## Performance
 

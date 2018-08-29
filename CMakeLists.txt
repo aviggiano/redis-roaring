@@ -8,8 +8,8 @@ set(DEPS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/deps)
 set(TEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 set(CROARING_PATH ${DEPS_PATH}/CRoaring)
 set(HIREDIS_PATH ${DEPS_PATH}/hiredis)
-set(CROARING_BUILD_PATH ${DEPS_PATH}/CRoaring/build/src)
-set(CMAKE_C_FLAGS_RELEASE "") # removes -NDEBUG
+set(CROARING_BUILD_PATH ${DEPS_PATH}/CRoaring/build)
+#set(CMAKE_C_FLAGS_RELEASE "") # removes -NDEBUG
 set(CMAKE_BUILD_TYPE Debug)
 
 link_directories(${CROARING_BUILD_PATH})
@@ -46,6 +46,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(SOURCE_FILES ${SRC_PATH}/redis-roaring.c
         ${SRC_PATH}/type.c
-        ${SRC_PATH}/data-structure.c)
+        ${SRC_PATH}/data-structure.c
+        ${SRC_PATH}/sds.c)
 add_library(redis-roaring SHARED ${SOURCE_FILES})
 target_link_libraries(redis-roaring roaring)

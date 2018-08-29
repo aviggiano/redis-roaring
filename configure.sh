@@ -16,9 +16,10 @@ function configure_croaring()
   ./amalgamation.sh
 
   # https://github.com/RoaringBitmap/CRoaring#building-with-cmake-linux-and-macos-visual-studio-users-should-see-below
+#  rm -rf  build
   mkdir -p build
   cd build
-  cmake -DBUILD_STATIC=ON ..
+  cmake -DBUILD_STATIC=ON -DCMAKE_BUILD_TYPE=Debug ..
   make
 
   popd

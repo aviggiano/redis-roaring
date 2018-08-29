@@ -1,6 +1,6 @@
 [submodule "deps/CRoaring"]
 	path = deps/CRoaring
-	url = https://github.com/RoaringBitmap/CRoaring.git
+	url = https://github.com/baiyunping333/CRoaring.git 
 [submodule "deps/redis"]
 	path = deps/redis
 	url = https://github.com/antirez/redis.git
