@@ -83,8 +83,9 @@ Currently the following operations are supported
 <a name="newAPI">new API</a>
 
 - `R.APPENDINTARRAY` (append integers to a roaring bitmap)
-- `R.RANGEINTARRAY` (get an integer array from a roaring bitmap with `offset` and `limit`, so can implements paging)
+- `R.RANGEINTARRAY` (get an integer array from a roaring bitmap with `start` and `end`, so can implements paging)
 - `R.SETRANGE` (set or append integer range to a roaring bitmap)
+- `R.SETFULL` (fill up a roaring bitmap in integer)
 - `R.STAT` (get statistical information of a roaring bitmap)
 - `R.OPTIMIZE` (optimize a roaring bitmap)
 
