@@ -176,7 +176,7 @@ int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   roaring_bitmap_statistics(bitmap, &stat);
 
   sds s = sdsempty();
-  s = sdscatprintf(s, "total nums: %lld\n", stat.cardinality);
+  s = sdscatprintf(s, "total nums: %lld\n", (long long)stat.cardinality);
   s = sdscatprintf(s, "total containers: %d\n", stat.n_containers);
   s = sdscatprintf(s, "min num: %d\n", stat.max_value);
   s = sdscatprintf(s, "max num: %d\n", stat.min_value);
