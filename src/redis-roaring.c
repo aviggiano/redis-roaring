@@ -24,7 +24,7 @@ int RSetFullCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   Bitmap* nbitmap = roaring_bitmap_from_range(0, UINT32_MAX-1, 1);
   RedisModule_ModuleTypeSetValue(key, BitmapType, nbitmap);
   RedisModule_ReplicateVerbatim(ctx);
-  RedisModule_ReplyWithSimpleString(ctx, "ok");    
+  RedisModule_ReplyWithSimpleString(ctx, "OK");    
   return REDISMODULE_OK;
 }
 
@@ -73,7 +73,7 @@ int RSetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   RedisModule_ReplicateVerbatim(ctx);
-  RedisModule_ReplyWithSimpleString(ctx, "ok");    
+  RedisModule_ReplyWithSimpleString(ctx, "OK");    
   return REDISMODULE_OK;
 }
 

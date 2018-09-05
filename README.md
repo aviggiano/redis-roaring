@@ -24,14 +24,6 @@ Pull requests are welcome.
 $ git clone https://github.com/aviggiano/redis-roaring.git
 $ cd redis-roaring/
 $ configure.sh
-$ mkdir build && cd build
-$ cmake ..
-$ make
-$ cd .. && mkdir dist
-$ cp build/libredis-roaring.dylib dist
-$ cp deps/redis/redis.conf dist
-$ cp deps/redis/src/{redis-benchmark,redis-check-aof,redis-check-rdb,redis-cli,redis-sentinel,redis-server} dist
-$ echo "loadmodule `pwd`/dist/libredis-roaring.dylib" >> dist/redis.conf
 $ cd dist 
 $ ./redis-server ./redis.conf  
 ```
@@ -83,15 +75,17 @@ Missing commands:
 $ redis-cli
 # add numbers from 1 util 100 to test roaring bitmap
 127.0.0.1:6379> r.setrange test 1 100
+# if the key `test` exists and is a roaring bitmap type, append these numbers
+# if the key `test` does not exist, add to an new roaring bitmap
 
 # get all the int numbers
 127.0.0.1:6379> R.GETINTARRAY test
 
 # fill up the roaring bitmap, then don't use the `R.GETINTARRAY` 
-# because you need 2^32*4bytes memory and a long lang time
+# because you need 2^32*4bytes memory and a long long time
 127.0.0.1:6379> R.SETFULL test
 
-# bu you can use `R.RANGEINTARRAY` to get numbers from 100 to 1000 
+# but you can use `R.RANGEINTARRAY` to get numbers from 100 to 1000 
 127.0.0.1:6379> R.RANGEINTARRAY test 100 1000
 
 # you can append numbers to an existed roaring bitmap
