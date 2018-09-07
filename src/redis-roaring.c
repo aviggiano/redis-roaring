@@ -17,14 +17,14 @@ int RSetFullCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
   int type = RedisModule_KeyType(key);
-  if(type != REDISMODULE_KEYTYPE_EMPTY){
+  if (type != REDISMODULE_KEYTYPE_EMPTY) {
     return RedisModule_ReplyWithError(ctx, "key exists");
   }
 
-  Bitmap* nbitmap = roaring_bitmap_from_range(0, UINT32_MAX-1, 1);
+  Bitmap* nbitmap = roaring_bitmap_from_range(0, UINT32_MAX - 1, 1);
   RedisModule_ModuleTypeSetValue(key, BitmapType, nbitmap);
   RedisModule_ReplicateVerbatim(ctx);
-  RedisModule_ReplyWithSimpleString(ctx, "OK");    
+  RedisModule_ReplyWithSimpleString(ctx, "OK");
   return REDISMODULE_OK;
 }
 
@@ -49,20 +49,20 @@ int RSetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if ((RedisModule_StringToLongLong(argv[3], &end_num) != REDISMODULE_OK)) {
     return RedisModule_ReplyWithError(ctx, "ERR invalid end_num: must be an unsigned 32 bit integer");
   }
-  if (start_num < 0 || end_num < 0 || end_num < start_num){
+  if (start_num < 0 || end_num < 0 || end_num < start_num) {
     return RedisModule_ReplyWithError(ctx, "start_num and end_num must >=0 and end_num must >= start_num");
   }
 
-  if ((uint32_t) start_num > UINT32_MAX || (uint32_t) end_num > UINT32_MAX){
+  if ((uint32_t) start_num > UINT32_MAX || (uint32_t) end_num > UINT32_MAX) {
     return RedisModule_ReplyWithError(ctx, "ERR invalid end_num: must be an unsigned 32 bit integer");
   }
-  Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key); 
+  Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
 
-  Bitmap* nbitmap = roaring_bitmap_from_range((uint32_t)start_num, (uint32_t)end_num, 1);
+  Bitmap* nbitmap = roaring_bitmap_from_range((uint32_t) start_num, (uint32_t) end_num, 1);
 
-  if (type == REDISMODULE_KEYTYPE_EMPTY){
+  if (type == REDISMODULE_KEYTYPE_EMPTY) {
     RedisModule_ModuleTypeSetValue(key, BitmapType, nbitmap);
-  }else{
+  } else {
     Bitmap** bitmaps = RedisModule_Alloc(2 * sizeof(*bitmaps));
     bitmaps[0] = bitmap;
     bitmaps[1] = nbitmap;
@@ -73,7 +73,7 @@ int RSetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   RedisModule_ReplicateVerbatim(ctx);
-  RedisModule_ReplyWithSimpleString(ctx, "OK");    
+  RedisModule_ReplyWithSimpleString(ctx, "OK");
   return REDISMODULE_OK;
 }
 
@@ -142,8 +142,7 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   char value;
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
     value = 0;
-  }
-  else {
+  } else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
     /* Get bit */
     value = bitmap_getbit(bitmap, (uint32_t) offset);
@@ -153,6 +152,7 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 
   return REDISMODULE_OK;
 }
+
 /**
  * R.STAT <key> 
  * */
@@ -167,8 +167,8 @@ int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
   //@todo statistics 
-  if (type == REDISMODULE_KEYTYPE_EMPTY){
-    return RedisModule_ReplyWithError(ctx, "key not exists");
+  if (type == REDISMODULE_KEYTYPE_EMPTY) {
+    return RedisModule_ReplyWithError(ctx, "ERR key does not exist");
   }
 
   Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
@@ -176,29 +176,30 @@ int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   roaring_bitmap_statistics(bitmap, &stat);
 
   sds s = sdsempty();
-  s = sdscatprintf(s, "total nums: %lld\n", (long long)stat.cardinality);
-  s = sdscatprintf(s, "total containers: %d\n", stat.n_containers);
-  s = sdscatprintf(s, "min num: %d\n", stat.max_value);
-  s = sdscatprintf(s, "max num: %d\n", stat.min_value);
+  s = sdscatprintf(s, "cardinality: %lld\n", (long long) stat.cardinality);
+  s = sdscatprintf(s, "number of containers: %d\n", stat.n_containers);
+  s = sdscatprintf(s, "max value: %d\n", stat.max_value);
+  s = sdscatprintf(s, "min value: %d\n", stat.min_value);
 
-  s = sdscatprintf(s, "array contaiers: %d\n", stat.n_array_containers);
-  s = sdscatprintf(s, "\tarray container nums: %d\n", stat.n_values_array_containers);
+  s = sdscatprintf(s, "number of array containers: %d\n", stat.n_array_containers);
+  s = sdscatprintf(s, "\tarray container values: %d\n", stat.n_values_array_containers);
   s = sdscatprintf(s, "\tarray container bytes: %d\n", stat.n_bytes_array_containers);
 
-  s = sdscatprintf(s, "bitset  contaiers: %d\n", stat.n_bitset_containers);
-  s = sdscatprintf(s, "\tbitset  container nums: %d\n", stat.n_values_bitset_containers);
+  s = sdscatprintf(s, "bitset  containers: %d\n", stat.n_bitset_containers);
+  s = sdscatprintf(s, "\tbitset  container values: %d\n", stat.n_values_bitset_containers);
   s = sdscatprintf(s, "\tbitset  container bytes: %d\n", stat.n_bytes_bitset_containers);
 
-  s = sdscatprintf(s, "run contaiers: %d\n", stat.n_run_containers);
-  s = sdscatprintf(s, "\trun container nums: %d\n", stat.n_values_run_containers);
+  s = sdscatprintf(s, "run containers: %d\n", stat.n_run_containers);
+  s = sdscatprintf(s, "\trun container values: %d\n", stat.n_values_run_containers);
   s = sdscatprintf(s, "\trun container bytes: %d\n", stat.n_bytes_run_containers);
 
   RedisModule_ReplicateVerbatim(ctx);
-  RedisModule_ReplyWithSimpleString(ctx, s);    
+  RedisModule_ReplyWithSimpleString(ctx, s);
   sdsfree(s);
 
   return REDISMODULE_OK;
 }
+
 /**
  * R.OPTIMIZE <key> 
  * */
@@ -238,7 +239,7 @@ int RSetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
-  size_t length = (size_t) (argc - 2);
+  size_t length = (size_t)(argc - 2);
   uint32_t* values = RedisModule_Alloc(sizeof(*values) * length);
   for (int i = 0; i < length; i++) {
     long long value;
@@ -275,9 +276,9 @@ int RAppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int ar
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
-  Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key); 
+  Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
 
-  size_t length = (size_t) (argc - 2);
+  size_t length = (size_t)(argc - 2);
   uint32_t* values = RedisModule_Alloc(sizeof(*values) * length);
   for (int i = 0; i < length; i++) {
     long long value;
@@ -290,9 +291,9 @@ int RAppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int ar
 
   Bitmap* nbitmap = bitmap_from_int_array(length, values);
 
-  if (type == REDISMODULE_KEYTYPE_EMPTY){
+  if (type == REDISMODULE_KEYTYPE_EMPTY) {
     RedisModule_ModuleTypeSetValue(key, BitmapType, nbitmap);
-  }else{
+  } else {
     Bitmap** bitmaps = RedisModule_Alloc(2 * sizeof(*bitmaps));
     bitmaps[0] = bitmap;
     bitmaps[1] = nbitmap;
@@ -335,31 +336,31 @@ int RRangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
     return RedisModule_ReplyWithError(ctx, "ERR invalid start: must be an unsigned 32 bit integer");
   }
 
-  if (start < 0 || end < 0){
-    return RedisModule_ReplyWithError(ctx, "start and end must be >=0");
+  if (start < 0 || end < 0) {
+    return RedisModule_ReplyWithError(ctx, "ERR start and end must be >= 0");
   }
 
   Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
   uint32_t* array = NULL;
-  size_t n = 0; 
-  if (bitmap != NULL){
-      long long count = (long long)bitmap_get_cardinality(bitmap);
-      if(start > count - 1 || start > end){
-          n = 0;
-      }else{
-          n = end - start + 1;
-      }
-      if(n > 0){
-          array = bitmap_range_int_array(bitmap, (size_t)start, n);
-      } 
-  }else{
+  size_t n = 0;
+  if (bitmap != NULL) {
+    long long count = (long long) bitmap_get_cardinality(bitmap);
+    if (start > count - 1 || start > end) {
       n = 0;
+    } else {
+      n = end - start + 1;
+    }
+    if (n > 0) {
+      array = bitmap_range_int_array(bitmap, (size_t) start, n);
+    }
+  } else {
+    n = 0;
   }
   RedisModule_ReplyWithArray(ctx, n);
-  for (size_t i=0; i<n; i++) {
+  for (size_t i = 0; i < n; i++) {
     RedisModule_ReplyWithLongLong(ctx, array[i]);
   }
-  if (array != NULL){
+  if (array != NULL) {
     bitmap_free_int_array(array);
   }
   return REDISMODULE_OK;
@@ -442,8 +443,7 @@ int RGetBitArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
     RedisModule_ReplyWithStringBuffer(ctx, array, size);
 
     bitmap_free_bit_array(array);
-  }
-  else {
+  } else {
     RedisModule_ReplyWithSimpleString(ctx, "");
   }
 
@@ -458,7 +458,7 @@ int RBitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, Bitmap* (* o
   if (desttype != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(destkey) != BitmapType) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
-  uint32_t n = (uint32_t) (argc - 3);
+  uint32_t n = (uint32_t)(argc - 3);
   // checks for srckey types
   for (uint32_t i = 0; i < n; i++) {
     RedisModuleKey* srckey = RedisModule_OpenKey(ctx, argv[3 + i], REDISMODULE_READ);
@@ -481,8 +481,7 @@ int RBitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, Bitmap* (* o
       // "non-existent keys [...] are considered as a stream of zero bytes up to the length of the longest string"
       bitmap = bitmap_alloc();
       should_free[i] = true;
-    }
-    else {
+    } else {
       bitmap = RedisModule_ModuleTypeGetValue(srckey);
       should_free[i] = false;
     }
@@ -530,20 +529,16 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (strcmp(operation, "NOT") == 0) {
     if (argc != 4) return RedisModule_WrongArity(ctx);
     else return RBitOp(ctx, argv, argc, bitmap_not_array);
-  }
-  else if (strcmp(operation, "AND") == 0) {
+  } else if (strcmp(operation, "AND") == 0) {
     if (argc == 4) return RedisModule_WrongArity(ctx);
     else return RBitOp(ctx, argv, argc, bitmap_and);
-  }
-  else if (strcmp(operation, "OR") == 0) {
+  } else if (strcmp(operation, "OR") == 0) {
     if (argc == 4) return RedisModule_WrongArity(ctx);
     else return RBitOp(ctx, argv, argc, bitmap_or);
-  }
-  else if (strcmp(operation, "XOR") == 0) {
+  } else if (strcmp(operation, "XOR") == 0) {
     if (argc == 4) return RedisModule_WrongArity(ctx);
     else return RBitOp(ctx, argv, argc, bitmap_xor);
-  }
-  else {
+  } else {
     RedisModule_ReplyWithSimpleString(ctx, "ERR syntax error");
     return REDISMODULE_ERR;
   }
@@ -568,8 +563,7 @@ int RBitCountCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   uint64_t count;
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
     count = 0;
-  }
-  else {
+  } else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
     count = bitmap_get_cardinality(bitmap);
   }
@@ -599,13 +593,11 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   int64_t pos;
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
     pos = -1;
-  }
-  else {
+  } else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-    if(bit == 1) {
+    if (bit == 1) {
       pos = bitmap_get_nth_element_present(bitmap, 1);
-    }
-    else {
+    } else {
       pos = bitmap_get_nth_element_not_present(bitmap, 1);
     }
   }
@@ -640,15 +632,15 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   if (RedisModule_CreateCommand(ctx, "R.GETBIT", RGetBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
- 
+
   if (RedisModule_CreateCommand(ctx, "R.SETINTARRAY", RSetIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R.GETINTARRAY", RGetIntArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
-//@todo
-  if (RedisModule_CreateCommand(ctx, "R.RANGEINTARRAY", RRangeIntArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+  if (RedisModule_CreateCommand(ctx, "R.RANGEINTARRAY", RRangeIntArrayCommand, "readonly", 1, 1, 1) ==
+      REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R.APPENDINTARRAY", RAppendIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
