@@ -36,7 +36,7 @@ function configure_hiredis()
   make
   cd -
 }
-function build() 
+function build()
 {
   mkdir -p build
   cd build
