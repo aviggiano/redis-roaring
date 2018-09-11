@@ -53,6 +53,7 @@ Bitmap* bitmap_not_array(uint32_t unused, const Bitmap** bitmaps);
 Bitmap* bitmap_not(const Bitmap* bitmap);
 Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array);
 uint32_t* bitmap_get_int_array(Bitmap* bitmap, size_t* n);
+uint32_t* bitmap_range_int_array(Bitmap* bitmap, size_t offset,  size_t n);
 void bitmap_free_int_array(uint32_t* array);
 /**
  * Creates a Bitmap from a buffer composed from ASCII '0's and '1's

@@ -1,9 +1,12 @@
 [submodule "deps/CRoaring"]
 	path = deps/CRoaring
-	url = https://github.com/RoaringBitmap/CRoaring.git
+	url = https://github.com/RoaringBitmap/CRoaring.git 
 [submodule "deps/redis"]
 	path = deps/redis
 	url = https://github.com/antirez/redis.git
 [submodule "deps/hiredis"]
 	path = deps/hiredis
 	url = https://github.com/redis/hiredis.git
+[submodule "deps/sds"]
+	path = deps/sds
+	url = https://github.com/antirez/sds.git

@@ -10,6 +10,7 @@ calls, according to microbenchmarks, while consuming less memory than their unco
 
 Pull requests are welcome.
 
+
 ## Dependencies
 
 - CRoaring (bitmap compression library used by this redis module)
@@ -19,34 +20,14 @@ Pull requests are welcome.
 
 ## Getting started
 
-Clone this repository:
-
-```bash
+```
 $ git clone https://github.com/aviggiano/redis-roaring.git
 $ cd redis-roaring/
+$ configure.sh
+$ cd dist 
+$ ./redis-server ./redis.conf  
 ```
-
-Run the `configure.sh` script, or manually do the following steps:
-
-```bash
-$ git submodule init
-$ git submodule update
-$ git submodule status
-# cd to deps/CRoaring and compile it, following the build instructions on their repository
-# cd to deps/redis and compile it
-# cd to deps/hiredis and compile it
-```
-
-## Build
-
-Build the project with cmake and it will generate the Redis Module shared library `libredis-roaring.so`, together with unit tests and performance tests.
-
-```bash
-mkdir -p build
-cd build
-cmake ..
-make
-```
+then you can open another terminal and use `./redis-cli` to connect to the redis server
 
 ## Docker
 
@@ -76,9 +57,40 @@ Currently the following operations are supported
 - `R.SETBITARRAY` (create a roaring bitmap from a bit array string)
 - `R.GETBITARRAY` (get a bit array string from a roaring bitmap)
 
+<a id="newAPI">new added API</a>
+
+- `R.APPENDINTARRAY` (append integers to a roaring bitmap)
+- `R.RANGEINTARRAY` (get an integer array from a roaring bitmap with `start` and `end`, so can implements paging)
+- `R.SETRANGE` (set or append integer range to a roaring bitmap)
+- `R.SETFULL` (fill up a roaring bitmap in integer)
+- `R.STAT` (get statistical information of a roaring bitmap)
+- `R.OPTIMIZE` (optimize a roaring bitmap)
+
 Missing commands:
 
 - `R.BITFIELD` (same as [BITFIELD](https://redis.io/commands/bitfield))
+
+## API Example
+```
+$ redis-cli
+# add numbers from 1 util 100 to test roaring bitmap
+127.0.0.1:6379> r.setrange test 1 100
+# if the key `test` exists and is a roaring bitmap type, append these numbers
+# if the key `test` does not exist, add to an new roaring bitmap
+
+# get all the int numbers
+127.0.0.1:6379> R.GETINTARRAY test
+
+# fill up the roaring bitmap, then don't use the `R.GETINTARRAY` 
+# because you need 2^32*4bytes memory and a long long time
+127.0.0.1:6379> R.SETFULL test
+
+# but you can use `R.RANGEINTARRAY` to get numbers from 100 to 1000 
+127.0.0.1:6379> R.RANGEINTARRAY test 100 1000
+
+# you can append numbers to an existed roaring bitmap
+127.0.0.1:6379> R.APPENDINTARRAY test 111 222 3333 456 999999999 9999990
+```
 
 ## Performance
 
