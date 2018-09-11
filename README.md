@@ -94,23 +94,23 @@ $ redis-cli
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset on the travis build [337762446](https://travis-ci.org/aviggiano/redis-roaring/builds/337762446):
+Tested using CRoaring's `census1881` dataset on the travis build [427188414](https://travis-ci.org/aviggiano/redis-roaring/builds/427188414):
 
 |           OP | TIME/OP (us) | ST.DEV. (us) |
 | ------------ | ------------ | ------------ |
-|     R.SETBIT |        28.21 |        27.82 |
-|       SETBIT |        27.02 |        20.99 |
-|     R.GETBIT |        26.57 |        11.42 |
-|       GETBIT |        25.93 |         9.84 |
-|   R.BITCOUNT |        26.96 |         0.03 |
-|     BITCOUNT |       185.15 |         1.05 |
-|     R.BITPOS |        27.16 |         0.07 |
-|       BITPOS |        61.31 |         2.47 |
-|  R.BITOP NOT |       101.53 |         1.75 |
-|    BITOP NOT |       294.59 |         4.60 |
-|  R.BITOP AND |        39.76 |         0.37 |
-|    BITOP AND |       723.38 |        13.28 |
-|   R.BITOP OR |        49.18 |         1.15 |
-|     BITOP OR |       401.55 |         6.99 |
-|  R.BITOP XOR |        57.31 |         1.45 |
-|    BITOP XOR |       525.76 |         9.14 |
+|     R.SETBIT |        39.29 |        15.57 |
+|       SETBIT |        37.39 |        15.61 |
+|     R.GETBIT |        42.58 |        26.27 |
+|       GETBIT |        36.15 |        14.90 |
+|   R.BITCOUNT |        35.11 |         0.05 |
+|     BITCOUNT |       178.65 |         0.92 |
+|     R.BITPOS |        35.72 |         0.07 |
+|       BITPOS |        57.87 |         0.63 |
+|  R.BITOP NOT |       139.24 |         3.14 |
+|    BITOP NOT |       309.45 |         4.99 |
+|  R.BITOP AND |        48.52 |         0.36 |
+|    BITOP AND |       401.27 |         7.15 |
+|   R.BITOP OR |        71.15 |         2.32 |
+|     BITOP OR |       397.03 |         6.99 |
+|  R.BITOP XOR |        69.26 |         2.58 |
+|    BITOP XOR |       385.89 |         6.73 |
