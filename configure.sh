@@ -36,25 +36,34 @@ function configure_hiredis()
   make
   cd -
 }
+function build()
+{
+  mkdir -p build
+  cd build
+  cmake ..
+  make
+  local LIB=$(find libredis-roaring*)
+  
+  cd ..
+  mkdir -p dist
+  cp "build/$LIB" dist
+  cp deps/redis/redis.conf dist
+  cp deps/redis/src/{redis-benchmark,redis-check-aof,redis-check-rdb,redis-cli,redis-sentinel,redis-server} dist
+  echo "loadmodule $(pwd)/dist/$LIB" >> dist/redis.conf
+}
+function instructions()
+{
+  echo ""
+  echo "Start redis server with redis-roaring:"
+  echo "./dist/redis-server ./dist/redis.conf"  
+  echo "Connect to server:"
+  echo "./dist/redis-cli"
+}
 
 configure_submodules
 configure_croaring
 configure_redis
 configure_hiredis
+build
+instructions
 
-mkdir -p build && cd build
-cmake ..
-make
-
-cd .. && mkdir -p dist
-cp build/libredis-roaring.dylib dist
-cp deps/redis/redis.conf dist
-cp deps/redis/src/{redis-benchmark,redis-check-aof,redis-check-rdb,redis-cli,redis-sentinel,redis-server} dist
-echo "loadmodule `pwd`/dist/libredis-roaring.dylib" >> dist/redis.conf
-echo "so you can:"
-echo "cd dist" 
-echo "start server:" 
-echo "./redis-server ./redis.conf"  
-echo "connect to server:"
-echo "./redis-cli"
-echo "and test these commands"

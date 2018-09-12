@@ -74,21 +74,21 @@ Missing commands:
 ```
 $ redis-cli
 # add numbers from 1 util 100 to test roaring bitmap
-127.0.0.1:6379> r.setrange test 1 100
+127.0.0.1:6379> R.SETRANGE test 1 100
 # if the key `test` exists and is a roaring bitmap type, append these numbers
-# if the key `test` does not exist, add to an new roaring bitmap
+# if the key `test` does not exist, add to a new roaring bitmap
 
 # get all the int numbers
 127.0.0.1:6379> R.GETINTARRAY test
 
-# fill up the roaring bitmap, then don't use the `R.GETINTARRAY` 
-# because you need 2^32*4bytes memory and a long long time
+# fill up the roaring bitmap, then don't use `R.GETINTARRAY` 
+# because you need 2^32*4 bytes memory and a very long time
 127.0.0.1:6379> R.SETFULL test
 
 # but you can use `R.RANGEINTARRAY` to get numbers from 100 to 1000 
 127.0.0.1:6379> R.RANGEINTARRAY test 100 1000
 
-# you can append numbers to an existed roaring bitmap
+# you can append numbers to an existing roaring bitmap
 127.0.0.1:6379> R.APPENDINTARRAY test 111 222 3333 456 999999999 9999990
 ```
 
