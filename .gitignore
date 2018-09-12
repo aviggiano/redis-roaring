@@ -7,3 +7,5 @@ build/
 Makefile
 core
 vgcore*
+dist/
+cmake-build-debug/
