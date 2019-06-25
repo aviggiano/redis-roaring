@@ -65,6 +65,8 @@ Currently the following operations are supported
 - `R.SETFULL` (fill up a roaring bitmap in integer)
 - `R.STAT` (get statistical information of a roaring bitmap)
 - `R.OPTIMIZE` (optimize a roaring bitmap)
+- `R.MIN` (get minimal integer from a roaring bitmap, if key is not exists or bitmap is empty, return -1)
+- `R.MAX` (get maximal integer from a roaring bitmap, if key is not exists or bitmap is empty, return -1)
 
 Missing commands:
 

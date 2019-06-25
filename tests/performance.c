@@ -269,6 +269,44 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  {
+    const char* ops[] = {
+      "R.MIN",
+      "MIN"
+    };
+
+    for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
+      Statistics statistics = statistics_init(ops[op]);
+      for (size_t i = 0; i < count; i++) {
+        timer(&statistics);
+        redisReply* reply = redisCommand(c, "%s %d-%d", ops[op], op, i);
+        timer(&statistics);
+        debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
+        freeReplyObject(reply);
+      }
+      statistics_print(&statistics);
+    }
+  }
+
+  {
+    const char* ops[] = {
+      "R.MAX",
+      "MAX"
+    };
+
+    for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
+      Statistics statistics = statistics_init(ops[op]);
+      for (size_t i = 0; i < count; i++) {
+        timer(&statistics);
+        redisReply* reply = redisCommand(c, "%s %d-%d", ops[op], op, i);
+        timer(&statistics);
+        debug("reply %s %s %lld\n", ops[op], reply->str, reply->integer);
+        freeReplyObject(reply);
+      }
+      statistics_print(&statistics);
+    }
+  }
+
   printf("\n");
 
   for (size_t i = 0; i < count; i++) {
