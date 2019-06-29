@@ -195,6 +195,55 @@ function test_getbitarray_setbitarray()
   EXPECTED=""
   [ "$FOUND" == "$EXPECTED" ]
 }
+function test_min_max()
+{
+  echo "test_min_max"
+
+  FOUND=$(echo "R.MIN test_min_max" | redis-cli)
+  EXPECTED="-1"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.MAX test_min_max" | redis-cli)
+  EXPECTED="-1"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  echo "R.SETBIT test_min_max 100 1" | redis-cli
+
+  FOUND=$(echo "R.MIN test_min_max" | redis-cli)
+  EXPECTED="100"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.MAX test_min_max" | redis-cli)
+  EXPECTED="100"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  echo "R.SETBIT test_min_max 0 1" | redis-cli
+
+  FOUND=$(echo "R.MIN test_min_max" | redis-cli)
+  EXPECTED="0"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.MAX test_min_max" | redis-cli)
+  EXPECTED="100"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.SETBIT test_min_max 0 0" | redis-cli)
+  EXPECTED="1"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.SETBIT test_min_max 100 0" | redis-cli)
+   EXPECTED="1"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.MIN test_min_max" | redis-cli)
+  EXPECTED="-1"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.MAX test_min_max" | redis-cli)
+  EXPECTED="-1"
+  [ "$FOUND" == "$EXPECTED" ]
+
+}
 function test_del()
 {
   echo "test_del"
@@ -221,5 +270,6 @@ test_bitcount
 test_bitpos
 test_getintarray_setintarray
 test_getbitarray_setbitarray
+test_min_max
 test_del
 test_save

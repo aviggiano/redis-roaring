@@ -607,6 +607,60 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   return REDISMODULE_OK;
 }
 
+int RMinCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+  int type = RedisModule_KeyType(key);
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  long long result;
+  if (type == REDISMODULE_KEYTYPE_EMPTY) {
+    result = -1;
+  } else {
+    Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
+    if (roaring_bitmap_is_empty(bitmap)) {
+      result = -1;
+    } else {
+      result = roaring_bitmap_minimum(bitmap);
+    }
+  }
+
+  RedisModule_ReplyWithLongLong(ctx, result);
+  return REDISMODULE_OK;
+}
+
+int RMaxCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+  int type = RedisModule_KeyType(key);
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  long long result;
+  if (type == REDISMODULE_KEYTYPE_EMPTY) {
+    result = -1;
+  } else {
+    Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
+    if (roaring_bitmap_is_empty(bitmap)) {
+      result = -1;
+    } else {
+      result = roaring_bitmap_maximum(bitmap);
+    }
+  }
+
+  RedisModule_ReplyWithLongLong(ctx, result);
+  return REDISMODULE_OK;
+}
+
 int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   // Register the module itself
   if (RedisModule_Init(ctx, "REDIS-ROARING", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
@@ -671,6 +725,12 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R.BITPOS", RBitPosCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R.MIN", RMinCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R.MAX", RMaxCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
 
