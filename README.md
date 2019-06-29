@@ -93,23 +93,27 @@ $ redis-cli
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset on the travis build [552199964](https://travis-ci.org/aviggiano/redis-roaring/builds/552199964):
+Tested using CRoaring's `census1881` dataset on the travis build [552208337](https://travis-ci.org/aviggiano/redis-roaring/builds/552208337):
 
 |           OP | TIME/OP (us) | ST.DEV. (us) |
 | ------------ | ------------ | ------------ |
-|     R.SETBIT |        31.81 |        70.32 |
-|       SETBIT |        30.57 |        64.70 |
-|     R.GETBIT |        31.01 |        33.69 |
-|       GETBIT |        28.97 |        30.40 |
-|   R.BITCOUNT |        29.95 |         0.04 |
-|     BITCOUNT |       166.46 |         0.91 |
-|     R.BITPOS |        30.49 |         0.04 |
-|       BITPOS |        49.77 |         0.58 |
-|  R.BITOP NOT |       100.31 |         1.52 |
-|    BITOP NOT |       304.33 |         5.37 |
-|  R.BITOP AND |        40.87 |         0.38 |
-|    BITOP AND |       440.03 |         8.11 |
-|   R.BITOP OR |        60.46 |         2.13 |
-|     BITOP OR |       423.29 |         7.63 |
-|  R.BITOP XOR |        63.77 |         2.74 |
-|    BITOP XOR |       409.65 |         7.38 |
+|     R.SETBIT |        33.06 |        62.52 |
+|       SETBIT |        31.92 |        67.49 |
+|     R.GETBIT |        31.31 |        35.99 |
+|       GETBIT |        30.32 |        27.02 |
+|   R.BITCOUNT |        31.89 |         0.21 |
+|     BITCOUNT |       204.95 |         1.18 |
+|     R.BITPOS |        31.69 |         0.09 |
+|       BITPOS |        63.19 |         0.96 |
+|  R.BITOP NOT |       110.32 |         1.80 |
+|    BITOP NOT |       369.80 |         6.02 |
+|  R.BITOP AND |        45.09 |         0.47 |
+|    BITOP AND |       833.31 |        15.33 |
+|   R.BITOP OR |        64.46 |         2.44 |
+|     BITOP OR |       475.49 |         9.02 |
+|  R.BITOP XOR |        71.01 |         3.31 |
+|    BITOP XOR |       555.30 |         9.88 |
+|        R.MIN |        27.53 |         0.06 |
+|          MIN |        28.92 |         0.05 |
+|        R.MAX |        29.51 |         0.16 |
+|          MAX |        28.63 |         0.18 |
