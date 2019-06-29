@@ -227,8 +227,13 @@ function test_min_max()
   EXPECTED="100"
   [ "$FOUND" == "$EXPECTED" ]
 
-  echo "R.SETBIT test_min_max 0 0" | redis-cli
-  echo "R.SETBIT test_min_max 100 0" | redis-cli
+  FOUND=$(echo "R.SETBIT test_min_max 0 0" | redis-cli)
+  EXPECTED="1"
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.SETBIT test_min_max 100 0" | redis-cli)
+   EXPECTED="1"
+  [ "$FOUND" == "$EXPECTED" ]
 
   FOUND=$(echo "R.MIN test_min_max" | redis-cli)
   EXPECTED="-1"

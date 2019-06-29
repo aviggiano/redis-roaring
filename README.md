@@ -44,7 +44,7 @@ The performance tests can take a while, since they run on a real dataset of inte
 
 ## API
 
-Currently the following operations are supported
+The following operations are supported
 
 - `R.SETBIT` (same as [SETBIT](https://redis.io/commands/setbit))
 - `R.GETBIT` (same as [GETBIT](https://redis.io/commands/getbit))
@@ -56,7 +56,7 @@ Currently the following operations are supported
 - `R.SETBITARRAY` (create a roaring bitmap from a bit array string)
 - `R.GETBITARRAY` (get a bit array string from a roaring bitmap)
 
-<a id="newAPI">new added API</a>
+Additional commands
 
 - `R.APPENDINTARRAY` (append integers to a roaring bitmap)
 - `R.RANGEINTARRAY` (get an integer array from a roaring bitmap with `start` and `end`, so can implements paging)
