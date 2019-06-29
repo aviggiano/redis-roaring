@@ -10,24 +10,23 @@ void bitmap_free(Bitmap* bitmap) {
   roaring_bitmap_free(bitmap);
 }
 
-uint64_t bitmap_get_cardinality(Bitmap* bitmap) {
+uint64_t bitmap_get_cardinality(const Bitmap* bitmap) {
   return roaring_bitmap_get_cardinality(bitmap);
 }
 
-void bitmap_setbit(Bitmap* bitmap, uint32_t offset, char value) {
-  if (value == 0) {
+void bitmap_setbit(Bitmap* bitmap, uint32_t offset, bool value) {
+  if (!value) {
     roaring_bitmap_remove(bitmap, offset);
-  }
-  else {
+  } else {
     roaring_bitmap_add(bitmap, offset);
   }
 }
 
-char bitmap_getbit(Bitmap* bitmap, uint32_t offset) {
-  return roaring_bitmap_contains(bitmap, offset) == true;
+bool bitmap_getbit(const Bitmap* bitmap, uint32_t offset) {
+  return roaring_bitmap_contains(bitmap, offset);
 }
 
-int64_t bitmap_get_nth_element_present(Bitmap* bitmap, uint64_t n) {
+int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {
   roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
   int64_t element = -1;
   for (uint64_t i = 1; iterator->has_value; i++) {
@@ -41,7 +40,7 @@ int64_t bitmap_get_nth_element_present(Bitmap* bitmap, uint64_t n) {
   return element;
 }
 
-int64_t bitmap_get_nth_element_not_present(Bitmap* bitmap, uint64_t n) {
+int64_t bitmap_get_nth_element_not_present(const Bitmap* bitmap, uint64_t n) {
   roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
   int64_t element = -1;
   int64_t last = -1;
@@ -51,8 +50,7 @@ int64_t bitmap_get_nth_element_not_present(Bitmap* bitmap, uint64_t n) {
     if (n < step) {
       element = last + n;
       break;
-    }
-    else {
+    } else {
       n -= (step - 1);
     }
     last = current;
@@ -62,7 +60,7 @@ int64_t bitmap_get_nth_element_not_present(Bitmap* bitmap, uint64_t n) {
   return element;
 }
 
-int64_t bitmap_get_nth_element_not_present_slow(Bitmap* bitmap, uint64_t n) {
+int64_t bitmap_get_nth_element_not_present_slow(const Bitmap* bitmap, uint64_t n) {
   roaring_bitmap_t* inverted_bitmap = bitmap_not(bitmap);
   int64_t element = bitmap_get_nth_element_present(inverted_bitmap, n);
   roaring_bitmap_free(inverted_bitmap);
@@ -100,13 +98,14 @@ Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array) {
   return roaring_bitmap_of_ptr(n, array);
 }
 
-uint32_t* bitmap_get_int_array(Bitmap* bitmap, size_t* n) {
+uint32_t* bitmap_get_int_array(const Bitmap* bitmap, size_t* n) {
   *n = roaring_bitmap_get_cardinality(bitmap);
   uint32_t* ans = malloc(sizeof(*ans) * (*n));
   roaring_bitmap_to_uint32_array(bitmap, ans);
   return ans;
 }
-uint32_t* bitmap_range_int_array(Bitmap* bitmap, size_t offset,  size_t n) {
+
+uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t offset, size_t n) {
   uint32_t* ans = calloc(n, sizeof(*ans));
   roaring_bitmap_range_uint32_array(bitmap, offset, n, ans);
   return ans;
@@ -126,7 +125,7 @@ Bitmap* bitmap_from_bit_array(size_t size, const char* array) {
   return bitmap;
 }
 
-char* bitmap_get_bit_array(Bitmap* bitmap, size_t* size) {
+char* bitmap_get_bit_array(const Bitmap* bitmap, size_t* size) {
   *size = roaring_bitmap_maximum(bitmap) + 1;
   char* ans = malloc(*size + 1);
   memset(ans, '0', *size);
@@ -144,4 +143,28 @@ char* bitmap_get_bit_array(Bitmap* bitmap, size_t* size) {
 
 void bitmap_free_bit_array(char* array) {
   free(array);
+}
+
+Bitmap* bitmap_from_range(uint64_t from, uint64_t to) {
+  return roaring_bitmap_from_range(from, to, 1);
+}
+
+bool bitmap_is_empty(const Bitmap* bitmap) {
+  return roaring_bitmap_is_empty(bitmap);
+}
+
+uint32_t bitmap_min(const Bitmap* bitmap) {
+  return roaring_bitmap_minimum(bitmap);
+}
+
+uint32_t bitmap_max(const Bitmap* bitmap) {
+  return roaring_bitmap_maximum(bitmap);
+}
+
+void bitmap_optimize(Bitmap* bitmap) {
+  roaring_bitmap_run_optimize(bitmap);
+}
+
+void bitmap_statistics(const Bitmap* bitmap, Bitmap_statistics* stat) {
+  roaring_bitmap_statistics(bitmap, stat);
 }

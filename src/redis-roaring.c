@@ -21,8 +21,8 @@ int RSetFullCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_ReplyWithError(ctx, "key exists");
   }
 
-  Bitmap* nbitmap = roaring_bitmap_from_range(0, UINT32_MAX - 1, 1);
-  RedisModule_ModuleTypeSetValue(key, BitmapType, nbitmap);
+  Bitmap* bitmap = bitmap_from_range(0, UINT32_MAX - 1);
+  RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
   RedisModule_ReplicateVerbatim(ctx);
   RedisModule_ReplyWithSimpleString(ctx, "OK");
   return REDISMODULE_OK;
@@ -58,7 +58,7 @@ int RSetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
   Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
 
-  Bitmap* nbitmap = roaring_bitmap_from_range((uint32_t) start_num, (uint32_t) end_num, 1);
+  Bitmap* nbitmap = bitmap_from_range((uint32_t) start_num, (uint32_t) end_num);
 
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
     RedisModule_ModuleTypeSetValue(key, BitmapType, nbitmap);
@@ -166,14 +166,13 @@ int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
-  //@todo statistics 
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
     return RedisModule_ReplyWithError(ctx, "ERR key does not exist");
   }
 
   Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-  roaring_statistics_t stat;
-  roaring_bitmap_statistics(bitmap, &stat);
+  Bitmap_statistics stat;
+  bitmap_statistics(bitmap, &stat);
 
   sds s = sdsempty();
   s = sdscatprintf(s, "cardinality: %lld\n", (long long) stat.cardinality);
@@ -215,8 +214,7 @@ int ROptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
   }
 
   Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-  //@todo optimizer key
-  roaring_bitmap_run_optimize(bitmap);
+  bitmap_optimize(bitmap);
 
   RedisModule_ReplicateVerbatim(ctx);
   RedisModule_ReplyWithSimpleString(ctx, "OK");
@@ -623,10 +621,10 @@ int RMinCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     result = -1;
   } else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-    if (roaring_bitmap_is_empty(bitmap)) {
+    if (bitmap_is_empty(bitmap)) {
       result = -1;
     } else {
-      result = roaring_bitmap_minimum(bitmap);
+      result = bitmap_min(bitmap);
     }
   }
 
@@ -650,10 +648,10 @@ int RMaxCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     result = -1;
   } else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-    if (roaring_bitmap_is_empty(bitmap)) {
+    if (bitmap_is_empty(bitmap)) {
       result = -1;
     } else {
-      result = roaring_bitmap_maximum(bitmap);
+      result = bitmap_max(bitmap);
     }
   }
 
