@@ -31,11 +31,10 @@ then you can open another terminal and use `./redis-cli` to connect to the redis
 
 ## Docker
 
-It is also possible to run this project as a docker container:
+It is also possible to run this project as a docker container.
 
 ```bash
-docker build -t redis-roaring
-docker run -p 6379:6379 redis-roaring:latest
+docker run -p 6379:6379 aviggiano/redis-roaring:latest
 ```
 
 ## Tests
@@ -75,44 +74,42 @@ Missing commands:
 ## API Example
 ```
 $ redis-cli
-# add numbers from 1 util 100 to test roaring bitmap
+# create a roaring bitmap with numbers from 1 to 99
 127.0.0.1:6379> R.SETRANGE test 1 100
-# if the key `test` exists and is a roaring bitmap type, append these numbers
-# if the key `test` does not exist, add to a new roaring bitmap
 
-# get all the int numbers
+# get all the numbers as an integer array
 127.0.0.1:6379> R.GETINTARRAY test
 
-# fill up the roaring bitmap, then don't use `R.GETINTARRAY` 
+# fill up the roaring bitmap 
 # because you need 2^32*4 bytes memory and a very long time
-127.0.0.1:6379> R.SETFULL test
+127.0.0.1:6379> R.SETFULL full
 
-# but you can use `R.RANGEINTARRAY` to get numbers from 100 to 1000 
-127.0.0.1:6379> R.RANGEINTARRAY test 100 1000
+# use `R.RANGEINTARRAY` to get numbers from 100 to 1000 
+127.0.0.1:6379> R.RANGEINTARRAY full 100 1000
 
-# you can append numbers to an existing roaring bitmap
+# append numbers to an existing roaring bitmap
 127.0.0.1:6379> R.APPENDINTARRAY test 111 222 3333 456 999999999 9999990
 ```
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset on the travis build [427489820](https://travis-ci.org/aviggiano/redis-roaring/builds/427489820):
+Tested using CRoaring's `census1881` dataset on the travis build [552199964](https://travis-ci.org/aviggiano/redis-roaring/builds/552199964):
 
 |           OP | TIME/OP (us) | ST.DEV. (us) |
 | ------------ | ------------ | ------------ |
-|     R.SETBIT |        31.89 |        28.49 |
-|       SETBIT |        29.98 |        29.23 |
-|     R.GETBIT |        29.91 |        14.60 |
-|       GETBIT |        28.63 |        14.58 |
-|   R.BITCOUNT |        32.13 |         0.10 |
-|     BITCOUNT |       192.38 |         0.96 |
-|     R.BITPOS |        70.27 |         0.14 |
-|       BITPOS |        87.70 |         0.62 |
-|  R.BITOP NOT |       156.66 |         3.15 |
-|    BITOP NOT |       364.46 |         5.62 |
-|  R.BITOP AND |        81.56 |         0.48 |
-|    BITOP AND |       492.97 |         8.32 |
-|   R.BITOP OR |       107.03 |         2.44 |
-|     BITOP OR |       461.68 |         8.42 |
-|  R.BITOP XOR |        69.07 |         2.82 |
-|    BITOP XOR |       440.75 |         7.90 |
+|     R.SETBIT |        31.81 |        70.32 |
+|       SETBIT |        30.57 |        64.70 |
+|     R.GETBIT |        31.01 |        33.69 |
+|       GETBIT |        28.97 |        30.40 |
+|   R.BITCOUNT |        29.95 |         0.04 |
+|     BITCOUNT |       166.46 |         0.91 |
+|     R.BITPOS |        30.49 |         0.04 |
+|       BITPOS |        49.77 |         0.58 |
+|  R.BITOP NOT |       100.31 |         1.52 |
+|    BITOP NOT |       304.33 |         5.37 |
+|  R.BITOP AND |        40.87 |         0.38 |
+|    BITOP AND |       440.03 |         8.11 |
+|   R.BITOP OR |        60.46 |         2.13 |
+|     BITOP OR |       423.29 |         7.63 |
+|  R.BITOP XOR |        63.77 |         2.74 |
+|    BITOP XOR |       409.65 |         7.38 |
