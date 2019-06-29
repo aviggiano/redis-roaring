@@ -31,11 +31,10 @@ then you can open another terminal and use `./redis-cli` to connect to the redis
 
 ## Docker
 
-It is also possible to run this project as a docker container:
+It is also possible to run this project as a docker container.
 
 ```bash
-docker build -t redis-roaring
-docker run -p 6379:6379 redis-roaring:latest
+docker run -p 6379:6379 aviggiano/redis-roaring:latest
 ```
 
 ## Tests
@@ -73,22 +72,20 @@ Missing commands:
 ## API Example
 ```
 $ redis-cli
-# add numbers from 1 util 100 to test roaring bitmap
+# create a roaring bitmap with numbers from 1 to 99
 127.0.0.1:6379> R.SETRANGE test 1 100
-# if the key `test` exists and is a roaring bitmap type, append these numbers
-# if the key `test` does not exist, add to a new roaring bitmap
 
-# get all the int numbers
+# get all the numbers as an integer array
 127.0.0.1:6379> R.GETINTARRAY test
 
-# fill up the roaring bitmap, then don't use `R.GETINTARRAY` 
+# fill up the roaring bitmap 
 # because you need 2^32*4 bytes memory and a very long time
-127.0.0.1:6379> R.SETFULL test
+127.0.0.1:6379> R.SETFULL full
 
-# but you can use `R.RANGEINTARRAY` to get numbers from 100 to 1000 
-127.0.0.1:6379> R.RANGEINTARRAY test 100 1000
+# use `R.RANGEINTARRAY` to get numbers from 100 to 1000 
+127.0.0.1:6379> R.RANGEINTARRAY full 100 1000
 
-# you can append numbers to an existing roaring bitmap
+# append numbers to an existing roaring bitmap
 127.0.0.1:6379> R.APPENDINTARRAY test 111 222 3333 456 999999999 9999990
 ```
 

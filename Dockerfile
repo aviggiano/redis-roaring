@@ -21,7 +21,9 @@ RUN set -ex; \
     cd build; \
     cmake ..; \
     make -j; \
-    cp libredis-roaring.so /usr/local/lib/; \
+    cd ..; \
+    cp deps/CRoaring/build/libroaring.so /usr/local/lib/; \
+    cp build/libredis-roaring.so /usr/local/lib/; \
     \
     apt-get purge -y --auto-remove $BUILD_DEPS
 ADD http://download.redis.io/redis-stable/redis.conf /usr/local/etc/redis/redis.conf
