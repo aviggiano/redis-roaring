@@ -93,27 +93,27 @@ $ redis-cli
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset on the travis build [552208337](https://travis-ci.org/aviggiano/redis-roaring/builds/552208337):
+Tested using CRoaring's `census1881` dataset on the travis build [552223545](https://travis-ci.org/aviggiano/redis-roaring/builds/552223545):
 
 |           OP | TIME/OP (us) | ST.DEV. (us) |
 | ------------ | ------------ | ------------ |
-|     R.SETBIT |        33.06 |        62.52 |
-|       SETBIT |        31.92 |        67.49 |
-|     R.GETBIT |        31.31 |        35.99 |
-|       GETBIT |        30.32 |        27.02 |
-|   R.BITCOUNT |        31.89 |         0.21 |
-|     BITCOUNT |       204.95 |         1.18 |
-|     R.BITPOS |        31.69 |         0.09 |
-|       BITPOS |        63.19 |         0.96 |
-|  R.BITOP NOT |       110.32 |         1.80 |
-|    BITOP NOT |       369.80 |         6.02 |
-|  R.BITOP AND |        45.09 |         0.47 |
-|    BITOP AND |       833.31 |        15.33 |
-|   R.BITOP OR |        64.46 |         2.44 |
-|     BITOP OR |       475.49 |         9.02 |
-|  R.BITOP XOR |        71.01 |         3.31 |
-|    BITOP XOR |       555.30 |         9.88 |
-|        R.MIN |        27.53 |         0.06 |
-|          MIN |        28.92 |         0.05 |
-|        R.MAX |        29.51 |         0.16 |
-|          MAX |        28.63 |         0.18 |
+|     R.SETBIT |        31.83 |        71.85 |
+|       SETBIT |        30.52 |        74.83 |
+|     R.GETBIT |        30.29 |        46.99 |
+|       GETBIT |        29.30 |        38.39 |
+|   R.BITCOUNT |        30.38 |         0.04 |
+|     BITCOUNT |       169.46 |         0.95 |
+|     R.BITPOS |        30.62 |         0.08 |
+|       BITPOS |        55.06 |         0.77 |
+|  R.BITOP NOT |       103.90 |         1.71 |
+|    BITOP NOT |       328.14 |         5.81 |
+|  R.BITOP AND |        40.66 |         0.47 |
+|    BITOP AND |       433.52 |         7.98 |
+|   R.BITOP OR |        57.01 |         2.33 |
+|     BITOP OR |       425.10 |         7.68 |
+|  R.BITOP XOR |        60.50 |         2.77 |
+|    BITOP XOR |       415.21 |         7.51 |
+|        R.MIN |        27.16 |         0.08 |
+|          MIN |        24.57 |         0.18 |
+|        R.MAX |        24.62 |         0.04 |
+|          MAX |        25.85 |         0.03 |
