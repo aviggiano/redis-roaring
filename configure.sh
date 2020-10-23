@@ -6,23 +6,15 @@ function configure_submodules()
   git submodule update
   git submodule status
 }
-function configure_croaring()
+function amalgamate_croaring()
 {
-  pushd .
-
-  cd deps/CRoaring
-
+  pushd . 
+  cd src 
   # generates header files
-  ./amalgamation.sh
-
-  # https://github.com/RoaringBitmap/CRoaring#building-with-cmake-linux-and-macos-visual-studio-users-should-see-below
-  mkdir -p build
-  cd build
-  cmake -DBUILD_STATIC=ON -DCMAKE_BUILD_TYPE=Debug ..
-  make
-
+  ../deps/CRoaring/amalgamation.sh 
+  rm roaring.hh && rm amalgamation_demo.c && rm amalgamation_demo.cpp
   popd
-}
+} 
 function configure_redis()
 {
   cd deps/redis
@@ -60,7 +52,7 @@ function instructions()
 }
 
 configure_submodules
-configure_croaring
+amalgamate_croaring
 configure_redis
 configure_hiredis
 build

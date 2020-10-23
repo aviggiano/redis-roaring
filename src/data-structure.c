@@ -1,5 +1,7 @@
 #include "data-structure.h"
 
+#include "roaring.h"
+
 /* === Internal data structure === */
 
 Bitmap* bitmap_alloc() {

@@ -9,11 +9,9 @@ set(TEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 set(CROARING_PATH ${DEPS_PATH}/CRoaring)
 set(HIREDIS_PATH ${DEPS_PATH}/hiredis)
 set(SDS_PATH ${DEPS_PATH}/sds)
-set(CROARING_BUILD_PATH ${DEPS_PATH}/CRoaring/build)
 #set(CMAKE_C_FLAGS_RELEASE "") # removes -NDEBUG
 set(CMAKE_BUILD_TYPE Debug)
 
-link_directories(${CROARING_BUILD_PATH})
 link_directories(${HIREDIS_PATH})
 include_directories(${CROARING_PATH})
 include_directories(${HIREDIS_PATH})
@@ -26,10 +24,11 @@ message(STATUS "Compiling unit tests")
 
 set(UNIT_FILES
         ${SRC_PATH}/data-structure.c
+        ${SRC_PATH}/roaring.c
         ${TEST_PATH}/unit.c)
 
 add_executable(unit ${UNIT_FILES})
-target_link_libraries(unit roaring)
+target_link_libraries(unit)
 add_test(NAME unit_tests COMMAND unit)
 
 ####### performance tests #######
@@ -51,4 +50,4 @@ set(SOURCE_FILES ${SRC_PATH}/redis-roaring.c
         ${SRC_PATH}/data-structure.c
         ${SDS_PATH}/sds.c)
 add_library(redis-roaring SHARED ${SOURCE_FILES})
-target_link_libraries(redis-roaring roaring)
+target_link_libraries(redis-roaring)
