@@ -18,6 +18,10 @@ Pull requests are welcome.
 - redis (server needed for integration tests)
 - hiredis (redis client library needed for performance tests)
 
+##### Known issues
+
+- This library only works with [32-bit integeres](https://github.com/RoaringBitmap/CRoaring/issues/232) (e.g. counting numbers up to 4294967296)
+
 ## Getting started
 
 ```
