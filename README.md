@@ -20,7 +20,7 @@ Pull requests are welcome.
 
 ##### Known issues
 
-- This library only works with [32-bit integeres](https://github.com/RoaringBitmap/CRoaring/issues/232) (e.g. counting numbers up to 4294967296)
+- This library only works with [32-bit integeres](https://github.com/RoaringBitmap/CRoaring/issues/1) (e.g. counting numbers up to 4294967296)
 
 ## Getting started
 
