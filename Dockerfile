@@ -22,7 +22,6 @@ RUN set -ex; \
     cmake ..; \
     make -j; \
     cd ..; \
-    cp deps/CRoaring/build/libroaring.so /usr/local/lib/; \
     cp build/libredis-roaring.so /usr/local/lib/; \
     \
     apt-get purge -y --auto-remove $BUILD_DEPS
