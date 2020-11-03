@@ -1,0 +1,21 @@
+name: CI/CD
+
+on: push
+
+jobs:
+  lint: 
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: c-linter
+      uses: ArtificialAmateur/clang-tidy-action@master
+  configure: 
+    name: Compile 
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Configure
+      run: ./configure.sh
