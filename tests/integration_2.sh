@@ -6,7 +6,7 @@ function test_load()
 {
   echo "test_load"
 
-  FOUND=$(echo "KEYS *" | redis-cli)
+  FOUND=$(echo "KEYS *" | ./deps/redis/src/redis-cli)
   EXPECTED="test_"
   [[ "$FOUND" =~ .*"$EXPECTED".* ]]
 }
