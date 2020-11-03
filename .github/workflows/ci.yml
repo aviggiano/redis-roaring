@@ -23,9 +23,23 @@ jobs:
       run: sudo apt-get install valgrind
     - name: Test
       run: ./test.sh
+  performance:
+    name: Performance tests
+    needs: [configure, test]
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Configure
+      run: ./configure.sh
+    - name: Install valgrind
+      run: sudo apt-get install valgrind
+    - name: Test
+      run: ./performance.sh
   docker:
     name: Build and push to Dockerhub
-    needs: [configure, test]
+    needs: [configure, test, performance]
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
