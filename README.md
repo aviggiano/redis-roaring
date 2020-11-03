@@ -1,4 +1,4 @@
-redis-roaring [![Build Status](https://travis-ci.org/aviggiano/redis-roaring.svg?branch=master)](https://travis-ci.org/aviggiano/redis-roaring)
+redis-roaring ![CI/CD](https://github.com/aviggiano/redis-roaring/workflows/CI/CD/badge.svg)
 ===========
 Roaring Bitmaps for Redis
 
