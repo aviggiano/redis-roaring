@@ -20,7 +20,7 @@ jobs:
     - name: Configure
       run: ./configure.sh
     - name: Install valgrind
-      run: ./valgrind.sh
+      run: apt-get install valgrind
     - name: Test
       run: ./test.sh
   docker:
