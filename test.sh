@@ -45,5 +45,4 @@ setup
 unit
 integration_1
 integration_2
-performance
 end
