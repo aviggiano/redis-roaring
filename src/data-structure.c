@@ -91,6 +91,11 @@ Bitmap* bitmap_not_array(uint32_t unused, const Bitmap** bitmaps) {
   return roaring_bitmap_flip(bitmaps[0], 0, last + 1);
 }
 
+Bitmap* bitmap_flip(const Bitmap* bitmap, uint32_t end) {
+  return roaring_bitmap_flip(bitmap, 0, end);
+}
+
+
 Bitmap* bitmap_not(const Bitmap* bitmap) {
   const Bitmap* bitmaps[] = {bitmap};
   return bitmap_not_array(1, bitmaps);
