@@ -72,13 +72,23 @@ function test_bitop()
   function not()
   {
     FOUND=$(echo "R.BITOP NOT test_bitop_dest_3 test_bitop_4" | ./deps/redis/src/redis-cli)
+    EXPECTED="1"
+    [ "$FOUND" == "$EXPECTED" ]
+    FOUND=$(echo "R.GETBIT test_bitop_dest_3 0" | ./deps/redis/src/redis-cli)
+    EXPECTED="1"
+    [ "$FOUND" == "$EXPECTED" ]
+    FOUND=$(echo "R.MAX test_bitop_dest_3" | ./deps/redis/src/redis-cli)
+    EXPECTED="0"
+    [ "$FOUND" == "$EXPECTED" ]
+
+    FOUND=$(echo "R.BITOP NOT test_bitop_dest_3 test_bitop_4 3" | ./deps/redis/src/redis-cli)
     EXPECTED="2"
     [ "$FOUND" == "$EXPECTED" ]
     FOUND=$(echo "R.GETBIT test_bitop_dest_3 0" | ./deps/redis/src/redis-cli)
     EXPECTED="1"
     [ "$FOUND" == "$EXPECTED" ]
-    FOUND=$(echo "R.GETBIT test_bitop_dest_3 1" | ./deps/redis/src/redis-cli)
-    EXPECTED="1"
+    FOUND=$(echo "R.MAX test_bitop_dest_3" | ./deps/redis/src/redis-cli)
+    EXPECTED="3"
     [ "$FOUND" == "$EXPECTED" ]
   }
 
