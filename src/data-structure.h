@@ -40,6 +40,7 @@ int64_t bitmap_get_nth_element_not_present_slow(const Bitmap* bitmap, uint64_t n
 Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps);
 Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps);
 Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps);
+Bitmap* bitmap_flip(const Bitmap* bitmap, uint32_t end); 
 /**
  * Returns a bitmap equals to the inverted set of first bitmap of the `bitmaps` array,
  * ignoring the first parameter of the function.  * The purpose of this function is to

@@ -9,3 +9,5 @@ core
 vgcore*
 dist/
 cmake-build-debug/
+src/roaring.c
+src/roaring.h
