@@ -615,8 +615,12 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   } else if (strcmp(operation, "XOR") == 0) {
     return RBitOp(ctx, argv, argc, bitmap_xor);
   } else {
-    RedisModule_ReplyWithSimpleString(ctx, "ERR syntax error");
-    return REDISMODULE_ERR;
+    if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
+      return REDISMODULE_OK;
+    } else { 
+      RedisModule_ReplyWithSimpleString(ctx, "ERR syntax error");
+      return REDISMODULE_ERR;
+    }
   }
   return REDISMODULE_OK;
 }
