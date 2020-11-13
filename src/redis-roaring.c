@@ -535,9 +535,9 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return REDISMODULE_OK;
   }
 
-  long long last = 0;
+  long long last = -1;
   if (argc == 5) { 
-    if ((RedisModule_StringToLongLong(argv[4], &last) != REDISMODULE_OK)) {
+    if ((RedisModule_StringToLongLong(argv[4], &last) != REDISMODULE_OK) || last < 0) {
       return RedisModule_ReplyWithError(ctx, "ERR invalid last: must be an unsigned 32 bit integer");
     }
   } else if (argc > 5) {
@@ -559,7 +559,7 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   bool should_free = false;
-  Bitmap* bitmap;
+  Bitmap* bitmap; 
   if (srctype == REDISMODULE_KEYTYPE_EMPTY) {
     // "non-existent keys [...] are considered as a stream of zero bytes up to the length of the longest string"
     bitmap = bitmap_alloc();
@@ -569,9 +569,17 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     should_free = false;
   }
 
+  long long max = -1;
+  if (!bitmap_is_empty(bitmap)) {
+    max = bitmap_max(bitmap);
+  } 
+
   if (argc == 4) {
-    last = bitmap_max(bitmap);
+    last = max;
+  } else if (argc == 5 && last < max) {
+    last = max;
   }
+
   // calculate destkey bitmap
   Bitmap* result = bitmap_flip(bitmap, last+1);
   RedisModule_ModuleTypeSetValue(destkey, BitmapType, result);
