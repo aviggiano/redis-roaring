@@ -254,6 +254,38 @@ function test_min_max()
   [ "$FOUND" == "$EXPECTED" ]
 
 }
+function test_diff()
+{
+  echo "test_diff"
+
+  EXPECTED="ERR wrong number of arguments for 'R.DIFF' command"
+  FOUND=$(echo "R.DIFF test_diff_res" | ./deps/redis/src/redis-cli)
+  [ "$FOUND" == "$EXPECTED" ]
+
+  EXPECTED="WRONGTYPE Operation against a key holding the wrong kind of value"
+  FOUND=$(echo "R.DIFF test_diff_res empty_key_1 empty_key_2" | ./deps/redis/src/redis-cli)
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.SETINTARRAY test_diff_1 1 2 3 4" | ./deps/redis/src/redis-cli)
+  FOUND=$(echo "R.SETINTARRAY test_diff_2 3 4 5 6" | ./deps/redis/src/redis-cli)
+
+  EXPECTED="OK"
+  FOUND=$(echo "R.DIFF test_diff_res test_diff_1 test_diff_2" | ./deps/redis/src/redis-cli)
+  [ "$FOUND" == "$EXPECTED" ]
+ 
+  FOUND=$(echo "R.GETINTARRAY test_diff_res" | ./deps/redis/src/redis-cli)
+  EXPECTED=$(echo -e "1\n2")
+  [ "$FOUND" == "$EXPECTED" ]
+
+  EXPECTED="OK"
+  FOUND=$(echo "R.DIFF test_diff_res test_diff_2 test_diff_1" | ./deps/redis/src/redis-cli)
+  [ "$FOUND" == "$EXPECTED" ]
+ 
+  FOUND=$(echo "R.GETINTARRAY test_diff_res" | ./deps/redis/src/redis-cli)
+  EXPECTED=$(echo -e "5\n6")
+  [ "$FOUND" == "$EXPECTED" ]
+
+}
 function test_del()
 {
   echo "test_del"
@@ -281,5 +313,6 @@ test_bitpos
 test_getintarray_setintarray
 test_getbitarray_setbitarray
 test_min_max
+test_diff
 test_del
 test_save
