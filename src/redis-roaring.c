@@ -8,7 +8,7 @@
 #define realloc(p, sz) RedisModule_Realloc(p, sz)
 #define free(p) RedisModule_Free(p)
 
-#include "roaring.c" 
+#include "roaring.c"
 
 static RedisModuleType* BitmapType;
 
@@ -161,7 +161,7 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 }
 
 /**
- * R.STAT <key> 
+ * R.STAT <key>
  * */
 int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (argc != 2) {
@@ -207,7 +207,7 @@ int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 }
 
 /**
- * R.OPTIMIZE <key> 
+ * R.OPTIMIZE <key>
  * */
 int ROptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (argc != 2) {
@@ -266,6 +266,43 @@ int RSetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
 
   return REDISMODULE_OK;
 }
+
+/**
+ * R.DIFF <dest> <decreasing> <deductible>
+ * */
+int RDiffCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+   if (argc != 4) {
+     return RedisModule_WrongArity(ctx);
+   }
+   RedisModule_AutoMemory(ctx);
+
+   // open destkey for writing
+   RedisModuleKey* destkey = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+   int desttype = RedisModule_KeyType(destkey);
+   if (desttype != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(destkey) != BitmapType) {
+     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+   }
+
+   // checks for keys types
+   for (uint32_t i = 2; i < 4; i++) {
+     RedisModuleKey* srckey = RedisModule_OpenKey(ctx, argv[i], REDISMODULE_READ);
+     int srctype = RedisModule_KeyType(srckey);
+     if (srctype == REDISMODULE_KEYTYPE_EMPTY || RedisModule_ModuleTypeGetType(srckey) != BitmapType) {
+       return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+     }
+   }
+
+   RedisModuleKey* decreasing = RedisModule_OpenKey(ctx, argv[2], REDISMODULE_READ);
+   Bitmap* decreasing_bitmap = RedisModule_ModuleTypeGetValue(decreasing);
+   RedisModuleKey* deductible = RedisModule_OpenKey(ctx, argv[3], REDISMODULE_READ);
+   Bitmap* deductible_bitmap = RedisModule_ModuleTypeGetValue(deductible);
+
+   Bitmap* result = roaring_bitmap_andnot(decreasing_bitmap, deductible_bitmap);
+   RedisModule_ModuleTypeSetValue(destkey, BitmapType, result);
+   RedisModule_ReplyWithSimpleString(ctx, "OK");
+   return REDISMODULE_OK;
+}
+
 
 /**
  * R.APPENDINTARRAY <key> <value1> [<value2> <value3> ... <valueN>]
@@ -465,7 +502,7 @@ int RBitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, Bitmap* (* o
     }
     return REDISMODULE_OK;
   }
-  if (argc == 4) return RedisModule_WrongArity(ctx); 
+  if (argc == 4) return RedisModule_WrongArity(ctx);
 
   // open destkey for writing
   RedisModuleKey* destkey = RedisModule_OpenKey(ctx, argv[2], REDISMODULE_READ | REDISMODULE_WRITE);
@@ -536,7 +573,7 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   long long last = -1;
-  if (argc == 5) { 
+  if (argc == 5) {
     if ((RedisModule_StringToLongLong(argv[4], &last) != REDISMODULE_OK) || last < 0) {
       return RedisModule_ReplyWithError(ctx, "ERR invalid last: must be an unsigned 32 bit integer");
     }
@@ -559,7 +596,7 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   bool should_free = false;
-  Bitmap* bitmap; 
+  Bitmap* bitmap;
   if (srctype == REDISMODULE_KEYTYPE_EMPTY) {
     // "non-existent keys [...] are considered as a stream of zero bytes up to the length of the longest string"
     bitmap = bitmap_alloc();
@@ -572,7 +609,7 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   long long max = -1;
   if (!bitmap_is_empty(bitmap)) {
     max = bitmap_max(bitmap);
-  } 
+  }
 
   if (argc == 4) {
     last = max;
@@ -625,7 +662,7 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   } else {
     if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
       return REDISMODULE_OK;
-    } else { 
+    } else {
       RedisModule_ReplyWithSimpleString(ctx, "ERR syntax error");
       return REDISMODULE_ERR;
     }
@@ -773,7 +810,7 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   if (RedisModule_CreateCommand(ctx, "R.GETBIT", RGetBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
- 
+
   if (RedisModule_CreateCommand(ctx, "R.SETINTARRAY", RSetIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
@@ -785,6 +822,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R.APPENDINTARRAY", RAppendIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R.DIFF", RDiffCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R.SETFULL", RSetFullCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
