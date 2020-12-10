@@ -70,6 +70,7 @@ Additional commands
 - `R.OPTIMIZE` (optimize a roaring bitmap)
 - `R.MIN` (get minimal integer from a roaring bitmap, if key is not exists or bitmap is empty, return -1)
 - `R.MAX` (get maximal integer from a roaring bitmap, if key is not exists or bitmap is empty, return -1)
+- `R.DIFF` (get difference between two bitmaps)
 
 Missing commands:
 
