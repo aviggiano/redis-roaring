@@ -6,6 +6,13 @@
 #include "hiredis.h"
 #include "benchmarks/numbersfromtextfiles.h"
 
+#if defined(__APPLE__)
+#include <mach/clock.h>
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#endif
+
+
 /*
  * macros
  */
@@ -78,16 +85,41 @@ void print_header() {
   print("| %12s |\n", "------------");
 }
 
+int clock_gettime_local(struct timespec *a) {
+  int err = 0;
+#if defined(__APPLE__)
+  uint64_t clock_start_time = 0;
+  mach_timebase_info_data_t timebase_info = {0, 0};
+  uint64_t now = mach_absolute_time();
+
+  if (clock_start_time == 0)
+  {
+    mach_timebase_info(&timebase_info);
+    clock_start_time = now;
+  }
+
+  now = (uint64_t)((double)(now - clock_start_time) * (double)timebase_info.numer / (double)timebase_info.denom);
+
+  a->tv_sec = now / 1000000000;
+  a->tv_nsec = now % 1000000000;
+#else
+  err = clock_gettime(CLOCK_MONOTONIC, a);
+#endif
+  return err;
+}
+
 void static inline timer(Statistics* statistics) {
   if (!statistics->ticking) {
-    clock_gettime(CLOCK_MONOTONIC, &statistics->start);
+    //clock_gettime(CLOCK_MONOTONIC, &statistics->start);
+    clock_gettime_local(&statistics->start);
     statistics->ticking = true;
     return;
   }
   statistics->ticking = false;
 
   struct timespec end;
-  clock_gettime(CLOCK_MONOTONIC, &end);
+  //clock_gettime(CLOCK_MONOTONIC, &end);
+  clock_gettime_local(&end);
   double ns = (end.tv_sec - statistics->start.tv_sec) * 1000000000UL + (end.tv_nsec - statistics->start.tv_nsec);
 
   // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
