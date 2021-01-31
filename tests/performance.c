@@ -6,10 +6,9 @@
 #include "hiredis.h"
 #include "benchmarks/numbersfromtextfiles.h"
 
-#if defined(__APPLE__)
+#ifdef __MACH__
 #include <mach/clock.h>
 #include <mach/mach.h>
-#include <mach/mach_time.h>
 #endif
 
 
@@ -87,21 +86,15 @@ void print_header() {
 
 int clock_gettime_local(struct timespec *a) {
   int err = 0;
-#if defined(__APPLE__)
-  uint64_t clock_start_time = 0;
-  mach_timebase_info_data_t timebase_info = {0, 0};
-  uint64_t now = mach_absolute_time();
-
-  if (clock_start_time == 0)
-  {
-    mach_timebase_info(&timebase_info);
-    clock_start_time = now;
-  }
-
-  now = (uint64_t)((double)(now - clock_start_time) * (double)timebase_info.numer / (double)timebase_info.denom);
-
-  a->tv_sec = now / 1000000000;
-  a->tv_nsec = now % 1000000000;
+  //https://gist.github.com/jbenet/1087739     
+#ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
+   clock_serv_t cclock;
+   mach_timespec_t mts;
+   host_get_clock_service(mach_host_self(), REALTIME_CLOCK, &cclock);
+   clock_get_time(cclock, &mts);
+   mach_port_deallocate(mach_task_self(), cclock);
+   a->tv_sec = mts.tv_sec;
+   a->tv_nsec = mts.tv_nsec;
 #else
   err = clock_gettime(CLOCK_MONOTONIC, a);
 #endif
