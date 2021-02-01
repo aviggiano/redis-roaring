@@ -596,7 +596,7 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   bool should_free = false;
-  Bitmap* bitmap;
+  Bitmap* bitmap = NULL;
   if (srctype == REDISMODULE_KEYTYPE_EMPTY) {
     // "non-existent keys [...] are considered as a stream of zero bytes up to the length of the longest string"
     bitmap = bitmap_alloc();

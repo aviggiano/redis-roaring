@@ -6,6 +6,12 @@
 #include "hiredis.h"
 #include "benchmarks/numbersfromtextfiles.h"
 
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
+
 /*
  * macros
  */
@@ -78,16 +84,35 @@ void print_header() {
   print("| %12s |\n", "------------");
 }
 
+int clock_gettime_local(struct timespec *a) {
+  int err = 0;
+  //https://gist.github.com/jbenet/1087739     
+#ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
+   clock_serv_t cclock;
+   mach_timespec_t mts;
+   host_get_clock_service(mach_host_self(), REALTIME_CLOCK, &cclock);
+   clock_get_time(cclock, &mts);
+   mach_port_deallocate(mach_task_self(), cclock);
+   a->tv_sec = mts.tv_sec;
+   a->tv_nsec = mts.tv_nsec;
+#else
+  err = clock_gettime(CLOCK_MONOTONIC, a);
+#endif
+  return err;
+}
+
 void static inline timer(Statistics* statistics) {
   if (!statistics->ticking) {
-    clock_gettime(CLOCK_MONOTONIC, &statistics->start);
+    //clock_gettime(CLOCK_MONOTONIC, &statistics->start);
+    clock_gettime_local(&statistics->start);
     statistics->ticking = true;
     return;
   }
   statistics->ticking = false;
 
   struct timespec end;
-  clock_gettime(CLOCK_MONOTONIC, &end);
+  //clock_gettime(CLOCK_MONOTONIC, &end);
+  clock_gettime_local(&end);
   double ns = (end.tv_sec - statistics->start.tv_sec) * 1000000000UL + (end.tv_nsec - statistics->start.tv_nsec);
 
   // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
