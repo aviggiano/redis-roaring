@@ -216,8 +216,11 @@ int ROptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
   int type = RedisModule_KeyType(key);
-  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
-    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  if (type == REDISMODULE_KEYTYPE_EMPTY) {
+      return RedisModule_ReplyWithError(ctx, "ERR no such key");
+  }
+  if (RedisModule_ModuleTypeGetType(key) != BitmapType) {
+      return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
   Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
