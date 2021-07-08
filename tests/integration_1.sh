@@ -286,6 +286,13 @@ function test_diff()
   [ "$FOUND" == "$EXPECTED" ]
 
 }
+function test_optimize_nokey()
+{
+  echo "test_optimize nokey"
+  FOUND=$(echo "R.OPTIMIZE no-key" | ./deps/redis/src/redis-cli)
+  EXPECTED="ERR no such key"
+  [ "$FOUND" == "$EXPECTED" ]
+}
 function test_del()
 {
   echo "test_del"
@@ -314,5 +321,6 @@ test_getintarray_setintarray
 test_getbitarray_setbitarray
 test_min_max
 test_diff
+test_optimize_nokey
 test_del
 test_save
