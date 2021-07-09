@@ -28,7 +28,9 @@ int RSetFullCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_ReplyWithError(ctx, "key exists");
   }
 
-  Bitmap* bitmap = bitmap_from_range(0, UINT32_MAX - 1);
+  Bitmap* bitmap = bitmap_from_range(0, UINT32_MAX);
+  //NOTE bitmap from range is an right open interval, to set full bit for key, we need do it manually
+  bitmap_setbit(bitmap, UINT32_MAX, 1);
   RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
   RedisModule_ReplicateVerbatim(ctx);
   RedisModule_ReplyWithSimpleString(ctx, "OK");
@@ -214,7 +216,7 @@ int ROptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
     return RedisModule_WrongArity(ctx);
   }
   RedisModule_AutoMemory(ctx);
-  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
   int type = RedisModule_KeyType(key);
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
       return RedisModule_ReplyWithError(ctx, "ERR no such key");
