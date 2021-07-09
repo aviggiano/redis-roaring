@@ -293,6 +293,15 @@ function test_optimize_nokey()
   EXPECTED="ERR no such key"
   [ "$FOUND" == "$EXPECTED" ]
 }
+function test_setfull()
+{
+  echo "test_setfull"
+  echo "del foo" | ./deps/redis/src/redis-cli
+  echo "R.SETFULL foo" | ./deps/redis/src/redis-cli
+  FOUND=$(echo "R.BITCOUNT foo" | ./deps/redis/src/redis-cli)
+  EXPECTED="4294967296"
+  [ "$FOUND" == "$EXPECTED" ]
+}
 function test_del()
 {
   echo "test_del"
@@ -322,5 +331,6 @@ test_getbitarray_setbitarray
 test_min_max
 test_diff
 test_optimize_nokey
+test_setfull
 test_del
 test_save
