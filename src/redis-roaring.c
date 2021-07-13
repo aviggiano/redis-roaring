@@ -741,6 +741,7 @@ int RMinCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_WrongArity(ctx);
   }
 
+  RedisModule_AutoMemory(ctx);
   RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
   int type = RedisModule_KeyType(key);
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
@@ -768,6 +769,7 @@ int RMaxCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_WrongArity(ctx);
   }
 
+  RedisModule_AutoMemory(ctx);
   RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
   int type = RedisModule_KeyType(key);
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
