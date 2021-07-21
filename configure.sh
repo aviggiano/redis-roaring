@@ -19,9 +19,15 @@ function amalgamate_croaring()
 } 
 function configure_redis()
 {
+  pushd .
   cd deps/redis
+
+  cd deps
+  make hiredis jemalloc linenoise lua
+  cd ..
+
   make
-  cd -
+  popd
 }
 function configure_hiredis()
 {
