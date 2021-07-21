@@ -12,8 +12,8 @@ function amalgamate_croaring()
   cd src 
   # generates header files
   ../deps/CRoaring/amalgamation.sh 
-  cp ../deps/CRoaring/roaring.c .
-  cp ../deps/CRoaring/roaring.h .
+  cp ../deps/CRoaring/src/roaring.c .
+  cp ../deps/CRoaring/include/roaring/roaring.h .
   rm roaring.hh && rm amalgamation_demo.c && rm amalgamation_demo.cpp
   popd
 } 
