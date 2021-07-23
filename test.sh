@@ -12,8 +12,7 @@ function unit()
 function integration_1()
 {
   stop_redis
-  # FIXME should be "yes", but we are waiting on redis issue #4284
-  start_redis "no"
+  start_redis --valgrind
   ./tests/integration_1.sh
   stop_redis
   echo "All integration (1) tests passed"
@@ -21,8 +20,7 @@ function integration_1()
 function integration_2()
 {
   stop_redis
-  # FIXME should be "--valgrind", but we are waiting on redis issue #4284
-  start_redis --aof
+  start_redis --valgrind --aof
   ./tests/integration_1.sh
   stop_redis
 

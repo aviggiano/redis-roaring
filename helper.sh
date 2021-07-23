@@ -32,7 +32,7 @@ function start_redis()
   done
 
   local REDIS_COMMAND="./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so"
-  local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --error-exitcode=1 --log-file=$LOG_FILE"
+  local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --suppressions=./deps/redis/src/valgrind.sup --error-exitcode=1 --log-file=$LOG_FILE"
   local AOF_OPTION="--appendonly $USE_AOF"
   if [ "$USE_VALGRIND" == "no" ]; then
     VALGRIND_COMMAND=""
