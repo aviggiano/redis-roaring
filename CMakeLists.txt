@@ -46,7 +46,6 @@ message(STATUS "Compiling redis module")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(SOURCE_FILES ${SRC_PATH}/redis-roaring.c
-        ${SRC_PATH}/type.c
         ${SRC_PATH}/data-structure.c
         ${SDS_PATH}/sds.c)
 add_library(redis-roaring SHARED ${SOURCE_FILES})
