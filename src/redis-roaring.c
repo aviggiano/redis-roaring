@@ -245,8 +245,8 @@ int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   sds s = sdsempty();
   s = sdscatprintf(s, "cardinality: %lld\n", (long long) stat.cardinality);
   s = sdscatprintf(s, "number of containers: %d\n", stat.n_containers);
-  s = sdscatprintf(s, "max value: %d\n", stat.max_value);
-  s = sdscatprintf(s, "min value: %d\n", stat.min_value);
+  s = sdscatprintf(s, "max value: %u\n", stat.max_value);
+  s = sdscatprintf(s, "min value: %u\n", stat.min_value);
 
   s = sdscatprintf(s, "number of array containers: %d\n", stat.n_array_containers);
   s = sdscatprintf(s, "\tarray container values: %d\n", stat.n_values_array_containers);
