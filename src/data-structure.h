@@ -3,6 +3,11 @@
 
 #include "roaring.h"
 
+#define malloc(size) RedisModule_Alloc(size)
+#define calloc(count, size) RedisModule_Calloc(count, size)
+#define realloc(p, sz) RedisModule_Realloc(p, sz)
+#define free(p) RedisModule_Free(p)
+
 typedef roaring_bitmap_t Bitmap;
 typedef roaring_statistics_t Bitmap_statistics;
 
