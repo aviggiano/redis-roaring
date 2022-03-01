@@ -2,6 +2,8 @@
 #define REDIS_ROARING_DATA_STRUCTURE_H
 
 #include "roaring.h"
+#include <stdlib.h>
+#include <string.h>
 
 typedef roaring_bitmap_t Bitmap;
 typedef roaring_statistics_t Bitmap_statistics;
