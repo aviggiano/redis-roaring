@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Configure
       run: ./configure.sh
   test:
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Configure
       run: ./configure.sh
     - name: Install valgrind
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Configure
       run: ./configure.sh
     - name: Install valgrind
@@ -38,7 +38,7 @@ jobs:
     - name: Test
       run: ./performance.sh
   docker:
-    name: Build and push to Dockerhub
+    name: Build and push to ECR
     needs: [configure, test, performance]
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
