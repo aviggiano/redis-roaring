@@ -2,6 +2,12 @@ redis-roaring ![CI/CD](https://github.com/aviggiano/redis-roaring/workflows/CI/C
 ===========
 Roaring Bitmaps for Redis
 
+*This is a RocketReach fork of the opensource aviggiano project*
+
+We've forked this because:
+1) We want to install specific, tagged images in our own ECR registries to avoid a new "latest" tag from potentially disrupting our build repeatability
+2) We want to add our own .github/ actions to install the docker image with our own tags into our ECR registries
+
 ## Intro
 
 This project uses the [CRoaring](https://github.com/RoaringBitmap/CRoaring) library to implement roaring bitmap commands for Redis.
