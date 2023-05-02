@@ -2,7 +2,7 @@ name: CI/CD
 
 # For now, we just manually trigger a new build when AWS Inspector identifies a security vulnerability
 # that we believe we can resolve by re-building the Docker image (because there's an apt-get update in there)
-on: [workflow_dispatch]
+on: [push, workflow_dispatch]
 
 permissions:
   id-token: write
