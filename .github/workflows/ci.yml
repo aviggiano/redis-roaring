@@ -34,28 +34,12 @@ jobs:
     environment: staging
     runs-on: ubuntu-latest
     steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Build and Push Docker Image
+        uses: ./github/actions/build-and-push-docker-image
         with:
-          role-to-assume: ${{ vars.AWS_GITHUB_OIDC_ROLE }}
-          role-session-name: GithubActions
-          aws-region: ${{ vars.AWS_REGION }}
-      - name: Login to Amazon ECR
-        id: login_ecr
-        uses: aws-actions/amazon-ecr-login@v1
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
-        env:
-          AWS_ECR: ${{ vars.AWS_ECR }}
-        run: |
-          docker buildx build -t $AWS_ECR/redis-roaring:sha_$GITHUB_SHA --platform=linux/arm64 --output type=docker .
-          docker push $AWS_ECR/redis-roaring --all-tags
+          aws_ecr: ${{ vars.AWS_ECR }}
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role: ${{ vars.AWS_GITHUB_OIDC_ROLE }}
   performance:
     name: Performance tests
     needs: [configure, test]
@@ -70,37 +54,18 @@ jobs:
         run: sudo apt-get install valgrind
       - name: Test
         run: ./performance.sh
-
-#  build_and_push_production:
-#    name: Build and push to ECR
-#    needs: [configure, test, performance]
-#    if: github.ref == 'refs/heads/master'
-#    environment: prod
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#      - name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v1
-#      - name: Build
-#        run: |-
-#          docker buildx build -t redis-roaring:sha_$GITHUB_SHA --platform=linux/arm64 --output type=docker .
-#        shell: bash
-#      - name: Configure AWS Credentials
-#        uses: aws-actions/configure-aws-credentials@v2
-#        with:
-#          role-to-assume: ${{ vars.AWS_GITHUB_OIDC_ROLE }}
-#          aws-region: ${{ vars.AWS_REGION }}
-#      - name: Login to Amazon ECR
-#        id: login_ecr
-#        uses: aws-actions/amazon-ecr-login@v1
-#      - name: Push to ECR
-#        id: ecr
-#        uses: jwalton/gh-ecr-push@v1
-#        with:
-#          access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
-#          secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          region: us-west-2
-#          image: redis-roaring:sha_$GITHUB_SHA
+  build_and_push_production:
+    name: Build and push to ECR
+    needs: [configure, test, performance]
+    if: github.ref == 'refs/heads/master'
+    environment: prod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build and Push Docker Image
+        uses: ./github/actions/build-and-push-docker-image
+        with:
+          aws_ecr: ${{ vars.AWS_ECR }}
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role: ${{ vars.AWS_GITHUB_OIDC_ROLE }}
 
 
