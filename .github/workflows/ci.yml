@@ -34,6 +34,8 @@ jobs:
     environment: staging
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Build and Push Docker Image
         uses: ./.github/actions/build-and-push-docker-image
         with:
@@ -61,6 +63,8 @@ jobs:
     environment: prod
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Build and Push Docker Image
         uses: ./.github/actions/build-and-push-docker-image
         with:
