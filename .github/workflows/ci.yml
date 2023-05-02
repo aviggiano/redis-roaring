@@ -1,6 +1,8 @@
 name: CI/CD
 
-on: [push, pull_request, workflow_dispatch]
+# For now, we just manually trigger a new build when AWS Inspector identifies a security vulnerability
+# that we believe we can resolve by re-building the Docker image (because there's an apt-get update in there)
+on: [workflow_dispatch]
 
 permissions:
   id-token: write
@@ -28,7 +30,7 @@ jobs:
     - name: Test
       run: ./test.sh
   build_and_push_staging:
-    name: Build and push to ECR
+    name: Build and push to ECR (Staging)
     needs: [configure, test]
     if: github.ref != 'refs/heads/master'
     environment: staging
@@ -57,10 +59,10 @@ jobs:
       - name: Test
         run: ./performance.sh
   build_and_push_production:
-    name: Build and push to ECR
+    name: Build and push to ECR (Production)
     needs: [configure, test, performance]
     if: github.ref == 'refs/heads/master'
-    environment: prod
+    environment: production
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
