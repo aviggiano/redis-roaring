@@ -47,6 +47,8 @@ jobs:
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         env:
