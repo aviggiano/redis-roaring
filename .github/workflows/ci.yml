@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build and Push Docker Image
-        uses: ./github/actions/build-and-push-docker-image
+        uses: ./.github/actions/build-and-push-docker-image
         with:
           aws_ecr: ${{ vars.AWS_ECR }}
           aws_region: ${{ vars.AWS_REGION }}
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build and Push Docker Image
-        uses: ./github/actions/build-and-push-docker-image
+        uses: ./.github/actions/build-and-push-docker-image
         with:
           aws_ecr: ${{ vars.AWS_ECR }}
           aws_region: ${{ vars.AWS_REGION }}
