@@ -1,6 +1,12 @@
 name: CI/CD
 
-on: [push, pull_request]
+# For now, we just manually trigger a new build when AWS Inspector identifies a security vulnerability
+# that we believe we can resolve by re-building the Docker image (because there's an apt-get update in there)
+on: [push, workflow_dispatch]
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   configure:
@@ -8,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Configure
       run: ./configure.sh
   test:
@@ -16,52 +22,56 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Configure
       run: ./configure.sh
     - name: Install valgrind
       run: sudo apt-get install valgrind
     - name: Test
       run: ./test.sh
+  build_and_push_staging:
+    name: Build and push to ECR (Staging)
+    needs: [configure, test]
+    if: github.ref != 'refs/heads/master'
+    environment: staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Build and Push Docker Image
+        uses: ./.github/actions/build-and-push-docker-image
+        with:
+          aws_ecr: ${{ vars.AWS_ECR }}
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role: ${{ vars.AWS_GITHUB_OIDC_ROLE }}
   performance:
     name: Performance tests
     needs: [configure, test]
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Configure
-      run: ./configure.sh
-    - name: Install valgrind
-      run: sudo apt-get install valgrind
-    - name: Test
-      run: ./performance.sh
-  docker:
-    name: Build and push to Dockerhub
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Configure
+        run: ./configure.sh
+      - name: Install valgrind
+        run: sudo apt-get install valgrind
+      - name: Test
+        run: ./performance.sh
+  build_and_push_production:
+    name: Build and push to ECR (Production)
     needs: [configure, test, performance]
     if: github.ref == 'refs/heads/master'
+    environment: production
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v1 
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Build and Push Docker Image
+        uses: ./.github/actions/build-and-push-docker-image
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          tags: aviggiano/redis-roaring:latest
-      -
-        name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+          aws_ecr: ${{ vars.AWS_ECR }}
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role: ${{ vars.AWS_GITHUB_OIDC_ROLE }}
+
+
