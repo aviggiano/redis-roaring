@@ -35,3 +35,4 @@ runs:
       run: |
         docker buildx build -t $AWS_ECR/redis-roaring:sha_$GITHUB_SHA --platform=linux/arm64 --output type=docker .
         docker push $AWS_ECR/redis-roaring --all-tags
+      shell: bash
