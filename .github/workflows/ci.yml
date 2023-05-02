@@ -2,6 +2,10 @@ name: CI/CD
 
 on: [push, pull_request, workflow_dispatch]
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   configure:
     name: Configure project
@@ -31,9 +35,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ vars.AWS_GITHUB_OIDC_ROLE }}
+          role-session-name: GithubActions
           aws-region: ${{ vars.AWS_REGION }}
       - name: Login to Amazon ECR
         id: login_ecr
