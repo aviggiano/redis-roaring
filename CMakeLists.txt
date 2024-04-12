@@ -12,9 +12,6 @@ option(DISABLE_TESTS "disables tests in hiredis" ON)
 option(BUILD_SHARED_LIBS "use shared libraries" OFF)
 set(HIREDIS_PATH ${DEPS_PATH}/hiredis)
 add_subdirectory(${HIREDIS_PATH} EXCLUDE_FROM_ALL)
-#set(SDS_PATH ${DEPS_PATH}/sds)
-
-#include_directories(${SDS_PATH})
 include_directories(${SRC_PATH})
 enable_testing()
 

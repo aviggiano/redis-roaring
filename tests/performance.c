@@ -144,14 +144,12 @@ void statistics_print(Statistics* statistics) {
   print("| %12.2f ", mean);
   print("| %12.2f |\n", stdev);
 }
-#define CROARING_BENCHMARK_DATA_DIR "@CROARING_BENCHMARK_DATA_DIR@"
+
 int main(int argc, char* argv[]) {
   size_t count;
   size_t* howmany = NULL;
-  char dirbuffer[1024];
-  size_t bddl = strlen(CROARING_BENCHMARK_DATA_DIR);
-  strcpy(dirbuffer, CROARING_BENCHMARK_DATA_DIR);
-  strcpy(dirbuffer, "census1881");
+  const char* dirbuffer = CROARING_BENCHMARK_DATA_DIR "census1881";
+  printf("dirbuffer %s\n", dirbuffer);
   uint32_t** numbers = read_all_integer_files(dirbuffer,
                                               ".txt", &howmany, &count);
 
