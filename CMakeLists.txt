@@ -9,11 +9,12 @@ set(ENABLE_ROARING_TESTS OFF)
 set(CROARING_PATH ${DEPS_PATH}/CRoaring)
 add_subdirectory(${CROARING_PATH} EXCLUDE_FROM_ALL)
 option(DISABLE_TESTS "disables tests in hiredis" ON)
+option(BUILD_SHARED_LIBS "use shared libraries" OFF)
 set(HIREDIS_PATH ${DEPS_PATH}/hiredis)
 add_subdirectory(${HIREDIS_PATH} EXCLUDE_FROM_ALL)
-set(SDS_PATH ${DEPS_PATH}/sds)
+#set(SDS_PATH ${DEPS_PATH}/sds)
 
-include_directories(${SDS_PATH})
+#include_directories(${SDS_PATH})
 include_directories(${SRC_PATH})
 enable_testing()
 
@@ -34,6 +35,8 @@ message(STATUS "Compiling performance tests")
 set(PERFORMANCE_FILES ${TEST_PATH}/performance.c)
 
 add_executable(performance ${PERFORMANCE_FILES})
+set (CROARING_BENCHMARK_DATA_DIR "${CROARING_PATH}/benchmarks/realdata/")
+target_compile_definitions(performance PRIVATE CROARING_BENCHMARK_DATA_DIR="${CROARING_BENCHMARK_DATA_DIR}")
 target_link_libraries(performance  m roaring::roaring hiredis::hiredis)
 add_test(NAME performance_tests COMMAND performance)
 
@@ -42,7 +45,6 @@ message(STATUS "Compiling redis module")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(SOURCE_FILES ${SRC_PATH}/redis-roaring.c
-        ${SRC_PATH}/data-structure.c
-        ${SDS_PATH}/sds.c)
-add_library(redis-roaring SHARED ${SOURCE_FILES})
+        ${SRC_PATH}/data-structure.c)
+add_library(redis-roaring ${SOURCE_FILES})
 target_link_libraries(redis-roaring roaring::roaring hiredis::hiredis)
