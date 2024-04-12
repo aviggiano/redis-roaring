@@ -3,8 +3,9 @@
 #include <time.h>
 #include <math.h>
 #include <assert.h>
+#include <stdbool.h>
 #include "hiredis.h"
-#include "benchmarks/numbersfromtextfiles.h"
+#include "numbersfromtextfiles.h"
 
 #ifdef __MACH__
 #include <mach/clock.h>
