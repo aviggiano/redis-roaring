@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 project(redis-roaring)
 set (CMAKE_C_STANDARD 11)
-set(CMAKE_VERBOSE_MAKEFILE on)
 set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(DEPS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/deps)
 set(TEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/tests)
