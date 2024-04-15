@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(redis-roaring)
 set (CMAKE_C_STANDARD 11)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(DEPS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/deps)
 set(TEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/tests)
@@ -14,31 +16,17 @@ add_subdirectory(${HIREDIS_PATH} EXCLUDE_FROM_ALL)
 include_directories(${SRC_PATH})
 enable_testing()
 
-####### unit tests #######
-message(STATUS "Compiling unit tests")
 
-set(UNIT_FILES
-        ${SRC_PATH}/data-structure.c
-        ${TEST_PATH}/unit.c)
-
-add_executable(unit ${UNIT_FILES})
+add_executable(unit ${SRC_PATH}/data-structure.c ${TEST_PATH}/unit.c)
 target_link_libraries(unit roaring::roaring)
 add_test(NAME unit_tests COMMAND unit)
 
-####### performance tests #######
-message(STATUS "Compiling performance tests")
-
-set(PERFORMANCE_FILES ${TEST_PATH}/performance.c)
-
-add_executable(performance ${PERFORMANCE_FILES})
+add_executable(performance ${TEST_PATH}/performance.c)
 set (CROARING_BENCHMARK_DATA_DIR "${CROARING_PATH}/benchmarks/realdata/")
 target_compile_definitions(performance PRIVATE CROARING_BENCHMARK_DATA_DIR="${CROARING_BENCHMARK_DATA_DIR}")
 target_link_libraries(performance  m roaring::roaring hiredis::hiredis)
 add_test(NAME performance_tests COMMAND performance)
 
-####### redis module #######
-message(STATUS "Compiling redis module")
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(REDIS_ROARING_SOURCE_FILES ${SRC_PATH}/redis-roaring.c
         ${SRC_PATH}/data-structure.c)
