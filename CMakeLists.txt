@@ -40,7 +40,10 @@ add_test(NAME performance_tests COMMAND performance)
 message(STATUS "Compiling redis module")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(SOURCE_FILES ${SRC_PATH}/redis-roaring.c
+set(REDIS_ROARING_SOURCE_FILES ${SRC_PATH}/redis-roaring.c
         ${SRC_PATH}/data-structure.c)
-add_library(redis-roaring ${SOURCE_FILES})
+add_library(redis-roaring STATIC  ${REDIS_ROARING_SOURCE_FILES})
+add_library(redis-roaring-shared  SHARED ${REDIS_ROARING_SOURCE_FILES})
+
 target_link_libraries(redis-roaring roaring::roaring hiredis::hiredis)
+target_link_libraries(redis-roaring-shared roaring::roaring hiredis::hiredis)
