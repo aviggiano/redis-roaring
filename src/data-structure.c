@@ -29,21 +29,21 @@ bool bitmap_getbit(const Bitmap* bitmap, uint32_t offset) {
 }
 
 int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {
-  roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
+  roaring_uint32_iterator_t* iterator = roaring_iterator_create(bitmap);
   int64_t element = -1;
   for (uint64_t i = 1; iterator->has_value; i++) {
     if (i == n) {
       element = iterator->current_value;
       break;
     }
-    roaring_advance_uint32_iterator(iterator);
+    roaring_uint32_iterator_advance(iterator);
   }
-  roaring_free_uint32_iterator(iterator);
+  roaring_uint32_iterator_free(iterator);
   return element;
 }
 
 int64_t bitmap_get_nth_element_not_present(const Bitmap* bitmap, uint64_t n) {
-  roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
+  roaring_uint32_iterator_t* iterator = roaring_iterator_create(bitmap);
   int64_t element = -1;
   int64_t last = -1;
   for (uint64_t i = 1; iterator->has_value; i++) {
@@ -56,9 +56,9 @@ int64_t bitmap_get_nth_element_not_present(const Bitmap* bitmap, uint64_t n) {
       n -= (step - 1);
     }
     last = current;
-    roaring_advance_uint32_iterator(iterator);
+    roaring_uint32_iterator_advance(iterator);
   }
-  roaring_free_uint32_iterator(iterator);
+  roaring_uint32_iterator_free(iterator);
   return element;
 }
 
@@ -138,12 +138,12 @@ char* bitmap_get_bit_array(const Bitmap* bitmap, size_t* size) {
   memset(ans, '0', *size);
   ans[*size] = '\0';
 
-  roaring_uint32_iterator_t* iterator = roaring_create_iterator(bitmap);
+  roaring_uint32_iterator_t* iterator = roaring_iterator_create(bitmap);
   while (iterator->has_value) {
     ans[iterator->current_value] = '1';
-    roaring_advance_uint32_iterator(iterator);
+    roaring_uint32_iterator_advance(iterator);
   }
-  roaring_free_uint32_iterator(iterator);
+  roaring_uint32_iterator_free(iterator);
 
   return ans;
 }

@@ -7,7 +7,7 @@
 #define realloc(p, sz) RedisModule_Realloc(p, sz)
 #define free(p) RedisModule_Free(p)
 
-#include "roaring.c"
+#include "roaring.h"
 
 static RedisModuleType* BitmapType;
 

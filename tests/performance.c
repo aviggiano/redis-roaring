@@ -3,8 +3,9 @@
 #include <time.h>
 #include <math.h>
 #include <assert.h>
+#include <stdbool.h>
 #include "hiredis.h"
-#include "benchmarks/numbersfromtextfiles.h"
+#include "numbersfromtextfiles.h"
 
 #ifdef __MACH__
 #include <mach/clock.h>
@@ -147,7 +148,9 @@ void statistics_print(Statistics* statistics) {
 int main(int argc, char* argv[]) {
   size_t count;
   size_t* howmany = NULL;
-  uint32_t** numbers = read_all_integer_files("./deps/CRoaring/benchmarks/realdata/census1881",
+  const char* dirbuffer = CROARING_BENCHMARK_DATA_DIR "census1881";
+  printf("dirbuffer %s\n", dirbuffer);
+  uint32_t** numbers = read_all_integer_files(dirbuffer,
                                               ".txt", &howmany, &count);
 
   assert(numbers != NULL);
