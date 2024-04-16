@@ -35,13 +35,13 @@ int main(int argc, char* argv[]) {
 
     Bitmap* bitmaps[] = {sixteen, four, nine};
     Bitmap* or = bitmap_or(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
-    roaring_uint32_iterator_t* iterator = roaring_create_iterator(or);
+    roaring_uint32_iterator_t* iterator = roaring_iterator_create(or);
     int expected[] = {0, 2, 3, 4};
     for (int i = 0; iterator->has_value; i++) {
       assert(iterator->current_value == expected[i]);
-      roaring_advance_uint32_iterator(iterator);
+      roaring_uint32_iterator_advance(iterator);
     }
-    roaring_free_uint32_iterator(iterator);
+    roaring_uint32_iterator_free(iterator);
 
     bitmap_free(or);
 
@@ -63,13 +63,13 @@ int main(int argc, char* argv[]) {
 
     Bitmap* bitmaps[] = {twelve, four, six};
     Bitmap* and = bitmap_and(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
-    roaring_uint32_iterator_t* iterator = roaring_create_iterator(and);
+    roaring_uint32_iterator_t* iterator = roaring_iterator_create(and);
     int expected[] = {2};
     for (int i = 0; iterator->has_value; i++) {
       assert(iterator->current_value == expected[i]);
-      roaring_advance_uint32_iterator(iterator);
+      roaring_uint32_iterator_advance(iterator);
     }
-    roaring_free_uint32_iterator(iterator);
+    roaring_uint32_iterator_free(iterator);
 
     bitmap_free(and);
 
@@ -91,13 +91,13 @@ int main(int argc, char* argv[]) {
 
     Bitmap* bitmaps[] = {twelve, four, six};
     Bitmap* xor = bitmap_xor(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
-    roaring_uint32_iterator_t* iterator = roaring_create_iterator(xor);
+    roaring_uint32_iterator_t* iterator = roaring_iterator_create(xor);
     int expected[] = {1, 2, 3};
     for (int i = 0; iterator->has_value; i++) {
       assert(iterator->current_value == expected[i]);
-      roaring_advance_uint32_iterator(iterator);
+      roaring_uint32_iterator_advance(iterator);
     }
-    roaring_free_uint32_iterator(iterator);
+    roaring_uint32_iterator_free(iterator);
 
     bitmap_free(xor);
 
@@ -118,20 +118,20 @@ int main(int argc, char* argv[]) {
     int expected[] = {0, 1};
 
     {
-      roaring_uint32_iterator_t* iterator = roaring_create_iterator(not_array);
+      roaring_uint32_iterator_t* iterator = roaring_iterator_create(not_array);
       for (int i = 0; iterator->has_value; i++) {
         assert(iterator->current_value == expected[i]);
-        roaring_advance_uint32_iterator(iterator);
+        roaring_uint32_iterator_advance(iterator);
       }
-      roaring_free_uint32_iterator(iterator);
+      roaring_uint32_iterator_free(iterator);
     }
     {
-      roaring_uint32_iterator_t* iterator = roaring_create_iterator(not);
+      roaring_uint32_iterator_t* iterator = roaring_iterator_create(not);
       for (int i = 0; iterator->has_value; i++) {
         assert(iterator->current_value == expected[i]);
-        roaring_advance_uint32_iterator(iterator);
+        roaring_uint32_iterator_advance(iterator);
       }
-      roaring_free_uint32_iterator(iterator);
+      roaring_uint32_iterator_free(iterator);
     }
 
     bitmap_free(not);
