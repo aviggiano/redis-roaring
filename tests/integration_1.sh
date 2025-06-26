@@ -348,4 +348,5 @@ test_diff
 test_optimize_nokey
 test_setfull
 test_del
+test_stat
 test_save
