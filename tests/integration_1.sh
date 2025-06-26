@@ -314,6 +314,21 @@ function test_del()
   EXPECTED="1"
   [ "$FOUND" == "$EXPECTED" ]
 }
+function test_stat()
+{
+  echo "test_stat"
+
+  EXPECTED="0"
+  FOUND=$(echo "R.SETBIT test_stat 100 1" | ./deps/redis/src/redis-cli)
+  [ "$FOUND" == "$EXPECTED" ]
+
+  FOUND=$(echo "R.STAT test_stat" | ./deps/redis/src/redis-cli)
+  EXPECTED=$'cardinality: 1\nnumber of containers: 1\nmax value: 100\nmin value: 100
+number of array containers: 1\n\tarray container values: 1\n\tarray container bytes: 2
+bitset  containers: 0\n\tbitset  container values: 0\n\tbitset  container bytes: 0
+run containers: 0\n\trun container values: 0\n\trun container bytes: 0'
+  [ "$FOUND" == "$EXPECTED" ]
+}
 function test_save()
 {
   echo "test_save"
@@ -333,4 +348,5 @@ test_diff
 test_optimize_nokey
 test_setfull
 test_del
+test_stat
 test_save
