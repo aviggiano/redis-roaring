@@ -260,7 +260,7 @@ int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   s = sdscatprintf(s, "\trun container values: %d\n", stat.n_values_run_containers);
   s = sdscatprintf(s, "\trun container bytes: %d\n", stat.n_bytes_run_containers);
 
-  RedisModule_ReplyWithStringBuffer(ctx, s, sdslen(s));
+  RedisModule_ReplyWithVerbatimString(ctx, s, sdslen(s));
   sdsfree(s);
 
   return REDISMODULE_OK;
