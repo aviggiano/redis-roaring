@@ -7,6 +7,3 @@
 [submodule "deps/hiredis"]
 	path = deps/hiredis
 	url = https://github.com/redis/hiredis.git
-[submodule "deps/sds"]
-	path = deps/sds
-	url = https://github.com/antirez/sds.git
