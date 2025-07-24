@@ -267,7 +267,7 @@ int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 }
 
 /**
- * R.OPTIMIZE <key> [--MEM]
+ * R.OPTIMIZE <key> [--mem]
  * */
 int ROptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   int shrink_to_fit = 0;
@@ -287,7 +287,7 @@ int ROptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
   if (argc == 3) {
       size_t len;
       const char* option = RedisModule_StringPtrLen(argv[2], &len);
-      if (strcmp(option, "--MEM") == 0) {
+      if (strcmp(option, "--mem") == 0) {
           shrink_to_fit = 1;
       }
   }
