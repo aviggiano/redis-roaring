@@ -168,8 +168,11 @@ uint32_t bitmap_max(const Bitmap* bitmap) {
   return roaring_bitmap_maximum(bitmap);
 }
 
-void bitmap_optimize(Bitmap* bitmap) {
+void bitmap_optimize(Bitmap* bitmap, int shrink_to_fit) {
   roaring_bitmap_run_optimize(bitmap);
+  if (shrink_to_fit) {
+    roaring_bitmap_shrink_to_fit(bitmap);
+  }
 }
 
 void bitmap_statistics(const Bitmap* bitmap, Bitmap_statistics* stat) {

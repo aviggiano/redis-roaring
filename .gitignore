@@ -11,3 +11,6 @@ dist/
 cmake-build-debug/
 src/roaring.c
 src/roaring.h
+src/amalgamation_demo.c
+src/amalgamation_demo.cpp
+src/roaring.hh

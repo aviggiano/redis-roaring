@@ -85,7 +85,7 @@ Bitmap* bitmap_from_range(uint64_t from, uint64_t to);
 bool bitmap_is_empty(const Bitmap* bitmap);
 uint32_t bitmap_min(const Bitmap* bitmap);
 uint32_t bitmap_max(const Bitmap* bitmap);
-void bitmap_optimize(Bitmap* bitmap);
+void bitmap_optimize(Bitmap* bitmap, int shrink_to_fit);
 void bitmap_statistics(const Bitmap *bitmap, Bitmap_statistics *stat);
 
 #endif
