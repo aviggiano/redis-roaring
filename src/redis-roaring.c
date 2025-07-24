@@ -267,10 +267,11 @@ int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 }
 
 /**
- * R.OPTIMIZE <key>
+ * R.OPTIMIZE <key> [--MEM]
  * */
 int ROptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
-  if (argc != 2) {
+  int shrink_to_fit = 0;
+  if (argc < 2 || argc > 3) {
     return RedisModule_WrongArity(ctx);
   }
   RedisModule_AutoMemory(ctx);
@@ -283,8 +284,16 @@ int ROptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
       return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
+  if (argc == 3) {
+      size_t len;
+      const char* option = RedisModule_StringPtrLen(argv[2], &len);
+      if (strcmp(option, "--MEM") == 0) {
+          shrink_to_fit = 1;
+      }
+  }
+
   Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-  bitmap_optimize(bitmap);
+  bitmap_optimize(bitmap, shrink_to_fit);
 
   RedisModule_ReplicateVerbatim(ctx);
   RedisModule_ReplyWithSimpleString(ctx, "OK");
