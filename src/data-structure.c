@@ -8,12 +8,24 @@ Bitmap* bitmap_alloc() {
   return roaring_bitmap_create();
 }
 
+Bitmap64* bitmap64_alloc() {
+  return roaring64_bitmap_create();
+}
+
 void bitmap_free(Bitmap* bitmap) {
   roaring_bitmap_free(bitmap);
 }
 
+void bitmap64_free(Bitmap64* bitmap) {
+  roaring64_bitmap_free(bitmap);
+}
+
 uint64_t bitmap_get_cardinality(const Bitmap* bitmap) {
   return roaring_bitmap_get_cardinality(bitmap);
+}
+
+uint64_t bitmap64_get_cardinality(const Bitmap64* bitmap) {
+  return roaring64_bitmap_get_cardinality(bitmap);
 }
 
 void bitmap_setbit(Bitmap* bitmap, uint32_t offset, bool value) {
@@ -24,8 +36,20 @@ void bitmap_setbit(Bitmap* bitmap, uint32_t offset, bool value) {
   }
 }
 
+void bitmap64_setbit(Bitmap64* bitmap, uint64_t offset, bool value) {
+  if (!value) {
+    roaring64_bitmap_remove(bitmap, offset);
+  } else {
+    roaring64_bitmap_add(bitmap, offset);
+  }
+}
+
 bool bitmap_getbit(const Bitmap* bitmap, uint32_t offset) {
   return roaring_bitmap_contains(bitmap, offset);
+}
+
+bool bitmap64_getbit(const Bitmap64* bitmap, uint64_t offset) {
+  return roaring64_bitmap_contains(bitmap, offset);
 }
 
 int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {
@@ -39,6 +63,21 @@ int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {
     roaring_uint32_iterator_advance(iterator);
   }
   roaring_uint32_iterator_free(iterator);
+  return element;
+}
+
+uint64_t bitmap64_get_nth_element_present(const Bitmap64* bitmap, uint64_t n, bool* found) {
+  roaring64_iterator_t* iterator = roaring64_iterator_create(bitmap);
+  uint64_t element = 0;
+  for (uint64_t i = 1; roaring64_iterator_has_value(iterator); i++) {
+    if (i == n) {
+      element = roaring64_iterator_value(iterator);
+      *found = true;
+      break;
+    }
+    roaring64_iterator_advance(iterator);
+  }
+  roaring64_iterator_free(iterator);
   return element;
 }
 
@@ -62,6 +101,30 @@ int64_t bitmap_get_nth_element_not_present(const Bitmap* bitmap, uint64_t n) {
   return element;
 }
 
+uint64_t bitmap64_get_nth_element_not_present(const Bitmap64* bitmap, uint64_t n, bool* found) {
+  roaring64_iterator_t* iterator = roaring64_iterator_create(bitmap);
+  uint64_t element = 0;
+  uint64_t last = UINT64_MAX;
+
+  for (uint64_t i = 1; roaring64_iterator_has_value(iterator); i++) {
+    uint64_t current = roaring64_iterator_value(iterator);
+    uint64_t step = (last == UINT64_MAX) ? current + 1 : current - last;
+
+    if (n < step) {
+      element = (last == UINT64_MAX) ? n : last + n;
+      *found = true;
+      break;
+    } else {
+      n -= (step - 1);
+    }
+    last = current;
+    roaring64_iterator_advance(iterator);
+  }
+  
+  roaring64_iterator_free(iterator);
+  return element;
+}
+
 int64_t bitmap_get_nth_element_not_present_slow(const Bitmap* bitmap, uint64_t n) {
   roaring_bitmap_t* inverted_bitmap = bitmap_not(bitmap);
   int64_t element = bitmap_get_nth_element_present(inverted_bitmap, n);
@@ -73,6 +136,16 @@ Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps) {
   return roaring_bitmap_or_many_heap(n, bitmaps);
 }
 
+Bitmap64* bitmap64_or(uint32_t n, const Bitmap64** bitmaps) {
+  Bitmap64* result = roaring64_bitmap_copy(bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring64_bitmap_or_inplace(result, bitmaps[i]);
+  }
+
+  return result;
+}
+
 Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps) {
   Bitmap* result = roaring_bitmap_copy(bitmaps[0]);
   for (uint32_t i = 1; i < n; i++) {
@@ -81,8 +154,25 @@ Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps) {
   return result;
 }
 
+Bitmap64* bitmap64_and(uint32_t n, const Bitmap64** bitmaps) {
+  Bitmap64* result = roaring64_bitmap_copy(bitmaps[0]);
+  for (uint32_t i = 1; i < n; i++) {
+    roaring64_bitmap_and_inplace(result, bitmaps[i]);
+  }
+  return result;
+}
+
 Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps) {
   return roaring_bitmap_xor_many(n, bitmaps);
+}
+
+Bitmap64* bitmap64_xor(uint32_t n, const Bitmap64** bitmaps) {
+  Bitmap64* result = roaring64_bitmap_copy(bitmaps[0]);
+  for (uint32_t i = 1; i < n; i++) {
+    roaring64_bitmap_xor_inplace(result, bitmaps[i]);
+  }
+
+  return result;
 }
 
 Bitmap* bitmap_not_array(uint32_t unused, const Bitmap** bitmaps) {
@@ -95,6 +185,10 @@ Bitmap* bitmap_flip(const Bitmap* bitmap, uint32_t end) {
   return roaring_bitmap_flip(bitmap, 0, end);
 }
 
+Bitmap64* bitmap64_flip(const Bitmap64* bitmap, uint64_t end) {
+  return roaring64_bitmap_flip(bitmap, 0, end);
+}
+
 
 Bitmap* bitmap_not(const Bitmap* bitmap) {
   const Bitmap* bitmaps[] = {bitmap};
@@ -105,10 +199,21 @@ Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array) {
   return roaring_bitmap_of_ptr(n, array);
 }
 
+Bitmap64* bitmap64_from_int_array(size_t n, const uint64_t* array) {
+  return roaring64_bitmap_of_ptr(n, array);
+}
+
 uint32_t* bitmap_get_int_array(const Bitmap* bitmap, size_t* n) {
   *n = roaring_bitmap_get_cardinality(bitmap);
   uint32_t* ans = malloc(sizeof(*ans) * (*n));
   roaring_bitmap_to_uint32_array(bitmap, ans);
+  return ans;
+}
+
+uint64_t* bitmap64_get_int_array(const Bitmap64* bitmap, size_t* n) {
+  *n = roaring64_bitmap_get_cardinality(bitmap);
+  uint64_t* ans = malloc(sizeof(*ans) * (*n));
+  roaring64_bitmap_to_uint64_array(bitmap, ans);
   return ans;
 }
 
@@ -118,7 +223,24 @@ uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t offset, size_t n) 
   return ans;
 }
 
+uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, size_t offset, size_t n) {
+  roaring64_bitmap_t *range_bitmap = roaring64_bitmap_create();
+
+  roaring64_bitmap_add_range_closed(range_bitmap, offset, n);
+  roaring64_bitmap_and_inplace(range_bitmap, bitmap);
+
+  uint64_t *values = bitmap64_get_int_array(range_bitmap, &n);
+
+  roaring64_bitmap_free(range_bitmap);
+
+  return values;
+}
+
 void bitmap_free_int_array(uint32_t* array) {
+  free(array);
+}
+
+void bitmap64_free_int_array(uint64_t* array) {
   free(array);
 }
 
@@ -127,6 +249,16 @@ Bitmap* bitmap_from_bit_array(size_t size, const char* array) {
   for (size_t i = 0; i < size; i++) {
     if (array[i] == '1') {
       roaring_bitmap_add(bitmap, (int32_t) i);
+    }
+  }
+  return bitmap;
+}
+
+Bitmap64* bitmap64_from_bit_array(size_t size, const char* array) {
+  Bitmap64* bitmap = bitmap64_alloc();
+  for (size_t i = 0; i < size; i++) {
+    if (array[i] == '1') {
+      roaring64_bitmap_add(bitmap, (uint64_t) i);
     }
   }
   return bitmap;
@@ -148,6 +280,22 @@ char* bitmap_get_bit_array(const Bitmap* bitmap, size_t* size) {
   return ans;
 }
 
+char* bitmap64_get_bit_array(const Bitmap64* bitmap, uint64_t* size) {
+  *size = roaring64_bitmap_maximum(bitmap) + 1;
+  char* ans = malloc(*size + 1);
+  memset(ans, '0', *size);
+  ans[*size] = '\0';
+
+  roaring64_iterator_t* iterator = roaring64_iterator_create(bitmap);
+  while (roaring64_iterator_has_value(iterator)) {
+    ans[roaring64_iterator_value(iterator)] = '1';
+    roaring64_iterator_advance(iterator);
+  }
+  roaring64_iterator_free(iterator);
+
+  return ans;
+}
+
 void bitmap_free_bit_array(char* array) {
   free(array);
 }
@@ -156,16 +304,32 @@ Bitmap* bitmap_from_range(uint64_t from, uint64_t to) {
   return roaring_bitmap_from_range(from, to, 1);
 }
 
+Bitmap64* bitmap64_from_range(uint64_t from, uint64_t to) {
+  return roaring64_bitmap_from_range(from, to, 1);
+}
+
 bool bitmap_is_empty(const Bitmap* bitmap) {
   return roaring_bitmap_is_empty(bitmap);
+}
+
+bool bitmap64_is_empty(const Bitmap64* bitmap) {
+  return roaring64_bitmap_is_empty(bitmap);
 }
 
 uint32_t bitmap_min(const Bitmap* bitmap) {
   return roaring_bitmap_minimum(bitmap);
 }
 
+uint64_t bitmap64_min(const Bitmap64* bitmap) {
+  return roaring64_bitmap_minimum(bitmap);
+}
+
 uint32_t bitmap_max(const Bitmap* bitmap) {
   return roaring_bitmap_maximum(bitmap);
+}
+
+uint64_t bitmap64_max(const Bitmap64* bitmap) {
+  return roaring64_bitmap_maximum(bitmap);
 }
 
 void bitmap_optimize(Bitmap* bitmap, int shrink_to_fit) {
@@ -175,6 +339,47 @@ void bitmap_optimize(Bitmap* bitmap, int shrink_to_fit) {
   }
 }
 
+void bitmap64_optimize(Bitmap64* bitmap, int shrink_to_fit) {
+  roaring64_bitmap_run_optimize(bitmap);
+  if (shrink_to_fit) {
+    roaring64_bitmap_shrink_to_fit(bitmap);
+  }
+}
+
 void bitmap_statistics(const Bitmap* bitmap, Bitmap_statistics* stat) {
   roaring_bitmap_statistics(bitmap, stat);
+}
+
+void bitmap64_statistics(const Bitmap64* bitmap, Bitmap64_statistics* stat) {
+  roaring64_bitmap_statistics(bitmap, stat);
+}
+
+size_t uint64_to_string(uint64_t value, char *buffer) {
+  if (value == 0) {
+      buffer[0] = '0';
+      buffer[1] = '\0';
+      return 1;
+  }
+
+  char *ptr = buffer;
+  char *start = buffer;
+
+  // Extract digits in reverse order
+  while (value > 0) {
+      *ptr++ = '0' + (value % 10);
+      value /= 10;
+  }
+
+  size_t len = ptr - buffer;
+  *ptr = '\0';
+
+  // Reverse the string in-place
+  ptr--;
+  while (start < ptr) {
+      char temp = *start;
+      *start++ = *ptr;
+      *ptr-- = temp;
+  }
+
+  return len;
 }
