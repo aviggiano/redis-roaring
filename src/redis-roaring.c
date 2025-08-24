@@ -1755,9 +1755,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
       .free = Bitmap64Free
   };
 
-  Bitmap64Type = RedisModule_CreateDataType(ctx, "MyType-AZ", BITMAP_ENCODING_VERSION, &tm64);
+  Bitmap64Type = RedisModule_CreateDataType(ctx, "roaring64", BITMAP_ENCODING_VERSION, &tm64);
   if (Bitmap64Type == NULL) {
-    RedisModule_Log(ctx, "warning", "Failed to create Bitmap64Type");
+    RedisModule_Log(ctx, "warning", "Failed to register the Bitmap64Type data type");
     return REDISMODULE_ERR;
   }
 
