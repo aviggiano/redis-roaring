@@ -30,7 +30,7 @@ bool bitmap64_getbit(const Bitmap64* bitmap, uint64_t offset);
  * @example set {1, 10, 100, 1000} and n=1 returns 1, n=3 returns 100, n=0 returns -1, n=5 returns -1
  */
 int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n);
-int64_t bitmap64_get_nth_element_present(const Bitmap64* bitmap, uint64_t n);
+uint64_t bitmap64_get_nth_element_present(const Bitmap64* bitmap, uint64_t n, bool* found);
 /**
  * Gets the n-th element not present in the set
  *
@@ -42,7 +42,7 @@ int64_t bitmap64_get_nth_element_present(const Bitmap64* bitmap, uint64_t n);
  * @example set {1, 2, 4, 5, 7} and n=1 returns 0, n=2 returns 3, n=3 returns 6, n=5 returns 9
  */
 int64_t bitmap_get_nth_element_not_present(const Bitmap* bitmap, uint64_t n);
-int64_t bitmap64_get_nth_element_not_present(const Bitmap64* bitmap, uint64_t n);
+uint64_t bitmap64_get_nth_element_not_present(const Bitmap64* bitmap, uint64_t n, bool* found);
 /**
  * Same as `bitmap_get_nth_element_not_present` but slower. Useful for cross validation.
  */
@@ -113,5 +113,7 @@ void bitmap_optimize(Bitmap* bitmap, int shrink_to_fit);
 void bitmap64_optimize(Bitmap64* bitmap, int shrink_to_fit);
 void bitmap_statistics(const Bitmap *bitmap, Bitmap_statistics *stat);
 void bitmap64_statistics(const Bitmap64 *bitmap, Bitmap64_statistics *stat);
+
+size_t uint64_to_string(uint64_t value, char *buffer);
 
 #endif

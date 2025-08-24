@@ -66,12 +66,13 @@ int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {
   return element;
 }
 
-int64_t bitmap64_get_nth_element_present(const Bitmap64* bitmap, uint64_t n) {
+uint64_t bitmap64_get_nth_element_present(const Bitmap64* bitmap, uint64_t n, bool* found) {
   roaring64_iterator_t* iterator = roaring64_iterator_create(bitmap);
-  int64_t element = -1;
+  uint64_t element = 0;
   for (uint64_t i = 1; roaring64_iterator_has_value(iterator); i++) {
     if (i == n) {
       element = roaring64_iterator_value(iterator);
+      *found = true;
       break;
     }
     roaring64_iterator_advance(iterator);
@@ -100,15 +101,18 @@ int64_t bitmap_get_nth_element_not_present(const Bitmap* bitmap, uint64_t n) {
   return element;
 }
 
-int64_t bitmap64_get_nth_element_not_present(const Bitmap64* bitmap, uint64_t n) {
+uint64_t bitmap64_get_nth_element_not_present(const Bitmap64* bitmap, uint64_t n, bool* found) {
   roaring64_iterator_t* iterator = roaring64_iterator_create(bitmap);
-  int64_t element = -1;
-  int64_t last = -1;
+  uint64_t element = 0;
+  uint64_t last = UINT64_MAX;
+
   for (uint64_t i = 1; roaring64_iterator_has_value(iterator); i++) {
-    int64_t current = roaring64_iterator_value(iterator);
-    int64_t step = current - last;
+    uint64_t current = roaring64_iterator_value(iterator);
+    uint64_t step = (last == UINT64_MAX) ? current + 1 : current - last;
+
     if (n < step) {
-      element = last + n;
+      element = (last == UINT64_MAX) ? n : last + n;
+      *found = true;
       break;
     } else {
       n -= (step - 1);
@@ -116,6 +120,7 @@ int64_t bitmap64_get_nth_element_not_present(const Bitmap64* bitmap, uint64_t n)
     last = current;
     roaring64_iterator_advance(iterator);
   }
+  
   roaring64_iterator_free(iterator);
   return element;
 }
@@ -347,4 +352,34 @@ void bitmap_statistics(const Bitmap* bitmap, Bitmap_statistics* stat) {
 
 void bitmap64_statistics(const Bitmap64* bitmap, Bitmap64_statistics* stat) {
   roaring64_bitmap_statistics(bitmap, stat);
+}
+
+size_t uint64_to_string(uint64_t value, char *buffer) {
+  if (value == 0) {
+      buffer[0] = '0';
+      buffer[1] = '\0';
+      return 1;
+  }
+
+  char *ptr = buffer;
+  char *start = buffer;
+
+  // Extract digits in reverse order
+  while (value > 0) {
+      *ptr++ = '0' + (value % 10);
+      value /= 10;
+  }
+
+  size_t len = ptr - buffer;
+  *ptr = '\0';
+
+  // Reverse the string in-place
+  ptr--;
+  while (start < ptr) {
+      char temp = *start;
+      *start++ = *ptr;
+      *ptr-- = temp;
+  }
+
+  return len;
 }
