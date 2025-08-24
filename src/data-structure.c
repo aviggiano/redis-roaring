@@ -258,7 +258,7 @@ Bitmap64* bitmap64_from_bit_array(size_t size, const char* array) {
   Bitmap64* bitmap = bitmap64_alloc();
   for (size_t i = 0; i < size; i++) {
     if (array[i] == '1') {
-      roaring64_bitmap_add(bitmap, (int32_t) i);
+      roaring64_bitmap_add(bitmap, (uint64_t) i);
     }
   }
   return bitmap;
