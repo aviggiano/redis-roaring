@@ -18,10 +18,6 @@ Pull requests are welcome.
 - redis (server needed for integration tests)
 - hiredis (redis client library needed for performance tests)
 
-##### Known limitations
-
-- This library only works with [32-bit integeres](https://github.com/RoaringBitmap/CRoaring/issues/1) (e.g. counting numbers up to 4294967296)
-
 ## Getting started
 
 ```
@@ -71,6 +67,17 @@ Additional commands
 - `R.MIN` (get minimal integer from a roaring bitmap, if key is not exists or bitmap is empty, return -1)
 - `R.MAX` (get maximal integer from a roaring bitmap, if key is not exists or bitmap is empty, return -1)
 - `R.DIFF` (get difference between two bitmaps)
+
+64-bit bitmap commands (for handling values beyond 32-bit range)
+
+- `R64.SETBIT` (64-bit version of SETBIT)
+- `R64.GETBIT` (64-bit version of GETBIT)
+- `R64.SETINTARRAY` (create a 64-bit roaring bitmap from an integer array)
+- `R64.GETINTARRAY` (get an integer array from a 64-bit roaring bitmap)
+- `R64.RANGEINTARRAY` (get an integer array from a 64-bit roaring bitmap with `start` and `end`)
+- `R64.APPENDINTARRAY` (append integers to a 64-bit roaring bitmap)
+- `R64.DIFF` (get difference between two 64-bit bitmaps)
+- `R64.SETFULL` (fill up a 64-bit roaring bitmap)
 
 Missing commands:
 
