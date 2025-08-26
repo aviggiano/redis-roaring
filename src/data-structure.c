@@ -223,17 +223,17 @@ uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t offset, size_t n) 
   return ans;
 }
 
-uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, size_t offset, size_t n) {
-  roaring64_bitmap_t *range_bitmap = roaring64_bitmap_create();
+uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t offset, uint64_t n) {
+  uint64_t* ans = calloc(n, sizeof(*ans));
 
-  roaring64_bitmap_add_range_closed(range_bitmap, offset, n);
-  roaring64_bitmap_and_inplace(range_bitmap, bitmap);
+  // [TODO] replace with roaring64_bitmap_range_uint64_array in next version of CRoaring
+  for (uint64_t i = 0; i < n; i++) {
+    if (!roaring64_bitmap_select(bitmap, offset + i, &ans[i])) {
+      break;
+    }
+  }
 
-  uint64_t *values = bitmap64_get_int_array(range_bitmap, &n);
-
-  roaring64_bitmap_free(range_bitmap);
-
-  return values;
+  return ans;
 }
 
 void bitmap_free_int_array(uint32_t* array) {

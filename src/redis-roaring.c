@@ -316,16 +316,17 @@ int R64RangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int a
 
   Bitmap64* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
   uint64_t* array = NULL;
-  size_t n = 0;
+  uint64_t n = 0;
   if (bitmap != NULL) {
     unsigned long long count = (unsigned long long) bitmap64_get_cardinality(bitmap);
+
     if (start > count - 1 || start > end) {
       n = 0;
     } else {
       n = end - start + 1;
     }
     if (n > 0) {
-      array = bitmap64_range_int_array(bitmap, (size_t) start, n);
+      array = bitmap64_range_int_array(bitmap, start, n);
     }
   } else {
     n = 0;
