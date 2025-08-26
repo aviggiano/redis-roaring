@@ -271,12 +271,12 @@ int R64GetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
 
   Bitmap64* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
 
-  size_t n = 0;
+  uint64_t n = 0;
   uint64_t* array = bitmap == NULL ? NULL : bitmap64_get_int_array(bitmap, &n);
 
   RedisModule_ReplyWithArray(ctx, n);
 
-  for (size_t i = 0; i < n; i++) {
+  for (uint64_t i = 0; i < n; i++) {
     ReplyWithUint64(ctx, array[i]);
   }
 

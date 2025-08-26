@@ -210,7 +210,7 @@ uint32_t* bitmap_get_int_array(const Bitmap* bitmap, size_t* n) {
   return ans;
 }
 
-uint64_t* bitmap64_get_int_array(const Bitmap64* bitmap, size_t* n) {
+uint64_t* bitmap64_get_int_array(const Bitmap64* bitmap, uint64_t* n) {
   *n = roaring64_bitmap_get_cardinality(bitmap);
   uint64_t* ans = malloc(sizeof(*ans) * (*n));
   roaring64_bitmap_to_uint64_array(bitmap, ans);
