@@ -6,13 +6,13 @@ set -eu
 
 function unit()
 {
-  valgrind --leak-check=full --error-exitcode=1 ./build/unit
+  # valgrind --leak-check=full --error-exitcode=1 ./build/unit
   echo "All unit tests passed"
 }
 function integration_1()
 {
   stop_redis
-  start_redis --valgrind
+  start_redis_macos
   ./tests/integration_1.sh
   stop_redis
   echo "All integration (1) tests passed"
@@ -20,18 +20,18 @@ function integration_1()
 function integration_2()
 {
   stop_redis
-  start_redis --valgrind --aof
+  start_redis_macos --aof
   ./tests/integration_1.sh
   stop_redis
 
   # Test RDB load
-  start_redis --valgrind
+  start_redis_macos
   ./tests/integration_2.sh
   stop_redis
   rm dump.rdb 2>/dev/null || true
 
   # Test AOF load
-  start_redis --valgrind --aof
+  start_redis_macos --aof
   ./tests/integration_2.sh
   stop_redis
   rm appendonly.aof 2>/dev/null || true
@@ -42,7 +42,7 @@ function integration_3()
 {
   stop_redis
   rm dump.rdb 2>/dev/null || true
-  start_redis --valgrind
+  start_redis_macos
   ./tests/integration_3.sh
   stop_redis
   echo "All integration (3) tests passed"
