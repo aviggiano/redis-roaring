@@ -13,6 +13,7 @@
 #include "unit/test_bitmap_and.c"
 #include "unit/test_bitmap_or.c"
 #include "unit/test_bitmap_setbit.c"
+#include "unit/test_bitmap64_get_bit_array.c"
 
 int main(int argc, char* argv[]) {
   test_start();
@@ -22,6 +23,7 @@ int main(int argc, char* argv[]) {
   test_bitmap_from_bit_array();
   test_bitmap_from_int_array();
   test_bitmap64_range_int_array();
+  test_bitmap64_get_bit_array();
   test_bitmap_get_nth_element();
   test_bitmap_not();
   test_bitmap_xor();
