@@ -6,12 +6,15 @@ set -eu
 
 function unit()
 {
-  # valgrind --leak-check=full --error-exitcode=1 ./build/unit
+  ./build/unit
   echo "All unit tests passed"
 }
+
 function integration_1()
 {
   stop_redis
+  rm dump.rdb 2>/dev/null || true
+  rm -rf ./appendonlydir
   start_redis_macos
   ./tests/integration_1.sh
   stop_redis
@@ -34,7 +37,7 @@ function integration_2()
   start_redis_macos --aof
   ./tests/integration_2.sh
   stop_redis
-  rm appendonly.aof 2>/dev/null || true
+  rm -rf ./appendonlydir
 
   echo "All integration tests passed"
 }
