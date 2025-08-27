@@ -15,6 +15,7 @@
 #include "unit/test_bitmap_setbit.c"
 #include "unit/test_bitmap64_get_bit_array.c"
 #include "unit/test_bitmap64_from_bit_array.c"
+#include "unit/test_bitmap64_getbit.c"
 #include "unit/test_bitmap64_setbit.c"
 
 int main(int argc, char* argv[]) {
@@ -25,6 +26,7 @@ int main(int argc, char* argv[]) {
   test_bitmap_from_bit_array();
   test_bitmap_from_int_array();
   test_bitmap64_range_int_array();
+  test_bitmap64_getbit();
   test_bitmap64_setbit();
   test_bitmap64_get_bit_array();
   test_bitmap64_from_bit_array();
