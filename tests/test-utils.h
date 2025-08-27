@@ -18,6 +18,15 @@
 #define COLOR_BOLD    "\x1b[1m"
 #define COLOR_RESET   "\x1b[0m"
 
+// Memory cleanup helper
+#define SAFE_FREE(ptr) \
+    do { \
+        if (ptr) { \
+            free(ptr); \
+            ptr = NULL; \
+        } \
+    } while(0)
+
 typedef struct {
   int test_count;
   int test_failed;
@@ -146,19 +155,8 @@ static inline void before_describe(char* name) {
 }
 
 static inline void after_describe() {
-  char* padding = get_test_padding();
-
-  // printf(COLOR_GREY "%sDuration %.3fms\n" COLOR_RESET, padding, now_ms() - test_start_at);
-
   test_current_depth--;
-
-  int count = test_current_describe->test_count;
-  int failed = test_current_describe->test_failed;
-  int passed = count - failed;
-
-  // if (failed > 0) {
-  //   printf(COLOR_GREY "%s  Failed " COLOR_RED COLOR_BOLD "%d failed" COLOR_GREY " | " COLOR_GREEN "passed %d" COLOR_GREY " (%d)\n" COLOR_RESET, padding, failed, passed, count);
-  // }
+  SAFE_FREE(test_current_describe);
 }
 
 static inline void before_it(char* name) {
@@ -196,6 +194,8 @@ static inline void after_it() {
     printf(COLOR_GREY " %.3fms\n" COLOR_RESET, now_ms() - test_start_at);
     flush_test_buffer();
   }
+
+  SAFE_FREE(test_current_it);
 }
 
 static inline void test_start() {
@@ -438,15 +438,6 @@ static inline void test_end() {
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_ARRAY_EQ (all %zu elements match)\n", get_test_padding(), _exp_len); \
         } else { \
           assert(_arrays_equal); \
-        } \
-    } while(0)
-
-// Memory cleanup helper
-#define SAFE_FREE(ptr) \
-    do { \
-        if (ptr) { \
-            free(ptr); \
-            ptr = NULL; \
         } \
     } while(0)
 

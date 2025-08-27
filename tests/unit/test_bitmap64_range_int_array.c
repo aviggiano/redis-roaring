@@ -1,3 +1,6 @@
+#include "data-structure.h"
+#include "../test-utils.h"
+
 void test_bitmap64_range_int_array() {
   DESCRIBE("bitmap64_range_int_array")
   {
