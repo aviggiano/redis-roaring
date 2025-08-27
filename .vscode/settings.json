@@ -1,0 +1,14 @@
+{
+  "files.associations": {
+    "array": "c",
+    "__locale": "c",
+    "string": "c",
+    "string_view": "c",
+    "test-utils.h": "c",
+    "typeinfo": "c",
+    "data-structure.h": "c"
+  },
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "C_Cpp.default.cStandard": "c11",
+  "C_Cpp.loggingLevel": "Information"
+}

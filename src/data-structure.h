@@ -47,14 +47,15 @@ uint64_t bitmap64_get_nth_element_not_present(const Bitmap64* bitmap, uint64_t n
  * Same as `bitmap_get_nth_element_not_present` but slower. Useful for cross validation.
  */
 int64_t bitmap_get_nth_element_not_present_slow(const Bitmap* bitmap, uint64_t n);
+uint64_t bitmap64_get_nth_element_not_present_slow(const Bitmap64* bitmap, uint64_t n, bool* found);
 Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps);
 Bitmap64* bitmap64_or(uint32_t n, const Bitmap64** bitmaps);
 Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps);
 Bitmap64* bitmap64_and(uint32_t n, const Bitmap64** bitmaps);
 Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps);
 Bitmap64* bitmap64_xor(uint32_t n, const Bitmap64** bitmaps);
-Bitmap* bitmap_flip(const Bitmap* bitmap, uint32_t end); 
-Bitmap64* bitmap64_flip(const Bitmap64* bitmap, uint64_t end); 
+Bitmap* bitmap_flip(const Bitmap* bitmap, uint32_t end);
+Bitmap64* bitmap64_flip(const Bitmap64* bitmap, uint64_t end);
 /**
  * Returns a bitmap equals to the inverted set of first bitmap of the `bitmaps` array,
  * ignoring the first parameter of the function.  * The purpose of this function is to
@@ -66,7 +67,9 @@ Bitmap64* bitmap64_flip(const Bitmap64* bitmap, uint64_t end);
  * @return a NOT of bitmaps[0]
  */
 Bitmap* bitmap_not_array(uint32_t unused, const Bitmap** bitmaps);
+Bitmap64* bitmap64_not_array(uint64_t unused, const Bitmap64** bitmaps);
 Bitmap* bitmap_not(const Bitmap* bitmap);
+Bitmap64* bitmap64_not(const Bitmap64* bitmap);
 Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array);
 Bitmap64* bitmap64_from_int_array(size_t n, const uint64_t* array);
 uint32_t* bitmap_get_int_array(const Bitmap* bitmap, size_t* n);
@@ -111,9 +114,9 @@ uint32_t bitmap_max(const Bitmap* bitmap);
 uint64_t bitmap64_max(const Bitmap64* bitmap);
 void bitmap_optimize(Bitmap* bitmap, int shrink_to_fit);
 void bitmap64_optimize(Bitmap64* bitmap, int shrink_to_fit);
-void bitmap_statistics(const Bitmap *bitmap, Bitmap_statistics *stat);
-void bitmap64_statistics(const Bitmap64 *bitmap, Bitmap64_statistics *stat);
+void bitmap_statistics(const Bitmap* bitmap, Bitmap_statistics* stat);
+void bitmap64_statistics(const Bitmap64* bitmap, Bitmap64_statistics* stat);
 
-size_t uint64_to_string(uint64_t value, char *buffer);
+size_t uint64_to_string(uint64_t value, char* buffer);
 
 #endif

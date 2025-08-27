@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <time.h>
+#include <setjmp.h>
 
 // ANSI color codes for prettier output
 #define COLOR_GREEN   "\x1b[32m"
@@ -58,6 +59,8 @@ static test_it_t* test_current_it = NULL;
 static char* test_current_buffer = NULL;
 static size_t buffer_size = 0;
 static size_t buffer_used = 0;
+
+static jmp_buf test_jump_buffer;
 
 static inline double now_ms(void) {
   struct timespec ts;
@@ -111,6 +114,23 @@ static inline void printf_test(const char* format, ...) {
   va_end(args);
 }
 
+static inline void print_line(const char* file_path, int line) {
+  test_current_depth++;
+
+#ifdef _WIN32
+  const char* test_pos = strstr(file_path, "\\tests\\");
+#else
+  const char* test_pos = strstr(file_path, "/tests/");
+#endif
+
+  if (test_pos) {
+    file_path = test_pos;
+  }
+
+  printf_test("%sat .%s:%d\n", get_test_padding(), test_pos, line);
+  test_current_depth--;
+}
+
 // Print all buffered output and cleanup
 static inline void flush_test_buffer(void) {
   if (test_current_buffer) {
@@ -128,14 +148,6 @@ static inline void reset_test_buffer(void) {
     test_current_buffer = NULL;
     buffer_size = 0;
     buffer_used = 0;
-  }
-}
-
-static inline void increment_test_failed() {
-  if (test_current_it != NULL && !test_current_it->failed) {
-    test_current_it->failed = true;
-    test_current_describe->test_failed++;
-    test_total_failed++;
   }
 }
 
@@ -220,6 +232,17 @@ static inline void test_end() {
   printf("\n");
 }
 
+static inline void test_failed() {
+  if (test_current_it != NULL && !test_current_it->failed) {
+    test_current_it->failed = true;
+    test_current_describe->test_failed++;
+    test_total_failed++;
+  }
+
+  after_it();
+  longjmp(test_jump_buffer, 1);
+}
+
 // Test suite macros
 #define DESCRIBE(name) \
   before_describe(name); \
@@ -227,17 +250,18 @@ static inline void test_end() {
 
 #define IT(name) \
   before_it(name); \
-  for(int _once = 1; _once; _once = 0, after_it())
+  if (setjmp(test_jump_buffer) == 0) \
+    for(int _once = 1; _once; _once = 0, after_it())
 
   // Basic assertion macros
 #define ASSERT(condition, ...) \
     do { \
         if (!(condition)) { \
-            printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT(" #condition ") - FAILED\n  ", get_test_padding()); \
+            printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT(" #condition ") - FAILED ", get_test_padding()); \
             printf_test(__VA_ARGS__); \
             printf_test("\n"); \
-            increment_test_failed(); \
-            assert(condition); \
+            print_line(__FILE__, __LINE__); \
+            test_failed(); \
         } \
     } while(0)
 
@@ -248,9 +272,8 @@ static inline void test_end() {
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_TRUE(" #condition ")\n", get_test_padding()); \
         } else { \
             printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_TRUE(" #condition ") - FAILED\n", get_test_padding()); \
-            increment_test_failed(); \
-            assert(!(condition)); \
-            break; \
+            print_line(__FILE__, __LINE__); \
+            test_failed(); \
         } \
     } while(0)
 
@@ -260,8 +283,8 @@ static inline void test_end() {
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_FALSE(" #condition ")\n", get_test_padding()); \
         } else { \
             printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_FALSE(" #condition ") - FAILED\n", get_test_padding()); \
-            increment_test_failed(); \
-            assert(!(condition)); \
+            print_line(__FILE__, __LINE__); \
+            test_failed(); \
         } \
     } while(0)
 
@@ -271,8 +294,8 @@ static inline void test_end() {
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_NULL(" #ptr ")\n", get_test_padding()); \
         } else { \
             printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_NULL(" #ptr ") - FAILED (got %p)\n", get_test_padding(), (void*)(ptr)); \
-            increment_test_failed(); \
-            assert((ptr) == NULL); \
+            print_line(__FILE__, __LINE__); \
+            test_failed(); \
         } \
     } while(0)
 
@@ -282,8 +305,8 @@ static inline void test_end() {
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_NOT_NULL(" #ptr ")\n", get_test_padding()); \
         } else { \
             printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_NOT_NULL(" #ptr ") - FAILED (got NULL)\n", get_test_padding()); \
-            increment_test_failed(); \
-            assert((ptr) != NULL); \
+            print_line(__FILE__, __LINE__); \
+            test_failed(); \
         } \
     } while(0)
 
@@ -302,8 +325,8 @@ static inline void test_end() {
             printf_test(", "); \
             printf_test(GET_FORMAT_SPECIFIER(actual), (actual)); \
             printf_test(") - FAILED\n"); \
-            increment_test_failed(); \
-            assert((expected) == (actual)); \
+            print_line(__FILE__, __LINE__); \
+            test_failed(); \
         } \
     } while(0)
 
@@ -322,8 +345,8 @@ static inline void test_end() {
             printf_test(", "); \
             printf_test(GET_FORMAT_SPECIFIER(actual), (actual)); \
             printf_test(") - FAILED\n"); \
-            increment_test_failed(); \
-            assert((expected) == (actual)); \
+            print_line(__FILE__, __LINE__); \
+            test_failed(); \
         } \
     } while(0)
 
@@ -331,11 +354,11 @@ static inline void test_end() {
 #define ASSERT_EQ_STR(expected, actual) \
     do { \
         if (strcmp((expected), (actual)) == 0) { \
-            printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_EQ_STR(\"%s\", \"%s\")\n", (expected), (actual), get_test_padding()); \
+            printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_EQ_STR(\"%s\", \"%s\")\n", get_test_padding(), (expected), (actual)); \
         } else { \
-            printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_EQ_STR(\"%s\", \"%s\") - FAILED\n", (expected), (actual), get_test_padding()); \
-            increment_test_failed(); \
-            assert(strcmp((expected), (actual)) == 0); \
+            printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_EQ_STR(\"%s\", \"%s\") - FAILED\n", get_test_padding(), (expected), (actual)); \
+            print_line(__FILE__, __LINE__); \
+            test_failed(); \
         } \
     } while(0)
 
@@ -386,15 +409,15 @@ static inline void test_end() {
                 printf_test(GET_FORMAT_SPECIFIER((array)[_i]), (array)[_i]); \
                 printf_test("\n"); \
                 _all_zero = 0; \
-                increment_test_failed(); \
-                break; \
             } \
         } \
         if (_all_zero) { \
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_ARRAY_RANGE_ZERO [%zu..%zu]\n", get_test_padding(), \
                    (size_t)(start_index), (size_t)(start_index) + (size_t)(length) - 1); \
+        } else { \
+          print_line(__FILE__, __LINE__); \
+          test_failed(); \
         } \
-        assert(_all_zero); \
     } while(0)
 
 // Generic conditional print with explicit lengths
@@ -417,7 +440,6 @@ static inline void test_end() {
             printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_ARRAY_EQ - FAILED (length mismatch: expected=%zu, actual=%zu)\n", get_test_padding(), _exp_len, _act_len); \
             PRINT_ARRAYS_ON_MISMATCH(expected, actual, _exp_len, _act_len, "due length comparison"); \
             _arrays_equal = 0; \
-            increment_test_failed(); \
         } else { \
             /* Check elements */ \
             for (size_t _i = 0; _i < _exp_len; _i++) { \
@@ -428,7 +450,6 @@ static inline void test_end() {
                     PRINT_ARRAYS_ON_MISMATCH(expected, actual, _exp_len, _act_len, desc); \
                     free(desc); \
                     _arrays_equal = 0; \
-                    increment_test_failed(); \
                     break; \
                 } \
             } \
@@ -437,7 +458,8 @@ static inline void test_end() {
         if (_arrays_equal) { \
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_ARRAY_EQ (all %zu elements match)\n", get_test_padding(), _exp_len); \
         } else { \
-          assert(_arrays_equal); \
+          print_line(__FILE__, __LINE__); \
+          test_failed(); \
         } \
     } while(0)
 

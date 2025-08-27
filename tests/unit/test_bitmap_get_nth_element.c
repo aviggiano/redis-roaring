@@ -2,7 +2,7 @@
 #include "../test-utils.h"
 
 void test_bitmap_get_nth_element() {
-  DESCRIBE("test_bitmap_get_nth_element")
+  DESCRIBE("bitmap_get_nth_element")
   {
     IT("Should get n-th element of a bitmap for n=1..cardinality")
     {
