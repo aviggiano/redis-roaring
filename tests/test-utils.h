@@ -331,9 +331,9 @@ static inline void test_end() {
 #define ASSERT_EQ_STR(expected, actual) \
     do { \
         if (strcmp((expected), (actual)) == 0) { \
-            printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_EQ_STR(\"%s\", \"%s\")\n", (expected), (actual), get_test_padding()); \
+            printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_EQ_STR(\"%s\", \"%s\")\n", get_test_padding(), (expected), (actual)); \
         } else { \
-            printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_EQ_STR(\"%s\", \"%s\") - FAILED\n", (expected), (actual), get_test_padding()); \
+            printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_EQ_STR(\"%s\", \"%s\") - FAILED\n", get_test_padding(), (expected), (actual)); \
             increment_test_failed(); \
             assert(strcmp((expected), (actual)) == 0); \
         } \
