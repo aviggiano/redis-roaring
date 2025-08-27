@@ -14,6 +14,7 @@
 #include "unit/test_bitmap_or.c"
 #include "unit/test_bitmap_setbit.c"
 #include "unit/test_bitmap64_get_bit_array.c"
+#include "unit/test_bitmap64_get_nth_element.c"
 #include "unit/test_bitmap64_from_bit_array.c"
 #include "unit/test_bitmap64_getbit.c"
 #include "unit/test_bitmap64_setbit.c"
@@ -30,6 +31,7 @@ int main(int argc, char* argv[]) {
   test_bitmap64_setbit();
   test_bitmap64_get_bit_array();
   test_bitmap64_from_bit_array();
+  test_bitmap64_get_nth_element();
   test_bitmap_get_nth_element();
   test_bitmap_not();
   test_bitmap_xor();
