@@ -70,9 +70,9 @@ Bitmap* bitmap_not(const Bitmap* bitmap);
 Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array);
 Bitmap64* bitmap64_from_int_array(size_t n, const uint64_t* array);
 uint32_t* bitmap_get_int_array(const Bitmap* bitmap, size_t* n);
-uint64_t* bitmap64_get_int_array(const Bitmap64* bitmap, size_t* n);
+uint64_t* bitmap64_get_int_array(const Bitmap64* bitmap, uint64_t* n);
 uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t offset, size_t n);
-uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, size_t offset, size_t n);
+uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t offset, uint64_t n);
 void bitmap_free_int_array(uint32_t* array);
 void bitmap64_free_int_array(uint64_t* array);
 /**
