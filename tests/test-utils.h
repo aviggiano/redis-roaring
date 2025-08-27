@@ -257,11 +257,11 @@ static inline void test_failed() {
 #define ASSERT(condition, ...) \
     do { \
         if (!(condition)) { \
-            printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT(" #condition ") - FAILED\n  ", get_test_padding()); \
+            printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT(" #condition ") - FAILED ", get_test_padding()); \
             printf_test(__VA_ARGS__); \
             printf_test("\n"); \
+            print_line(__FILE__, __LINE__); \
             test_failed(); \
-            assert(condition); \
         } \
     } while(0)
 
@@ -272,6 +272,7 @@ static inline void test_failed() {
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_TRUE(" #condition ")\n", get_test_padding()); \
         } else { \
             printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_TRUE(" #condition ") - FAILED\n", get_test_padding()); \
+            print_line(__FILE__, __LINE__); \
             test_failed(); \
         } \
     } while(0)
@@ -282,6 +283,7 @@ static inline void test_failed() {
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_FALSE(" #condition ")\n", get_test_padding()); \
         } else { \
             printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_FALSE(" #condition ") - FAILED\n", get_test_padding()); \
+            print_line(__FILE__, __LINE__); \
             test_failed(); \
         } \
     } while(0)
@@ -303,6 +305,7 @@ static inline void test_failed() {
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_NOT_NULL(" #ptr ")\n", get_test_padding()); \
         } else { \
             printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_NOT_NULL(" #ptr ") - FAILED (got NULL)\n", get_test_padding()); \
+            print_line(__FILE__, __LINE__); \
             test_failed(); \
         } \
     } while(0)
@@ -322,6 +325,7 @@ static inline void test_failed() {
             printf_test(", "); \
             printf_test(GET_FORMAT_SPECIFIER(actual), (actual)); \
             printf_test(") - FAILED\n"); \
+            print_line(__FILE__, __LINE__); \
             test_failed(); \
         } \
     } while(0)
@@ -341,6 +345,7 @@ static inline void test_failed() {
             printf_test(", "); \
             printf_test(GET_FORMAT_SPECIFIER(actual), (actual)); \
             printf_test(") - FAILED\n"); \
+            print_line(__FILE__, __LINE__); \
             test_failed(); \
         } \
     } while(0)
@@ -352,6 +357,7 @@ static inline void test_failed() {
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_EQ_STR(\"%s\", \"%s\")\n", get_test_padding(), (expected), (actual)); \
         } else { \
             printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_EQ_STR(\"%s\", \"%s\") - FAILED\n", get_test_padding(), (expected), (actual)); \
+            print_line(__FILE__, __LINE__); \
             test_failed(); \
         } \
     } while(0)
@@ -409,6 +415,7 @@ static inline void test_failed() {
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_ARRAY_RANGE_ZERO [%zu..%zu]\n", get_test_padding(), \
                    (size_t)(start_index), (size_t)(start_index) + (size_t)(length) - 1); \
         } else { \
+          print_line(__FILE__, __LINE__); \
           test_failed(); \
         } \
     } while(0)
@@ -451,6 +458,7 @@ static inline void test_failed() {
         if (_arrays_equal) { \
             printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_ARRAY_EQ (all %zu elements match)\n", get_test_padding(), _exp_len); \
         } else { \
+          print_line(__FILE__, __LINE__); \
           test_failed(); \
         } \
     } while(0)
