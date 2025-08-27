@@ -20,6 +20,7 @@
 #include "unit/test_bitmap64_getbit.c"
 #include "unit/test_bitmap64_setbit.c"
 #include "unit/test_bitmap64_xor.c"
+#include "unit/test_bitmap64_not.c"
 
 int main(int argc, char* argv[]) {
   test_start();
@@ -29,6 +30,7 @@ int main(int argc, char* argv[]) {
   test_bitmap_from_bit_array();
   test_bitmap_from_int_array();
   test_bitmap64_or();
+  test_bitmap64_not();
   test_bitmap64_xor();
   test_bitmap64_range_int_array();
   test_bitmap64_getbit();
