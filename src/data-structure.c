@@ -1,6 +1,7 @@
 #include "data-structure.h"
 
 #include "roaring.h"
+#include "rmalloc.h"
 
 /* === Internal data structure === */
 
@@ -222,26 +223,26 @@ Bitmap64* bitmap64_from_int_array(size_t n, const uint64_t* array) {
 
 uint32_t* bitmap_get_int_array(const Bitmap* bitmap, size_t* n) {
   *n = roaring_bitmap_get_cardinality(bitmap);
-  uint32_t* ans = malloc(sizeof(*ans) * (*n));
+  uint32_t* ans = rm_malloc(sizeof(*ans) * (*n));
   roaring_bitmap_to_uint32_array(bitmap, ans);
   return ans;
 }
 
 uint64_t* bitmap64_get_int_array(const Bitmap64* bitmap, uint64_t* n) {
   *n = roaring64_bitmap_get_cardinality(bitmap);
-  uint64_t* ans = malloc(sizeof(*ans) * (*n));
+  uint64_t* ans = rm_malloc(sizeof(*ans) * (*n));
   roaring64_bitmap_to_uint64_array(bitmap, ans);
   return ans;
 }
 
 uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t offset, size_t n) {
-  uint32_t* ans = calloc(n, sizeof(*ans));
+  uint32_t* ans = rm_calloc(n, sizeof(*ans));
   roaring_bitmap_range_uint32_array(bitmap, offset, n, ans);
   return ans;
 }
 
 uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t offset, uint64_t n) {
-  uint64_t* ans = calloc(n, sizeof(*ans));
+  uint64_t* ans = rm_calloc(n, sizeof(*ans));
 
   // [TODO] replace with roaring64_bitmap_range_uint64_array in next version of CRoaring
   for (uint64_t i = 0; i < n; i++) {
@@ -251,14 +252,6 @@ uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t offset, uint
   }
 
   return ans;
-}
-
-void bitmap_free_int_array(uint32_t* array) {
-  free(array);
-}
-
-void bitmap64_free_int_array(uint64_t* array) {
-  free(array);
 }
 
 Bitmap* bitmap_from_bit_array(size_t size, const char* array) {
@@ -283,7 +276,7 @@ Bitmap64* bitmap64_from_bit_array(size_t size, const char* array) {
 
 char* bitmap_get_bit_array(const Bitmap* bitmap, size_t* size) {
   *size = roaring_bitmap_maximum(bitmap) + 1;
-  char* ans = malloc(*size + 1);
+  char* ans = rm_malloc(*size + 1);
   memset(ans, '0', *size);
   ans[*size] = '\0';
 
@@ -299,7 +292,7 @@ char* bitmap_get_bit_array(const Bitmap* bitmap, size_t* size) {
 
 char* bitmap64_get_bit_array(const Bitmap64* bitmap, uint64_t* size) {
   *size = roaring64_bitmap_maximum(bitmap) + 1;
-  char* ans = malloc(*size + 1);
+  char* ans = rm_malloc(*size + 1);
   memset(ans, '0', *size);
   ans[*size] = '\0';
 
@@ -314,7 +307,7 @@ char* bitmap64_get_bit_array(const Bitmap64* bitmap, uint64_t* size) {
 }
 
 void bitmap_free_bit_array(char* array) {
-  free(array);
+  rm_free(array);
 }
 
 Bitmap* bitmap_from_range(uint64_t from, uint64_t to) {
