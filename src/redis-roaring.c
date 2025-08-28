@@ -1736,8 +1736,8 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     .realloc = rm_realloc,
     .calloc = rm_calloc,
     .free = rm_free,
-    .aligned_malloc = roaring_aligned_malloc,
-    .aligned_free = roaring_aligned_free,
+    .aligned_malloc = rm_aligned_malloc,
+    .aligned_free = rm_free,
   };
 
   roaring_init_memory_hook(roaring_memory_hook);

@@ -85,4 +85,8 @@ static int rm_asprintf(char **__ptr, const char *__restrict __fmt, ...) {
 
 #define rm_new(x) rm_malloc(sizeof(x))
 
+static inline void *rm_aligned_malloc(size_t alignment, size_t size) {
+	return rm_malloc(size);
+}
+
 #endif /* __RMUTIL_ALLOC__ */
