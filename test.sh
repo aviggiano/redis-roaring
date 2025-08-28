@@ -6,7 +6,12 @@ set -eu
 
 function unit()
 {
-  valgrind --leak-check=full --error-exitcode=1 ./build/unit
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    ./build/unit
+  else
+    valgrind --leak-check=full --error-exitcode=1 ./build/unit
+  fi
+
   echo "All unit tests passed"
 }
 function integration_1()

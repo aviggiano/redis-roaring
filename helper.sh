@@ -31,41 +31,22 @@ function start_redis()
     shift
   done
 
-  local REDIS_COMMAND="./deps/redis/src/redis-server --loadmodule ./build/libredis-roaring.so"
+  local LIB_PATH
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS
+    LIB_PATH="./build/libredis-roaring.dylib"
+    USE_VALGRIND="no"
+  else
+    # Linux
+    LIB_PATH="./build/libredis-roaring.so"
+  fi
+
+  local REDIS_COMMAND="./deps/redis/src/redis-server --loadmodule $LIB_PATH"
   local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --suppressions=./deps/redis/src/valgrind.sup --error-exitcode=1 --log-file=$LOG_FILE"
   local AOF_OPTION="--appendonly $USE_AOF"
   if [ "$USE_VALGRIND" == "no" ]; then
     VALGRIND_COMMAND=""
   fi
-
-  eval "$VALGRIND_COMMAND" "$REDIS_COMMAND" "$AOF_OPTION" &
-
-  while [ "$(./deps/redis/src/redis-cli PING 2>/dev/null)" != "PONG" ]; do
-    sleep 0.1
-  done
-}
-
-function start_redis_macos()
-{
-  local USE_VALGRIND="no"
-  local USE_AOF="no"
-  while [[ $# -gt 0 ]]; do
-    local PARAM="$1"
-    case $PARAM in
-      --valgrind)
-        USE_VALGRIND="yes"
-        LOG_FILE=$(mktemp)
-        ;;
-      --aof)
-        USE_AOF="yes"
-        ;;
-    esac
-    shift
-  done
-
-  local REDIS_COMMAND="./deps/redis/src/redis-server --loadmodule ./dist/libredis-roaring.dylib"
-  local VALGRIND_COMMAND=""
-  local AOF_OPTION="--appendonly $USE_AOF"
 
   eval "$VALGRIND_COMMAND" "$REDIS_COMMAND" "$AOF_OPTION" &
 
