@@ -19,7 +19,7 @@ void test_bitmap_from_int_array() {
 
       ASSERT_ARRAY_EQ(array, found, array_len, n);
 
-      bitmap_free_int_array(found);
+      SAFE_FREE(found);
       bitmap_free(bitmap);
     }
 
