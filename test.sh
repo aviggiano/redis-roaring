@@ -2,10 +2,9 @@
 
 set -eu
 
-. helper.sh
+. ./tests/helper.sh
 
-function unit()
-{
+function unit() {
   if [[ "$OSTYPE" == "darwin"* ]]; then
     ./build/unit
   else
@@ -14,16 +13,17 @@ function unit()
 
   echo "All unit tests passed"
 }
-function integration_1()
-{
+
+function integration_1() {
   stop_redis
+  rm dump.rdb 2>/dev/null || true
   start_redis --valgrind
   ./tests/integration_1.sh
   stop_redis
   echo "All integration (1) tests passed"
 }
-function integration_2()
-{
+
+function integration_2() {
   stop_redis
   start_redis --valgrind --aof
   ./tests/integration_1.sh
@@ -43,8 +43,8 @@ function integration_2()
 
   echo "All integration tests passed"
 }
-function integration_3()
-{
+
+function integration_3() {
   stop_redis
   rm dump.rdb 2>/dev/null || true
   start_redis --valgrind
@@ -58,4 +58,9 @@ unit
 integration_1
 integration_2
 integration_3
-end
+
+echo ""
+echo "************************"
+echo "*** ALL TESTS PASSED ***"
+echo "************************"
+echo ""
