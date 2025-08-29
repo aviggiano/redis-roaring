@@ -351,6 +351,12 @@ int R64AppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int 
   }
 
   Bitmap64* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
+  bool bitmap_created = false;
+
+  if (bitmap == NULL) {
+    bitmap = bitmap64_alloc();
+    bitmap_created = true;
+  }
 
   size_t length = (size_t) (argc - 2);
   uint64_t* values = rm_malloc(sizeof(*values) * length);
@@ -363,24 +369,18 @@ int R64AppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int 
     values[i] = (uint64_t) value;
   }
 
-  Bitmap64* nbitmap = bitmap64_from_int_array(length, values);
+  roaring64_bitmap_add_many(bitmap, length, values);
 
-  if (type == REDISMODULE_KEYTYPE_EMPTY) {
-    RedisModule_ModuleTypeSetValue(key, Bitmap64Type, nbitmap);
+  if (bitmap_created) {
+    RedisModule_ModuleTypeSetValue(key, Bitmap64Type, bitmap);
   } else {
-    Bitmap64** bitmaps = rm_malloc(2 * sizeof(*bitmaps));
-    bitmaps[0] = bitmap;
-    bitmaps[1] = nbitmap;
-    Bitmap64* result = bitmap64_or(2, (const Bitmap64**) bitmaps);
-    RedisModule_ModuleTypeSetValue(key, Bitmap64Type, result);
-    bitmap64_free(bitmaps[1]);
-    rm_free(bitmaps);
+    RedisModule_SignalModifiedKey(ctx, argv[1]);
   }
-
-  rm_free(values);
 
   RedisModule_ReplicateVerbatim(ctx);
   RedisModule_ReplyWithSimpleString(ctx, "OK");
+
+  rm_free(values);
 
   return REDISMODULE_OK;
 }
@@ -1256,6 +1256,12 @@ int RAppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int ar
   }
 
   Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
+  bool bitmap_created = false;
+
+  if (bitmap == NULL) {
+    bitmap = bitmap_alloc();
+    bitmap_created = true;
+  }
 
   size_t length = (size_t) (argc - 2);
   uint32_t* values = rm_malloc(sizeof(*values) * length);
@@ -1268,18 +1274,12 @@ int RAppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int ar
     values[i] = (uint32_t) value;
   }
 
-  Bitmap* nbitmap = bitmap_from_int_array(length, values);
+  roaring_bitmap_add_many(bitmap, length, values);
 
-  if (type == REDISMODULE_KEYTYPE_EMPTY) {
-    RedisModule_ModuleTypeSetValue(key, BitmapType, nbitmap);
+  if (bitmap_created) {
+    RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
   } else {
-    Bitmap** bitmaps = rm_malloc(2 * sizeof(*bitmaps));
-    bitmaps[0] = bitmap;
-    bitmaps[1] = nbitmap;
-    Bitmap* result = bitmap_or(2, (const Bitmap**) bitmaps);
-    RedisModule_ModuleTypeSetValue(key, BitmapType, result);
-    bitmap_free(bitmaps[1]);
-    rm_free(bitmaps);
+    RedisModule_SignalModifiedKey(ctx, argv[1]);
   }
 
   rm_free(values);
