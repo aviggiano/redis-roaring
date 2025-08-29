@@ -311,10 +311,20 @@ void bitmap_free_bit_array(char* array) {
 }
 
 Bitmap* bitmap_from_range(uint64_t from, uint64_t to) {
+  // allocate empty bitmap when invalid range
+  if (from == to) {
+    return bitmap_alloc();
+  }
+
   return roaring_bitmap_from_range(from, to, 1);
 }
 
 Bitmap64* bitmap64_from_range(uint64_t from, uint64_t to) {
+  // allocate empty bitmap when invalid range
+  if (from == to) {
+    return bitmap64_alloc();
+  }
+
   return roaring64_bitmap_from_range(from, to, 1);
 }
 

@@ -2,9 +2,10 @@
 
 set -eu
 
-function test_load()
-{
-  echo "test_load"
+. "$(dirname "$0")/helper.sh"
+
+function test_load() {
+  print_test_header "test_load"
 
   FOUND=$(echo "KEYS *" | ./deps/redis/src/redis-cli)
   EXPECTED="test_"

@@ -161,6 +161,7 @@ int main(int argc, char* argv[]) {
   {
     const char* ops[] = {
       "R.SETBIT",
+      "R64.SETBIT",
       "SETBIT"
     };
 
@@ -185,6 +186,7 @@ int main(int argc, char* argv[]) {
   {
     const char* ops[] = {
       "R.GETBIT",
+      "R64.GETBIT",
       "GETBIT"
     };
 
@@ -206,6 +208,7 @@ int main(int argc, char* argv[]) {
   {
     const char* ops[] = {
       "R.BITCOUNT",
+      "R64.BITCOUNT",
       "BITCOUNT"
     };
 
@@ -225,6 +228,7 @@ int main(int argc, char* argv[]) {
   {
     const char* ops[] = {
       "R.BITPOS",
+      "R64.BITPOS",
       "BITPOS"
     };
 
@@ -247,6 +251,7 @@ int main(int argc, char* argv[]) {
   {
     const char* ops[] = {
       "R.BITOP",
+      "R64.BITOP",
       "BITOP"
     };
 
@@ -270,6 +275,7 @@ int main(int argc, char* argv[]) {
   {
     const char* ops[] = {
       "R.BITOP",
+      "R64.BITOP",
       "BITOP"
     };
 
@@ -300,6 +306,7 @@ int main(int argc, char* argv[]) {
   {
     const char* ops[] = {
       "R.MIN",
+      "R64.MIN",
       "MIN"
     };
 
@@ -319,6 +326,7 @@ int main(int argc, char* argv[]) {
   {
     const char* ops[] = {
       "R.MAX",
+      "R64.MAX",
       "MAX"
     };
 
