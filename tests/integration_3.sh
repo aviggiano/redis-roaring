@@ -175,6 +175,14 @@ function test_diff() {
   rcall_assert "R64.GETINTARRAY test_diff_res" "$(echo -e "5\n6")" "Get result of second difference"
 }
 
+function test_setrage() {
+  print_test_header "test_setrage (64)"
+
+  rcall_assert "R64.SETRANGE test_setrange 0 5" "OK" "Should set range from 0 to 5"
+  rcall_assert "R64.GETINTARRAY test_setrange" "$(echo -e "0\n1\n2\n3\n4")" "Validate range from 0 5"
+  rcall_assert "R64.SETRANGE test_setrange 5 5" "OK" "Should handle zero range"
+}
+
 function test_optimize_nokey() {
   print_test_header "test_optimize nokey (64)"
   rcall_assert "R64.OPTIMIZE no-key" "ERR no such key" "Optimize non-existent key"
@@ -220,6 +228,7 @@ test_bitpos
 test_getintarray_setintarray
 test_getbitarray_setbitarray
 test_appendintarray_deleteintarray
+test_setrage
 test_min_max
 test_diff
 test_optimize_nokey
