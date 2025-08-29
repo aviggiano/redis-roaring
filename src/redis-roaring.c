@@ -385,6 +385,53 @@ int R64AppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int 
   return REDISMODULE_OK;
 }
 
+/**
+ * R64.DELETEINTARRAY <key> <value1> [<value2> <value3> ... <valueN>]
+ * */
+int R64DeleteIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+  int type = RedisModule_KeyType(key);
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != Bitmap64Type) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  Bitmap64* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
+
+  if (bitmap == NULL) {
+    bitmap = bitmap64_alloc();
+
+    RedisModule_ModuleTypeSetValue(key, Bitmap64Type, bitmap);
+    RedisModule_ReplicateVerbatim(ctx);
+    RedisModule_ReplyWithSimpleString(ctx, "OK");
+
+    return REDISMODULE_OK;
+  }
+
+  size_t length = (size_t) (argc - 2);
+  uint64_t* values = rm_malloc(sizeof(*values) * length);
+  for (int i = 0; i < length; i++) {
+    unsigned long long value;
+    if ((RedisModule_StringToULongLong(argv[2 + i], &value) != REDISMODULE_OK)) {
+      rm_free(values);
+      return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be an unsigned 64 bit integer");
+    }
+    values[i] = (uint64_t) value;
+  }
+
+  roaring64_bitmap_remove_many(bitmap, length, values);
+
+  RedisModule_SignalModifiedKey(ctx, argv[1]);
+  RedisModule_ReplicateVerbatim(ctx);
+  RedisModule_ReplyWithSimpleString(ctx, "OK");
+
+  rm_free(values);
+
+  return REDISMODULE_OK;
+}
 
 /**
  * R64.DIFF <dest> <decreasing> <deductible>
@@ -1291,6 +1338,54 @@ int RAppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int ar
 }
 
 /**
+ * R.DELETEINTARRAY <key> <value1> [<value2> <value3> ... <valueN>]
+ * */
+int RDeleteIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+  int type = RedisModule_KeyType(key);
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
+
+  if (bitmap == NULL) {
+    bitmap = bitmap_alloc();
+
+    RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
+    RedisModule_ReplicateVerbatim(ctx);
+    RedisModule_ReplyWithSimpleString(ctx, "OK");
+
+    return REDISMODULE_OK;
+  }
+
+  size_t length = (size_t) (argc - 2);
+  uint32_t* values = rm_malloc(sizeof(*values) * length);
+  for (int i = 0; i < length; i++) {
+    long long value;
+    if ((RedisModule_StringToLongLong(argv[2 + i], &value) != REDISMODULE_OK)) {
+      rm_free(values);
+      return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be an unsigned 32 bit integer");
+    }
+    values[i] = (uint32_t) value;
+  }
+
+  roaring_bitmap_remove_many(bitmap, length, values);
+
+  RedisModule_SignalModifiedKey(ctx, argv[1]);
+  RedisModule_ReplicateVerbatim(ctx);
+  RedisModule_ReplyWithSimpleString(ctx, "OK");
+
+  rm_free(values);
+
+  return REDISMODULE_OK;
+}
+
+/**
  * R.RANGEINTARRAY <key> <start> <end>
  * */
 int RRangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
@@ -1789,6 +1884,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   if (RedisModule_CreateCommand(ctx, "R.APPENDINTARRAY", RAppendIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
+  if (RedisModule_CreateCommand(ctx, "R.DELETEINTARRAY", RDeleteIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
   if (RedisModule_CreateCommand(ctx, "R.DIFF", RDiffCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
@@ -1842,6 +1940,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.APPENDINTARRAY", R64AppendIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R64.DELETEINTARRAY", R64DeleteIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.DIFF", R64DiffCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
