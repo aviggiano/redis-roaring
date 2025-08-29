@@ -521,20 +521,15 @@ int R64SetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
   if ((uint64_t) start_num > UINT64_MAX || (uint64_t) end_num > UINT64_MAX) {
     return RedisModule_ReplyWithError(ctx, "ERR invalid end_num: must be an unsigned 64 bit integer");
   }
+
   Bitmap64* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
 
-  Bitmap64* nbitmap = bitmap64_from_range((uint64_t) start_num, (uint64_t) end_num);
-
-  if (type == REDISMODULE_KEYTYPE_EMPTY) {
-    RedisModule_ModuleTypeSetValue(key, Bitmap64Type, nbitmap);
+  if (bitmap == NULL) {
+    bitmap = bitmap64_from_range(start_num, end_num);
+    RedisModule_ModuleTypeSetValue(key, Bitmap64Type, bitmap);
   } else {
-    Bitmap64** bitmaps = rm_malloc(2 * sizeof(*bitmaps));
-    bitmaps[0] = bitmap;
-    bitmaps[1] = nbitmap;
-    Bitmap64* result = bitmap64_or(2, (const Bitmap64**) bitmaps);
-    RedisModule_ModuleTypeSetValue(key, Bitmap64Type, result);
-    bitmap64_free(bitmaps[1]);
-    rm_free(bitmaps);
+    roaring64_bitmap_add_range(bitmap, start_num, end_num);
+    RedisModule_SignalModifiedKey(ctx, argv[1]);
   }
 
   RedisModule_ReplicateVerbatim(ctx);
@@ -1036,20 +1031,15 @@ int RSetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if ((uint32_t) start_num > UINT32_MAX || (uint32_t) end_num > UINT32_MAX) {
     return RedisModule_ReplyWithError(ctx, "ERR invalid end_num: must be an unsigned 32 bit integer");
   }
+
   Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
 
-  Bitmap* nbitmap = bitmap_from_range((uint32_t) start_num, (uint32_t) end_num);
-
-  if (type == REDISMODULE_KEYTYPE_EMPTY) {
-    RedisModule_ModuleTypeSetValue(key, BitmapType, nbitmap);
+  if (bitmap == NULL) {
+    bitmap = bitmap_from_range(start_num, end_num);
+    RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
   } else {
-    Bitmap** bitmaps = rm_malloc(2 * sizeof(*bitmaps));
-    bitmaps[0] = bitmap;
-    bitmaps[1] = nbitmap;
-    Bitmap* result = bitmap_or(2, (const Bitmap**) bitmaps);
-    RedisModule_ModuleTypeSetValue(key, BitmapType, result);
-    bitmap_free(bitmaps[1]);
-    rm_free(bitmaps);
+    roaring_bitmap_add_range(bitmap, start_num, end_num);
+    RedisModule_SignalModifiedKey(ctx, argv[1]);
   }
 
   RedisModule_ReplicateVerbatim(ctx);
