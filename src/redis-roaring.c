@@ -765,16 +765,14 @@ int R64BitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, void (*ope
   RedisModuleKey** srckeys = rm_malloc(n * sizeof(RedisModuleKey*));
 
   // open destkey for writing
+  bool overwrite_dest_key = false;
+
   srckeys[0] = RedisModule_OpenKey(ctx, argv[2], REDISMODULE_READ | REDISMODULE_WRITE);
-  int desttype = RedisModule_KeyType(srckeys[0]);
 
-  if (desttype == REDISMODULE_KEYTYPE_EMPTY) {
+  if (RedisModule_KeyType(srckeys[0]) == REDISMODULE_KEYTYPE_EMPTY ||
+    RedisModule_ModuleTypeGetType(srckeys[0]) != Bitmap64Type) {
     bitmaps[0] = bitmap64_alloc();
-  } else if (RedisModule_ModuleTypeGetType(srckeys[0]) != Bitmap64Type) {
-    rm_free(bitmaps);
-    rm_free(srckeys);
-
-    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+    overwrite_dest_key = true;
   } else {
     bitmaps[0] = RedisModule_ModuleTypeGetValue(srckeys[0]);
   }
@@ -797,7 +795,7 @@ int R64BitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, void (*ope
   // calculate destkey bitmap
   operation(bitmaps[0], n - 1, (const Bitmap64**) (bitmaps + 1));
 
-  if (desttype == REDISMODULE_KEYTYPE_EMPTY) {
+  if (overwrite_dest_key) {
     RedisModule_ModuleTypeSetValue(srckeys[0], Bitmap64Type, bitmaps[0]);
   } else {
     RedisModule_SignalModifiedKey(ctx, argv[2]);
@@ -1536,16 +1534,14 @@ int RBitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, void (*opera
   RedisModuleKey** srckeys = rm_malloc(n * sizeof(RedisModuleKey*));
 
   // open destkey for writing
+  bool overwrite_dest_key = false;
+
   srckeys[0] = RedisModule_OpenKey(ctx, argv[2], REDISMODULE_READ | REDISMODULE_WRITE);
-  int desttype = RedisModule_KeyType(srckeys[0]);
 
-  if (desttype == REDISMODULE_KEYTYPE_EMPTY) {
+  if (RedisModule_KeyType(srckeys[0]) == REDISMODULE_KEYTYPE_EMPTY
+    || RedisModule_ModuleTypeGetType(srckeys[0]) != BitmapType) {
     bitmaps[0] = bitmap_alloc();
-  } else if (RedisModule_ModuleTypeGetType(srckeys[0]) != BitmapType) {
-    rm_free(bitmaps);
-    rm_free(srckeys);
-
-    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+    overwrite_dest_key = true;
   } else {
     bitmaps[0] = RedisModule_ModuleTypeGetValue(srckeys[0]);
   }
@@ -1568,7 +1564,7 @@ int RBitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, void (*opera
   // calculate destkey bitmap
   operation(bitmaps[0], n - 1, (const Bitmap**) (bitmaps + 1));
 
-  if (desttype == REDISMODULE_KEYTYPE_EMPTY) {
+  if (overwrite_dest_key) {
     RedisModule_ModuleTypeSetValue(srckeys[0], BitmapType, bitmaps[0]);
   } else {
     RedisModule_SignalModifiedKey(ctx, argv[2]);
