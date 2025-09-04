@@ -213,6 +213,38 @@ void bitmap64_xor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   }
 }
 
+void bitmap_andor(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
+  if (n == 0) return;
+  if (n < 2) return bitmap_and(r, n, bitmaps);
+
+  const Bitmap* x = bitmaps[0];
+
+  roaring_bitmap_overwrite(r, bitmaps[1]);
+
+  for (size_t i = 2; i < n; i++) {
+    roaring_bitmap_lazy_or_inplace(r, bitmaps[i], false);
+  }
+
+  roaring_bitmap_repair_after_lazy(r);
+
+  roaring_bitmap_and_inplace(r, x);
+}
+
+void bitmap64_andor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
+  if (n == 0) return;
+  if (n < 2) return bitmap64_and(r, n, bitmaps);
+
+  const Bitmap64* x = bitmaps[0];
+
+  _roaring64_bitmap_overwrite(r, bitmaps[1]);
+
+  for (size_t i = 2; i < n; i++) {
+    roaring64_bitmap_or_inplace(r, bitmaps[i]);
+  }
+
+  roaring64_bitmap_and_inplace(r, x);
+}
+
 Bitmap* bitmap_not_array(uint32_t unused, const Bitmap** bitmaps) {
   (void) (unused);
   uint32_t last = roaring_bitmap_maximum(bitmaps[0]);

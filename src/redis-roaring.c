@@ -838,6 +838,8 @@ int R64BitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return R64BitOp(ctx, argv, argc, bitmap64_or);
   } else if (strcmp(operation, "XOR") == 0) {
     return R64BitOp(ctx, argv, argc, bitmap64_xor);
+  } else if (strcmp(operation, "ANDOR") == 0) {
+    return R64BitOp(ctx, argv, argc, bitmap64_andor);
   } else {
     if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
       return REDISMODULE_OK;
@@ -1679,6 +1681,8 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RBitOp(ctx, argv, argc, bitmap_or);
   } else if (strcmp(operation, "XOR") == 0) {
     return RBitOp(ctx, argv, argc, bitmap_xor);
+  } else if (strcmp(operation, "ANDOR") == 0) {
+    return RBitOp(ctx, argv, argc, bitmap_andor);
   } else {
     if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
       return REDISMODULE_OK;

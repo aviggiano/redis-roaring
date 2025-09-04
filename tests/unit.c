@@ -24,6 +24,8 @@
 #include "unit/test_bitmap64_setbit.c"
 #include "unit/test_bitmap64_xor.c"
 #include "unit/test_bitmap64_not.c"
+#include "unit/test_bitmap_andor.c"
+#include "unit/test_bitmap64_andor.c"
 
 int main(int argc, char* argv[]) {
   test_start();
@@ -49,6 +51,8 @@ int main(int argc, char* argv[]) {
   test_bitmap_xor();
   test_bitmap_and();
   test_bitmap_or();
+  test_bitmap_andor();
+  test_bitmap64_andor();
 
   test_end();
 
