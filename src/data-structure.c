@@ -140,47 +140,77 @@ uint64_t bitmap64_get_nth_element_not_present_slow(const Bitmap64* bitmap, uint6
   return element;
 }
 
-Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps) {
-  return roaring_bitmap_or_many_heap(n, bitmaps);
-}
-
-Bitmap64* bitmap64_or(uint32_t n, const Bitmap64** bitmaps) {
-  Bitmap64* result = roaring64_bitmap_copy(bitmaps[0]);
-
-  for (uint32_t i = 1; i < n; i++) {
-    roaring64_bitmap_or_inplace(result, bitmaps[i]);
+// [TODO] Replace with roaring64_bitmap_overwrite in next CRoaring release 
+static void _roaring64_bitmap_overwrite(Bitmap64* dest, const Bitmap64* src) {
+  if (!roaring64_bitmap_is_empty(dest)) {
+    roaring64_bitmap_clear(dest);
   }
 
-  return result;
+  roaring64_bitmap_or_inplace(dest, src);
 }
 
-Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps) {
-  Bitmap* result = roaring_bitmap_copy(bitmaps[0]);
-  for (uint32_t i = 1; i < n; i++) {
-    roaring_bitmap_and_inplace(result, bitmaps[i]);
-  }
-  return result;
-}
+void bitmap_or(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
+  if (n == 0) return;
 
-Bitmap64* bitmap64_and(uint32_t n, const Bitmap64** bitmaps) {
-  Bitmap64* result = roaring64_bitmap_copy(bitmaps[0]);
-  for (uint32_t i = 1; i < n; i++) {
-    roaring64_bitmap_and_inplace(result, bitmaps[i]);
-  }
-  return result;
-}
+  roaring_bitmap_overwrite(r, bitmaps[0]);
 
-Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps) {
-  return roaring_bitmap_xor_many(n, bitmaps);
-}
-
-Bitmap64* bitmap64_xor(uint32_t n, const Bitmap64** bitmaps) {
-  Bitmap64* result = roaring64_bitmap_copy(bitmaps[0]);
-  for (uint32_t i = 1; i < n; i++) {
-    roaring64_bitmap_xor_inplace(result, bitmaps[i]);
+  for (size_t i = 1; i < n; i++) {
+    roaring_bitmap_lazy_or_inplace(r, (Bitmap*) bitmaps[i], false);
   }
 
-  return result;
+  roaring_bitmap_repair_after_lazy(r);
+}
+
+void bitmap64_or(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
+  if (n == 0) return;
+
+  _roaring64_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring64_bitmap_or_inplace(r, bitmaps[i]);
+  }
+}
+
+void bitmap_and(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
+  if (n == 0) return;
+
+  roaring_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring_bitmap_and_inplace(r, bitmaps[i]);
+  }
+}
+
+void bitmap64_and(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
+  if (n == 0) return;
+
+  _roaring64_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring64_bitmap_and_inplace(r, bitmaps[i]);
+  }
+}
+
+void bitmap_xor(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
+  if (n == 0) return;
+
+  roaring_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring_bitmap_lazy_xor_inplace(r, bitmaps[i]);
+  }
+
+  roaring_bitmap_repair_after_lazy(r);
+}
+
+void bitmap64_xor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
+  if (n == 0) return;
+
+  _roaring64_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring64_bitmap_xor_inplace(r, bitmaps[i]);
+  }
 }
 
 Bitmap* bitmap_not_array(uint32_t unused, const Bitmap** bitmaps) {

@@ -48,12 +48,12 @@ uint64_t bitmap64_get_nth_element_not_present(const Bitmap64* bitmap, uint64_t n
  */
 int64_t bitmap_get_nth_element_not_present_slow(const Bitmap* bitmap, uint64_t n);
 uint64_t bitmap64_get_nth_element_not_present_slow(const Bitmap64* bitmap, uint64_t n, bool* found);
-Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps);
-Bitmap64* bitmap64_or(uint32_t n, const Bitmap64** bitmaps);
-Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps);
-Bitmap64* bitmap64_and(uint32_t n, const Bitmap64** bitmaps);
-Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps);
-Bitmap64* bitmap64_xor(uint32_t n, const Bitmap64** bitmaps);
+void bitmap_or(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
+void bitmap64_or(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
+void bitmap_and(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
+void bitmap64_and(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
+void bitmap_xor(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
+void bitmap64_xor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
 Bitmap* bitmap_flip(const Bitmap* bitmap, uint32_t end);
 Bitmap64* bitmap64_flip(const Bitmap64* bitmap, uint64_t end);
 /**

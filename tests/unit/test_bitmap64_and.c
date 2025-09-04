@@ -16,7 +16,8 @@ void test_bitmap64_and() {
       bitmap64_setbit(six, 2, 1);
 
       Bitmap64* bitmaps[] = { twelve, four, six };
-      Bitmap64* and = bitmap64_and(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap64**) bitmaps);
+      Bitmap64* and = bitmap64_alloc();
+      bitmap64_and(and, sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap64**) bitmaps);
       roaring64_iterator_t* iterator = roaring64_iterator_create(and);
       uint64_t expected[] = { 2 };
       for (uint64_t i = 0; roaring64_iterator_has_value(iterator); i++) {

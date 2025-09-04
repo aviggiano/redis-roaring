@@ -15,7 +15,8 @@ void test_bitmap64_or() {
       bitmap64_setbit(nine, 3, 1);
 
       Bitmap64* bitmaps[] = { sixteen, four, nine };
-      Bitmap64* or = bitmap64_or(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap64**) bitmaps);
+      Bitmap64* or = bitmap64_alloc();
+      bitmap64_or(or , sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap64**) bitmaps);
       roaring64_iterator_t* iterator = roaring64_iterator_create(or );
       uint64_t expected[] = { 0, 2, 3, 4 };
       for (int i = 0; roaring64_iterator_has_value(iterator); i++) {

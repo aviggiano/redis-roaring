@@ -15,7 +15,8 @@ void test_bitmap_or() {
       bitmap_setbit(nine, 3, 1);
 
       Bitmap* bitmaps[] = { sixteen, four, nine };
-      Bitmap* or = bitmap_or(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
+      Bitmap* or = bitmap_alloc();
+      bitmap_or(or , sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
       roaring_uint32_iterator_t* iterator = roaring_iterator_create(or );
       int expected[] = { 0, 2, 3, 4 };
       for (int i = 0; iterator->has_value; i++) {

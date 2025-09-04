@@ -16,7 +16,8 @@ void test_bitmap_xor() {
       bitmap_setbit(six, 2, 1);
 
       Bitmap* bitmaps[] = { twelve, four, six };
-      Bitmap* xor = bitmap_xor(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
+      Bitmap* xor = bitmap_alloc();
+      bitmap_xor(xor, sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
       roaring_uint32_iterator_t* iterator = roaring_iterator_create(xor);
       int expected[] = { 1, 2, 3 };
       for (int i = 0; iterator->has_value; i++) {
