@@ -450,7 +450,8 @@ static inline void test_failed() {
                 if ((expected)[_i] != (actual)[_i]) { \
                     printf_test("%s" COLOR_RED "✗" COLOR_RESET " " op_name " - FAILED\n", get_test_padding()); \
                     char *desc;\
-                    asprintf(&desc, "at index %zu", _i);\
+                    int ret = asprintf(&desc, "at index %zu", _i); \
+                    if (ret == -1) desc = NULL; \
                     PRINT_ARRAYS_ON_MISMATCH(expected, actual, _exp_len, _act_len, desc); \
                     free(desc); \
                     _arrays_equal = 0; \
