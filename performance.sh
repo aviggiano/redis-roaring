@@ -15,4 +15,3 @@ function performance()
 
 setup
 performance
-end
