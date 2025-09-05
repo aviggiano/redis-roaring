@@ -32,5 +32,20 @@ void test_bitmap_xor() {
       bitmap_free(four);
       bitmap_free(twelve);
     }
+
+    IT("Should clear destination bitmap when passed zero bitmaps even if dest was not empty initially")
+    {
+      // Create a destination bitmap with some initial values
+      Bitmap* result = roaring_bitmap_create();
+      roaring_bitmap_add(result, 1);
+
+      // Call bitmap_one with zero bitmaps
+      bitmap_xor(result, 0, NULL);
+
+      // Verify destination is now empty
+      ASSERT_BITMAP_SIZE(0, result);
+
+      roaring_bitmap_free(result);
+    }
   }
 }
