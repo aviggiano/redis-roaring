@@ -16,7 +16,7 @@
 /*
  * macros
  */
-//#define debug(fmt, ...) printf(fmt, ##__VA_ARGS__)
+ //#define debug(fmt, ...) printf(fmt, ##__VA_ARGS__)
 #define debug(fmt, ...)
 
 /*
@@ -68,7 +68,7 @@ redisContext* create_context() {
   const char hostname[] = "127.0.0.1";
   int port = 6379;
 
-  struct timeval timeout = {2, 0};
+  struct timeval timeout = { 2, 0 };
   c = redisConnectWithTimeout(hostname, port, timeout);
   assert(c != NULL);
   assert(c->err == 0);
@@ -76,26 +76,26 @@ redisContext* create_context() {
 }
 
 void print_header() {
-  print("| %12s ", "OP");
-  print("| %12s ", "TIME/OP (us)");
-  print("| %12s |\n", "ST.DEV. (us)");
+  print("| %16s ", "OP");
+  print("| %16s ", "TIME/OP (us)");
+  print("| %16s |\n", "ST.DEV. (us)");
 
-  print("| %12s ", "------------");
-  print("| %12s ", "------------");
-  print("| %12s |\n", "------------");
+  print("| %16s ", "----------------");
+  print("| %16s ", "----------------");
+  print("| %16s |\n", "----------------");
 }
 
-int clock_gettime_local(struct timespec *a) {
+int clock_gettime_local(struct timespec* a) {
   int err = 0;
   //https://gist.github.com/jbenet/1087739     
 #ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
-   clock_serv_t cclock;
-   mach_timespec_t mts;
-   host_get_clock_service(mach_host_self(), REALTIME_CLOCK, &cclock);
-   clock_get_time(cclock, &mts);
-   mach_port_deallocate(mach_task_self(), cclock);
-   a->tv_sec = mts.tv_sec;
-   a->tv_nsec = mts.tv_nsec;
+  clock_serv_t cclock;
+  mach_timespec_t mts;
+  host_get_clock_service(mach_host_self(), REALTIME_CLOCK, &cclock);
+  clock_get_time(cclock, &mts);
+  mach_port_deallocate(mach_task_self(), cclock);
+  a->tv_sec = mts.tv_sec;
+  a->tv_nsec = mts.tv_nsec;
 #else
   err = clock_gettime(CLOCK_MONOTONIC, a);
 #endif
@@ -128,11 +128,11 @@ void static inline timer(Statistics* statistics) {
 Statistics statistics_init(const char* operation) {
   return (Statistics) {
     .operation = operation,
-    .start = {0, 0},
-    .ticking = false,
-    .N = 0,
-    .mean = 0,
-    .variance = 0
+      .start = { 0, 0 },
+      .ticking = false,
+      .N = 0,
+      .mean = 0,
+      .variance = 0
   };
 }
 
@@ -140,9 +140,9 @@ void statistics_print(Statistics* statistics) {
   double mean = 1E-3 * statistics->mean;
   double stdev = 1E-6 * sqrt(statistics->variance);
 
-  print("| %12s ", statistics->operation);
-  print("| %12.2f ", mean);
-  print("| %12.2f |\n", stdev);
+  print("| %16s ", statistics->operation);
+  print("| %16.2f ", mean);
+  print("| %16.2f |\n", stdev);
 }
 
 int main(int argc, char* argv[]) {
@@ -151,7 +151,7 @@ int main(int argc, char* argv[]) {
   const char* dirbuffer = CROARING_BENCHMARK_DATA_DIR "census1881";
   printf("dirbuffer %s\n", dirbuffer);
   uint32_t** numbers = read_all_integer_files(dirbuffer,
-                                              ".txt", &howmany, &count);
+    ".txt", &howmany, &count);
 
   assert(numbers != NULL);
 
@@ -167,7 +167,7 @@ int main(int argc, char* argv[]) {
 
     for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
       Statistics statistics = statistics_init(ops[op]);
-      const int bits[] = {1, 0, 1};
+      const int bits[] = { 1, 0, 1 };
       for (size_t b = 0; b < sizeof(bits) / sizeof(*bits); b++) {
         for (size_t i = 0; i < count; i++) {
           for (size_t j = 0; j < howmany[i]; j++) {
@@ -234,7 +234,7 @@ int main(int argc, char* argv[]) {
 
     for (size_t op = 0; op < sizeof(ops) / sizeof(*ops); op++) {
       Statistics statistics = statistics_init(ops[op]);
-      const int bits[] = {1, 0};
+      const int bits[] = { 1, 0 };
       for (size_t b = 0; b < sizeof(bits) / sizeof(*bits); b++) {
         for (size_t i = 0; i < count; i++) {
           timer(&statistics);
@@ -282,7 +282,9 @@ int main(int argc, char* argv[]) {
     const char* types[] = {
       "AND",
       "OR",
-      "XOR"
+      "XOR",
+      "ANDOR",
+      "ONE"
     };
 
     for (size_t t = 0; t < sizeof(types) / sizeof(*types); t++) {
@@ -293,7 +295,7 @@ int main(int argc, char* argv[]) {
         for (size_t i = 0; i < count; i++) {
           timer(&statistics);
           redisReply* reply = redisCommand(c, "%s %s dest-%d-%d-%d %d-%d %d-%d",
-                                           ops[op], types[t], t, op, i, op, 2 * i, op, 2 * i + 1);
+            ops[op], types[t], t, op, i, op, 2 * i, op, 2 * i + 1);
           timer(&statistics);
           debug("reply %s %s %lld\n", operation, reply->str, reply->integer);
           freeReplyObject(reply);
