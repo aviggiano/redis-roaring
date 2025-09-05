@@ -31,5 +31,20 @@ void test_bitmap64_and() {
       bitmap64_free(four);
       bitmap64_free(twelve);
     }
+
+    IT("Should clear destination bitmap when passed zero bitmaps even if dest was not empty initially")
+    {
+      // Create a destination bitmap with some initial values
+      Bitmap64* result = roaring64_bitmap_create();
+      roaring64_bitmap_add(result, 1);
+
+      // Call bitmap_one with zero bitmaps
+      bitmap64_and(result, 0, NULL);
+
+      // Verify destination is now empty
+      ASSERT_BITMAP64_SIZE(0, result);
+
+      roaring64_bitmap_free(result);
+    }
   }
 }

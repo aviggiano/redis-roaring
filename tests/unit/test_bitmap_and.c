@@ -32,5 +32,20 @@ void test_bitmap_and() {
       bitmap_free(four);
       bitmap_free(twelve);
     }
+
+    IT("Should clear destination bitmap when passed zero bitmaps even if dest was not empty initially")
+    {
+      // Create a destination bitmap with some initial values
+      uint32_t initial_values[] = { 10, 20, 30, 40, 50 };
+      Bitmap* result = roaring_bitmap_of_ptr(ARRAY_LENGTH(initial_values), initial_values);
+
+      // Call bitmap_one with zero bitmaps
+      bitmap_and(result, 0, NULL);
+
+      // Verify destination is now empty
+      ASSERT_BITMAP_SIZE(0, result);
+
+      roaring_bitmap_free(result);
+    }
   }
 }
