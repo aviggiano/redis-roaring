@@ -1,22 +1,7 @@
 #include "data-structure.h"
 #include "../test-utils.h"
 
-// Helper function to create a bitmap with specific values
-static Bitmap64* create_test_bitmap64(uint64_t* values, size_t count) {
-  Bitmap64* bitmap = roaring64_bitmap_create();
-  for (size_t i = 0; i < count; i++) {
-    roaring64_bitmap_add(bitmap, values[i]);
-  }
-  return bitmap;
-}
-
-// Helper function to check if two bitmaps are equal
-static bool bitmaps64_equal(const Bitmap64* a, const Bitmap64* b) {
-  return roaring64_bitmap_equals(a, b);
-}
-
 void test_bitmap64_andor() {
-
   DESCRIBE("bitmap64_andor")
   {
     IT("Should handle empty array (n = 0)")
@@ -25,7 +10,22 @@ void test_bitmap64_andor() {
       bitmap64_andor(result, 0, NULL);
 
       // Result should remain unchanged (empty)
-      ASSERT_EQ(0, roaring64_bitmap_get_cardinality(result));
+      ASSERT_BITMAP64_SIZE(0, result);
+
+      roaring64_bitmap_free(result);
+    }
+
+    IT("Should clear destination bitmap when passed zero bitmaps even if dest was not empty initially")
+    {
+      // Create a destination bitmap with some initial values
+      uint64_t initial_values[] = { 10, 20, 30, 40, 50 };
+      Bitmap64* result = roaring64_bitmap_of_ptr(ARRAY_LENGTH(initial_values), initial_values);
+
+      // Call bitmap_one with zero bitmaps
+      bitmap64_andor(result, 0, NULL);
+
+      // Verify destination is now empty
+      ASSERT_BITMAP64_SIZE(0, result);
 
       roaring64_bitmap_free(result);
     }
@@ -33,14 +33,14 @@ void test_bitmap64_andor() {
     IT("Should handle single bitmap (n = 1)")
     {
       uint64_t values1[] = { 1, 2, 3, 4, 5 };
-      Bitmap64* bitmap1 = create_test_bitmap64(values1, 5);
+      Bitmap64* bitmap1 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values1), values1);
       const Bitmap64* bitmaps[] = { bitmap1 };
 
       Bitmap64* result = roaring64_bitmap_create();
       bitmap64_andor(result, ARRAY_LENGTH(bitmaps), bitmaps);
 
       // Should call bitmap_and with single bitmap, expect same result as input
-      ASSERT_TRUE(bitmaps64_equal(result, bitmap1));
+      ASSERT_BITMAP64_EQ(result, bitmap1);
 
       roaring64_bitmap_free(bitmap1);
       roaring64_bitmap_free(result);
@@ -50,11 +50,11 @@ void test_bitmap64_andor() {
     {
       // bitmap1: {1, 2, 3, 4}
       uint64_t values1[] = { 1, 2, 3, 4 };
-      Bitmap64* bitmap1 = create_test_bitmap64(values1, 4);
+      Bitmap64* bitmap1 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values1), values1);
 
       // bitmap2: {3, 4, 5, 6}
       uint64_t values2[] = { 3, 4, 5, 6 };
-      Bitmap64* bitmap2 = create_test_bitmap64(values2, 4);
+      Bitmap64* bitmap2 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values2), values2);
 
       const Bitmap64* bitmaps[] = { bitmap1, bitmap2 };
 
@@ -62,31 +62,28 @@ void test_bitmap64_andor() {
       bitmap64_andor(result, ARRAY_LENGTH(bitmaps), bitmaps);
 
       // Expected: bitmap1 AND bitmap2 = {3, 4}
-      Bitmap64* expected = roaring64_bitmap_create();
-      roaring64_bitmap_add(expected, 3);
-      roaring64_bitmap_add(expected, 4);
+      uint64_t expected[] = { 3, 4 };
 
-      ASSERT_TRUE(bitmaps64_equal(result, expected));
+      ASSERT_BITMAP64_EQ_ARRAY(expected, ARRAY_LENGTH(expected), result);
 
       roaring64_bitmap_free(bitmap1);
       roaring64_bitmap_free(bitmap2);
       roaring64_bitmap_free(result);
-      roaring64_bitmap_free(expected);
     }
 
     IT("Should perform AND-OR operation with three bitmaps")
     {
       // bitmap1: {1, 2, 3}
       uint64_t values1[] = { 1, 2, 3 };
-      Bitmap64* bitmap1 = create_test_bitmap64(values1, 3);
+      Bitmap64* bitmap1 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values1), values1);
 
       // bitmap2: {2, 3, 4}
       uint64_t values2[] = { 2, 3, 4 };
-      Bitmap64* bitmap2 = create_test_bitmap64(values2, 3);
+      Bitmap64* bitmap2 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values2), values2);
 
       // bitmap3: {3, 4, 5}
       uint64_t values3[] = { 3, 4, 5 };
-      Bitmap64* bitmap3 = create_test_bitmap64(values3, 3);
+      Bitmap64* bitmap3 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values2), values2);
 
       const Bitmap64* bitmaps[] = { bitmap1, bitmap2, bitmap3 };
 
@@ -96,32 +93,29 @@ void test_bitmap64_andor() {
       // Expected: bitmap1 AND (bitmap2 OR bitmap3)
       // bitmap2 OR bitmap3 = {2, 3, 4, 5}
       // bitmap1 AND {2, 3, 4, 5} = {2, 3}
-      Bitmap64* expected = roaring64_bitmap_create();
-      roaring64_bitmap_add(expected, 2);
-      roaring64_bitmap_add(expected, 3);
+      uint64_t expected[] = { 2, 3 };
 
-      ASSERT_TRUE(bitmaps64_equal(result, expected));
+      ASSERT_BITMAP64_EQ_ARRAY(expected, ARRAY_LENGTH(expected), result);
 
       roaring64_bitmap_free(bitmap1);
       roaring64_bitmap_free(bitmap2);
       roaring64_bitmap_free(bitmap3);
       roaring64_bitmap_free(result);
-      roaring64_bitmap_free(expected);
     }
 
     IT("Should handle disjoint bitmaps")
     {
       // bitmap1: {1, 2}
       uint64_t values1[] = { 1, 2 };
-      Bitmap64* bitmap1 = create_test_bitmap64(values1, 2);
+      Bitmap64* bitmap1 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values1), values1);
 
       // bitmap2: {3, 4}
       uint64_t values2[] = { 3, 4 };
-      Bitmap64* bitmap2 = create_test_bitmap64(values2, 2);
+      Bitmap64* bitmap2 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values2), values2);
 
       // bitmap3: {5, 6}
       uint64_t values3[] = { 5, 6 };
-      Bitmap64* bitmap3 = create_test_bitmap64(values3, 2);
+      Bitmap64* bitmap3 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values3), values3);
 
       const Bitmap64* bitmaps[] = { bitmap1, bitmap2, bitmap3 };
 
@@ -131,7 +125,7 @@ void test_bitmap64_andor() {
       // Expected: bitmap1 AND (bitmap2 OR bitmap3)
       // bitmap2 OR bitmap3 = {3, 4, 5, 6}
       // bitmap1 AND {3, 4, 5, 6} = {} (empty)
-      ASSERT_EQ(0, roaring64_bitmap_get_cardinality(result));
+      ASSERT_BITMAP64_SIZE(0, result);
 
       roaring64_bitmap_free(bitmap1);
       roaring64_bitmap_free(bitmap2);
@@ -143,14 +137,14 @@ void test_bitmap64_andor() {
     {
       // bitmap1: {1, 2, 3}
       uint64_t values1[] = { 1, 2, 3 };
-      Bitmap64* bitmap1 = create_test_bitmap64(values1, 3);
+      Bitmap64* bitmap1 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values1), values1);
 
       // bitmap2: empty
       Bitmap64* bitmap2 = roaring64_bitmap_create();
 
       // bitmap3: {2, 3, 4}
       uint64_t values3[] = { 2, 3, 4 };
-      Bitmap64* bitmap3 = create_test_bitmap64(values3, 3);
+      Bitmap64* bitmap3 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values3), values3);
 
       const Bitmap64* bitmaps[] = { bitmap1, bitmap2, bitmap3 };
 
@@ -160,17 +154,14 @@ void test_bitmap64_andor() {
       // Expected: bitmap1 AND (bitmap2 OR bitmap3)
       // bitmap2 OR bitmap3 = {2, 3, 4} (empty OR bitmap3)
       // bitmap1 AND {2, 3, 4} = {2, 3}
-      Bitmap64* expected = roaring64_bitmap_create();
-      roaring64_bitmap_add(expected, 2);
-      roaring64_bitmap_add(expected, 3);
+      uint64_t expected[] = { 2, 3 };
 
-      ASSERT_TRUE(bitmaps64_equal(result, expected));
+      ASSERT_BITMAP64_EQ_ARRAY(expected, ARRAY_LENGTH(expected), result);
 
       roaring64_bitmap_free(bitmap1);
       roaring64_bitmap_free(bitmap2);
       roaring64_bitmap_free(bitmap3);
       roaring64_bitmap_free(result);
-      roaring64_bitmap_free(expected);
     }
 
     IT("Should handle when first bitmap is empty")
@@ -180,11 +171,11 @@ void test_bitmap64_andor() {
 
       // bitmap2: {1, 2, 3}
       uint64_t values2[] = { 1, 2, 3 };
-      Bitmap64* bitmap2 = create_test_bitmap64(values2, 3);
+      Bitmap64* bitmap2 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values2), values2);
 
       // bitmap3: {2, 3, 4}
       uint64_t values3[] = { 2, 3, 4 };
-      Bitmap64* bitmap3 = create_test_bitmap64(values3, 3);
+      Bitmap64* bitmap3 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values3), values3);
 
       const Bitmap64* bitmaps[] = { bitmap1, bitmap2, bitmap3 };
 
@@ -192,7 +183,7 @@ void test_bitmap64_andor() {
       bitmap64_andor(result, ARRAY_LENGTH(bitmaps), bitmaps);
 
       // Expected: empty AND (bitmap2 OR bitmap3) = empty
-      ASSERT_EQ(0, roaring64_bitmap_get_cardinality(result));
+      ASSERT_BITMAP64_SIZE(0, result);
 
       roaring64_bitmap_free(bitmap1);
       roaring64_bitmap_free(bitmap2);
@@ -208,7 +199,7 @@ void test_bitmap64_andor() {
 
       // Create first bitmap with values 1-5
       uint64_t first_values[] = { 1, 2, 3, 4, 5 };
-      bitmaps_array[0] = create_test_bitmap64(first_values, 5);
+      bitmaps_array[0] = roaring64_bitmap_of_ptr(ARRAY_LENGTH(first_values), first_values);
       bitmaps_ptrs[0] = bitmaps_array[0];
 
       // Create remaining bitmaps, each containing some overlapping values
@@ -237,11 +228,11 @@ void test_bitmap64_andor() {
     IT("Should not modify input bitmaps")
     {
       uint64_t values1[] = { 1, 2, 3 };
-      Bitmap64* bitmap1 = create_test_bitmap64(values1, 3);
+      Bitmap64* bitmap1 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values1), values1);
       Bitmap64* bitmap1_copy = roaring64_bitmap_copy(bitmap1);
 
       uint64_t values2[] = { 2, 3, 4 };
-      Bitmap64* bitmap2 = create_test_bitmap64(values2, 3);
+      Bitmap64* bitmap2 = roaring64_bitmap_of_ptr(ARRAY_LENGTH(values2), values2);
       Bitmap64* bitmap2_copy = roaring64_bitmap_copy(bitmap2);
 
       const Bitmap64* bitmaps[] = { bitmap1, bitmap2 };
@@ -250,8 +241,8 @@ void test_bitmap64_andor() {
       bitmap64_andor(result, ARRAY_LENGTH(bitmaps), bitmaps);
 
       // Verify input bitmaps are unchanged
-      ASSERT_TRUE(bitmaps64_equal(bitmap1, bitmap1_copy));
-      ASSERT_TRUE(bitmaps64_equal(bitmap2, bitmap2_copy));
+      ASSERT_BITMAP64_EQ(bitmap1_copy, bitmap1);
+      ASSERT_BITMAP64_EQ(bitmap2_copy, bitmap2);
 
       roaring64_bitmap_free(bitmap1);
       roaring64_bitmap_free(bitmap1_copy);

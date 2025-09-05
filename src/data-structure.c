@@ -214,8 +214,16 @@ void bitmap64_xor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
 }
 
 void bitmap_andor(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
-  if (n == 0) return;
-  if (n < 2) return bitmap_and(r, n, bitmaps);
+  if (n == 0) {
+    return roaring_bitmap_clear(r);
+  }
+  if (n == 1) {
+    roaring_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+  if (n < 2) {
+    return bitmap_and(r, n, bitmaps);
+  }
 
   const Bitmap* x = bitmaps[0];
 
@@ -231,8 +239,16 @@ void bitmap_andor(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
 }
 
 void bitmap64_andor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
-  if (n == 0) return;
-  if (n < 2) return bitmap64_and(r, n, bitmaps);
+  if (n == 0) {
+    return roaring64_bitmap_clear(r);
+  }
+  if (n == 1) {
+    _roaring64_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+  if (n < 2) {
+    return bitmap64_and(r, n, bitmaps);
+  }
 
   const Bitmap64* x = bitmaps[0];
 
