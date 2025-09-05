@@ -2,7 +2,7 @@
 
 set -eu
 
-. helper.sh
+. ./tests/helper.sh
 
 function performance()
 {
