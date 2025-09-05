@@ -60,5 +60,5 @@ int main(int argc, char* argv[]) {
 
   test_end();
 
-  return 0;
+  return test_total_failed > 0 ? 1 : 0;
 }
