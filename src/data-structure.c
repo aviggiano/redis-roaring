@@ -150,7 +150,13 @@ static void _roaring64_bitmap_overwrite(Bitmap64* dest, const Bitmap64* src) {
 }
 
 void bitmap_or(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
-  if (n == 0) return;
+  if (n == 0) {
+    return roaring_bitmap_clear(r);
+  }
+  if (n == 1) {
+    roaring_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
 
   roaring_bitmap_overwrite(r, bitmaps[0]);
 
@@ -162,7 +168,13 @@ void bitmap_or(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
 }
 
 void bitmap64_or(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
-  if (n == 0) return;
+  if (n == 0) {
+    return roaring64_bitmap_clear(r);
+  }
+  if (n == 1) {
+    _roaring64_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
 
   _roaring64_bitmap_overwrite(r, bitmaps[0]);
 
