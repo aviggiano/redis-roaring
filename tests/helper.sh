@@ -77,7 +77,7 @@ function rcall() {
 
 function rcall_assert() {
   local cmd="$1"
-  local expected="$2"
+  local expected="$(echo -e "$2")"
   local description="${3:-Redis command}"
 
   local result=$(echo "$cmd" | ./deps/redis/src/redis-cli) 

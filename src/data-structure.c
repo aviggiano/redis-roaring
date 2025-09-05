@@ -245,6 +245,77 @@ void bitmap64_andor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   roaring64_bitmap_and_inplace(r, x);
 }
 
+void bitmap_one(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
+  if (n == 0) {
+    return roaring_bitmap_clear(r);
+  }
+  if (n == 1) {
+    roaring_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+  // Do simple xor for two bitmaps
+  if (n < 2) {
+    return bitmap_xor(r, n, bitmaps);
+  }
+
+  // Helper bitmap to track bits seen in more than one key
+  Bitmap* helper = roaring_bitmap_create();
+
+  // Start with the first bitmap
+  roaring_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    // Track bits that appear in both current result and new bitmap
+    // These are bits that now appear in more than one key
+    Bitmap* intersection = roaring_bitmap_and(r, bitmaps[i]);
+    roaring_bitmap_or_inplace(helper, intersection);
+    roaring_bitmap_free(intersection);
+
+    // XOR the new bitmap with current result
+    roaring_bitmap_xor_inplace(r, bitmaps[i]);
+
+    // Remove bits that have been seen in more than one key
+    roaring_bitmap_andnot_inplace(r, helper);
+  }
+
+  roaring_bitmap_free(helper);
+}
+
+void bitmap64_one(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
+  if (n == 0) {
+    return roaring64_bitmap_clear(r);
+  }
+  if (n == 1) {
+    return _roaring64_bitmap_overwrite(r, bitmaps[0]);
+  }
+  // Do simple xor for two bitmaps
+  if (n < 2) {
+    return bitmap64_xor(r, n, bitmaps);
+  }
+
+  // Helper bitmap to track bits seen in more than one key
+  Bitmap64* helper = roaring64_bitmap_create();
+
+  // Start with the first bitmap
+  _roaring64_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    // Track bits that appear in both current result and new bitmap
+    // These are bits that now appear in more than one key
+    Bitmap64* intersection = roaring64_bitmap_and(r, bitmaps[i]);
+    roaring64_bitmap_or_inplace(helper, intersection);
+    roaring64_bitmap_free(intersection);
+
+    // XOR the new bitmap with current result
+    roaring64_bitmap_xor_inplace(r, bitmaps[i]);
+
+    // Remove bits that have been seen in more than one key
+    roaring64_bitmap_andnot_inplace(r, helper);
+  }
+
+  roaring64_bitmap_free(helper);
+}
+
 Bitmap* bitmap_not_array(uint32_t unused, const Bitmap** bitmaps) {
   (void) (unused);
   uint32_t last = roaring_bitmap_maximum(bitmaps[0]);

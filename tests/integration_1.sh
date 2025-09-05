@@ -159,6 +159,87 @@ function test_min_max() {
   rcall_assert "R.MAX test_min_max" "-1" "Get max after unsetting all bits"
 }
 
+function test_bitop_one() {
+  print_test_header "test_bitop_one"
+
+  # Test 1: Empty bitmap array
+  rcall_assert "R.BITOP ONE test_bitop_one_result_empty" "ERR wrong number of arguments for 'R.BITOP' command" "BITOP ONE with no source bitmaps"
+
+  # Test 2: Single bitmap
+  rcall_assert "R.BITOP ONE test_bitop_one_result_single test_bitop_one_key1" "ERR wrong number of arguments for 'R.BITOP' command" "BITOP ONE with single bitmap"
+
+  # Test 3: Two non-overlapping bitmaps
+  rcall_assert "R.SETINTARRAY test_bitop_one_key1 1 3 5" "OK" "Set bits in test_bitop_one_key1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key2 2 4 6" "OK" "Set bits in test_bitop_one_key2"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_non_overlap test_bitop_one_key1 test_bitop_one_key2" "6" "BITOP ONE with non-overlapping bitmaps"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_non_overlap" "1\n2\n3\n4\n5\n6" "Result should contain all bits from both keys"
+
+  # Test 4: Two overlapping bitmaps
+  rcall_assert "R.SETINTARRAY test_bitop_one_key3 1 2 3" "OK" "Set bits in test_bitop_one_key3"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key4 3 4 5" "OK" "Set bits in test_bitop_one_key4"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_overlap test_bitop_one_key3 test_bitop_one_key4" "4" "BITOP ONE with overlapping bitmaps"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_overlap" "1\n2\n4\n5" "Result should contain only non-overlapping bits"
+
+  # Test 5: Three bitmaps - Redis example
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_a 0 4 5 6" "OK" "Set bits in test_bitop_one_key_a"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_b 1 5 6" "OK" "Set bits in test_bitop_one_key_b"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_c 2 3 5 6 7" "OK" "Set bits in test_bitop_one_key_c"
+  
+  rcall_assert "R.BITOP ONE test_bitop_one_result_three test_bitop_one_key_a test_bitop_one_key_b test_bitop_one_key_c" "6" "BITOP ONE with three bitmaps"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_three" "0\n1\n2\n3\n4\n7" "Result should contain bits appearing exactly once"
+
+  # Test 6: All bitmaps have same bits
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_same1 10 20 30" "OK" "Set bits in test_bitop_one_key_same1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_same2 10 20 30" "OK" "Set bits in test_bitop_one_key_same2"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_same3 10 20 30" "OK" "Set bits in test_bitop_one_key_same3"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_same test_bitop_one_key_same1 test_bitop_one_key_same2 test_bitop_one_key_same3" "0" "BITOP ONE with identical bitmaps"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_same" "" "Result should be empty array"
+
+  # Test 7: One empty bitmap among others
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_with_bits1 1 2 3" "OK" "Set bits in test_bitop_one_key_with_bits1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_with_bits2 3 4 5" "OK" "Set bits in test_bitop_one_key_with_bits2"
+
+  rcall "DEL test_bitop_one_key_empty"
+  rcall_assert "R.BITOP ONE test_bitop_one_result_mixed test_bitop_one_key_with_bits1 test_bitop_one_key_empty test_bitop_one_key_with_bits2" "4" "BITOP ONE with one empty bitmap"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_mixed" "1\n2\n4\n5" "Result should contain non-overlapping bits"
+
+  # Test 8: Complex overlaps with four bitmaps
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_complex1 1 2 3 4 5" "OK" "Set bits in test_bitop_one_key_complex1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_complex2 2 3 4 6 7" "OK" "Set bits in test_bitop_one_key_complex2"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_complex3 3 4 5 7 8" "OK" "Set bits in test_bitop_one_key_complex3"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_complex4 4 5 6 8 9" "OK" "Set bits in test_bitop_one_key_complex4"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_complex test_bitop_one_key_complex1 test_bitop_one_key_complex2 test_bitop_one_key_complex3 test_bitop_one_key_complex4" "2" "BITOP ONE with complex overlaps"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_complex" "1\n9" "Result should contain only bits appearing exactly once"
+
+  # Test 9: Large bit values
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_large1 1000000 2000000" "OK" "Set large bits in key_large1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_large2 2000000 3000000" "OK" "Set large bits in key_large2"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_large test_bitop_one_key_large1 test_bitop_one_key_large2" "2" "BITOP ONE with large bit values"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_large" "1000000\n3000000" "Result should contain non-overlapping large bits"
+
+  # Test 10: Destination already has content
+  rcall_assert "R.SETINTARRAY test_bitop_one_result_preexist 100 200 300" "OK" "Set bits in test_bitop_one_result_preexist"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_overwrite1 1 2" "OK" "Set bits in test_bitop_one_key_overwrite1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_overwrite2 2 3" "OK" "Set bits in test_bitop_one_key_overwrite2"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_preexist test_bitop_one_key_overwrite1 test_bitop_one_key_overwrite2" "2" "BITOP ONE should overwrite destination"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_preexist" "1\n3" "Result should only contain new operation result"
+
+  # Test 11: Input bitmaps should remain unchanged
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_immutable1 10 20 30" "OK" "Set bits in test_bitop_one_key_immutable1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_immutable2 20 30 40" "OK" "Set bits in test_bitop_one_key_immutable2"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_immutable test_bitop_one_key_immutable1 test_bitop_one_key_immutable2" "2" "BITOP ONE operation"
+  rcall_assert "R.GETINTARRAY test_bitop_one_key_immutable1" "10\n20\n30" "key_immutable1 should remain unchanged"
+  rcall_assert "R.GETINTARRAY test_bitop_one_key_immutable2" "20\n30\n40" "key_immutable2 should remain unchanged"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_immutable" "10\n40" "Result should contain bits appearing exactly once"
+}
+
 function test_diff() {
   print_test_header "test_diff"
 
@@ -229,6 +310,7 @@ test_getintarray_setintarray
 test_getbitarray_setbitarray
 test_appendintarray_deleteintarray
 test_min_max
+test_bitop_one
 test_setrage
 test_diff
 test_optimize_nokey
