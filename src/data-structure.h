@@ -3,6 +3,9 @@
 
 #include "roaring.h"
 
+#define BITMAP_STATISTICS_FORMAT_PLAIN_TEXT 0
+#define BITMAP_STATISTICS_FORMAT_JSON 1
+
 typedef roaring_bitmap_t Bitmap;
 typedef roaring_statistics_t Bitmap_statistics;
 
@@ -60,6 +63,8 @@ void bitmap_one(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
 void bitmap64_one(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
 Bitmap* bitmap_flip(const Bitmap* bitmap, uint32_t end);
 Bitmap64* bitmap64_flip(const Bitmap64* bitmap, uint64_t end);
+char* bitmap_statistics_str(const Bitmap* bitmap, int format, int* size_out);
+char* bitmap64_statistics_str(const Bitmap64* bitmap, int format, int* size_out);
 /**
  * Returns a bitmap equals to the inverted set of first bitmap of the `bitmaps` array,
  * ignoring the first parameter of the function.  * The purpose of this function is to

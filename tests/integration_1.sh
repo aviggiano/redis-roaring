@@ -289,12 +289,16 @@ function test_stat() {
 
   rcall_assert "R.SETBIT test_stat 100 1" "0" "Set bit 100 for stat test"
 
-  EXPECTED_STAT=$'cardinality: 1\nnumber of containers: 1\nmax value: 100\nmin value: 100
+  EXPECTED_STAT=$'type: bitmap\ncardinality: 1\nnumber of containers: 1\nmax value: 100\nmin value: 100
 number of array containers: 1\n\tarray container values: 1\n\tarray container bytes: 2
 bitset  containers: 0\n\tbitset  container values: 0\n\tbitset  container bytes: 0
 run containers: 0\n\trun container values: 0\n\trun container bytes: 0'
   
   rcall_assert "R.STAT test_stat" "$EXPECTED_STAT" "Get bitmap statistics"
+
+  EXPECTED_STAT=$'{"type":"bitmap","cardinality":"1","number_of_containers":"1","max_value":"100","min_value":"100","array_container":{"number_of_containers":"1","container_cardinality":"1","container_allocated_bytes":"2"},"bitset_container":{"number_of_containers":"0","container_cardinality":"0","container_allocated_bytes":"0"},"run_container":{"number_of_containers":"0","container_cardinality":"0","container_allocated_bytes":"0"}}'
+
+  rcall_assert "R.STAT test_stat JSON" "$EXPECTED_STAT" "Get bitmap statistics (json)"
 }
 
 function test_save() {

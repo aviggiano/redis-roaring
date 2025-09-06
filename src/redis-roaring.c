@@ -574,52 +574,6 @@ int R64OptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
   return REDISMODULE_OK;
 }
 
-
-/**
- * R64.STAT <key>
- * */
-int R64StatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
-  if (argc != 2) {
-    return RedisModule_WrongArity(ctx);
-  }
-  RedisModule_AutoMemory(ctx);
-  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
-  int type = RedisModule_KeyType(key);
-  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != Bitmap64Type) {
-    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
-  }
-  if (type == REDISMODULE_KEYTYPE_EMPTY) {
-    return RedisModule_ReplyWithError(ctx, "ERR key does not exist");
-  }
-
-  Bitmap64* bitmap = RedisModule_ModuleTypeGetValue(key);
-  Bitmap64_statistics stat;
-  bitmap64_statistics(bitmap, &stat);
-
-  sds s = sdsempty();
-  s = sdscatprintf(s, "cardinality: %lld\n", (long long) stat.cardinality);
-  s = sdscatprintf(s, "number of containers: %llu\n", stat.n_containers);
-  s = sdscatprintf(s, "max value: %llu\n", stat.max_value);
-  s = sdscatprintf(s, "min value: %llu\n", stat.min_value);
-
-  s = sdscatprintf(s, "number of array containers: %llu\n", stat.n_array_containers);
-  s = sdscatprintf(s, "\tarray container values: %llu\n", stat.n_values_array_containers);
-  s = sdscatprintf(s, "\tarray container bytes: %llu\n", stat.n_bytes_array_containers);
-
-  s = sdscatprintf(s, "bitset  containers: %llu\n", stat.n_bitset_containers);
-  s = sdscatprintf(s, "\tbitset  container values: %llu\n", stat.n_values_bitset_containers);
-  s = sdscatprintf(s, "\tbitset  container bytes: %llu\n", stat.n_bytes_bitset_containers);
-
-  s = sdscatprintf(s, "run containers: %llu\n", stat.n_run_containers);
-  s = sdscatprintf(s, "\trun container values: %llu\n", stat.n_values_run_containers);
-  s = sdscatprintf(s, "\trun container bytes: %llu\n", stat.n_bytes_run_containers);
-
-  RedisModule_ReplyWithVerbatimString(ctx, s, sdslen(s));
-  sdsfree(s);
-
-  return REDISMODULE_OK;
-}
-
 /**
  * R64.SETBITARRAY <key> <value1>
  * */
@@ -1129,46 +1083,51 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 }
 
 /**
- * R.STAT <key>
+ * R.STAT <key> [format]
  * */
 int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
-  if (argc != 2) {
+  int output_format = BITMAP_STATISTICS_FORMAT_PLAIN_TEXT;
+
+  if (argc == 3) {
+    const char* format_arg = RedisModule_StringPtrLen(argv[2], NULL);
+
+    if (strcmp(format_arg, "JSON") == 0) {
+      output_format = BITMAP_STATISTICS_FORMAT_JSON;
+    }
+  } else if (argc != 2) {
     return RedisModule_WrongArity(ctx);
   }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
-  int type = RedisModule_KeyType(key);
-  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
+
+  if (RedisModule_KeyType(key) == REDISMODULE_KEYTYPE_EMPTY) {
+    RedisModule_ReplyWithNull(ctx);
+    return REDISMODULE_OK;
+  }
+
+  RedisModuleType* type = RedisModule_ModuleTypeGetType(key);
+
+  char* stat = NULL;
+  int stat_len;
+
+  if (type == BitmapType) {
+    Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
+    stat = bitmap_statistics_str(bitmap, output_format, &stat_len);
+  } else if (type == Bitmap64Type) {
+    Bitmap64* bitmap = RedisModule_ModuleTypeGetValue(key);
+    stat = bitmap64_statistics_str(bitmap, output_format, &stat_len);
+  } else {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
-  if (type == REDISMODULE_KEYTYPE_EMPTY) {
-    return RedisModule_ReplyWithError(ctx, "ERR key does not exist");
+
+  if (stat == NULL) {
+    RedisModule_Log(ctx, "warning", "Failed to allocate R.START resulting string");
+    return REDISMODULE_ERR;
   }
 
-  Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-  Bitmap_statistics stat;
-  bitmap_statistics(bitmap, &stat);
-
-  sds s = sdsempty();
-  s = sdscatprintf(s, "cardinality: %lld\n", (long long) stat.cardinality);
-  s = sdscatprintf(s, "number of containers: %d\n", stat.n_containers);
-  s = sdscatprintf(s, "max value: %u\n", stat.max_value);
-  s = sdscatprintf(s, "min value: %u\n", stat.min_value);
-
-  s = sdscatprintf(s, "number of array containers: %d\n", stat.n_array_containers);
-  s = sdscatprintf(s, "\tarray container values: %d\n", stat.n_values_array_containers);
-  s = sdscatprintf(s, "\tarray container bytes: %d\n", stat.n_bytes_array_containers);
-
-  s = sdscatprintf(s, "bitset  containers: %d\n", stat.n_bitset_containers);
-  s = sdscatprintf(s, "\tbitset  container values: %d\n", stat.n_values_bitset_containers);
-  s = sdscatprintf(s, "\tbitset  container bytes: %d\n", stat.n_bytes_bitset_containers);
-
-  s = sdscatprintf(s, "run containers: %d\n", stat.n_run_containers);
-  s = sdscatprintf(s, "\trun container values: %d\n", stat.n_values_run_containers);
-  s = sdscatprintf(s, "\trun container bytes: %d\n", stat.n_bytes_run_containers);
-
-  RedisModule_ReplyWithVerbatimString(ctx, s, sdslen(s));
-  sdsfree(s);
+  RedisModule_ReplyWithVerbatimString(ctx, stat, strlen(stat));
+  rm_free(stat);
 
   return REDISMODULE_OK;
 }
@@ -1933,7 +1892,6 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   if (RedisModule_CreateCommand(ctx, "R.MAX", RMaxCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
-
   if (RedisModule_CreateCommand(ctx, "R64.SETBIT", R64SetBitCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
@@ -1965,9 +1923,6 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.OPTIMIZE", R64OptimizeBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.STAT", R64StatBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.SETBITARRAY", R64SetBitArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {

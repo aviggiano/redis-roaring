@@ -588,3 +588,232 @@ size_t uint64_to_string(uint64_t value, char* buffer) {
 
   return len;
 }
+
+
+static inline int bitmap_stat_json(const Bitmap* bitmap, char** result) {
+  roaring_statistics_t stats;
+  roaring_bitmap_statistics(bitmap, &stats);
+
+  return asprintf(result,
+    "{"
+    "\"type\":\"bitmap\","
+    "\"cardinality\":\"%llu\","
+    "\"number_of_containers\":\"%u\","
+    "\"max_value\":\"%u\","
+    "\"min_value\":\"%u\","
+    "\"array_container\":{"
+    "\"number_of_containers\":\"%u\","
+    "\"container_cardinality\":\"%u\","
+    "\"container_allocated_bytes\":\"%u\"},"
+    "\"bitset_container\":{"
+    "\"number_of_containers\":\"%u\","
+    "\"container_cardinality\":\"%u\","
+    "\"container_allocated_bytes\":\"%u\"},"
+    "\"run_container\":{"
+    "\"number_of_containers\":\"%u\","
+    "\"container_cardinality\":\"%u\","
+    "\"container_allocated_bytes\":\"%u\"}"
+    "}",
+    roaring_bitmap_get_cardinality(bitmap),
+    stats.n_containers,
+    roaring_bitmap_maximum(bitmap),
+    roaring_bitmap_minimum(bitmap),
+    stats.n_array_containers,
+    stats.n_values_array_containers,
+    stats.n_bytes_array_containers,
+    stats.n_bitset_containers,
+    stats.n_values_bitset_containers,
+    stats.n_bytes_bitset_containers,
+    stats.n_run_containers,
+    stats.n_values_run_containers,
+    stats.n_bytes_run_containers
+  );
+}
+
+static inline int bitmap_stat_plain(const Bitmap* bitmap, char** result) {
+  roaring_statistics_t stats;
+  roaring_bitmap_statistics(bitmap, &stats);
+
+  return asprintf(result,
+    "type: bitmap\n"
+    "cardinality: %llu\n"
+    "number of containers: %u\n"
+    "max value: %u\n"
+    "min value: %u\n"
+    "number of array containers: %u\n"
+    "\tarray container values: %u\n"
+    "\tarray container bytes: %u\n"
+    "bitset  containers: %u\n"
+    "\tbitset  container values: %u\n"
+    "\tbitset  container bytes: %u\n"
+    "run containers: %u\n"
+    "\trun container values: %u\n"
+    "\trun container bytes: %u\n"
+    ,
+    roaring_bitmap_get_cardinality(bitmap),
+    stats.n_containers,
+    roaring_bitmap_maximum(bitmap),
+    roaring_bitmap_minimum(bitmap),
+    stats.n_array_containers,
+    stats.n_values_array_containers,
+    stats.n_bytes_array_containers,
+    stats.n_bitset_containers,
+    stats.n_values_bitset_containers,
+    stats.n_bytes_bitset_containers,
+    stats.n_run_containers,
+    stats.n_values_run_containers,
+    stats.n_bytes_run_containers
+  );
+}
+
+/**
+ * Computes string statistics of roaring bitmap
+ * Returns `NULL` when failed.
+ * You is responsible for calling `free()`
+ */
+char* bitmap_statistics_str(const Bitmap* bitmap, int format, int* size) {
+  if (!bitmap) {
+    return NULL;
+  }
+
+  char* result = NULL;
+  int result_size = -1;
+
+  switch (format) {
+  case BITMAP_STATISTICS_FORMAT_JSON:
+    result_size = bitmap_stat_json(bitmap, &result);
+    break;
+  case BITMAP_STATISTICS_FORMAT_PLAIN_TEXT:
+    result_size = bitmap_stat_plain(bitmap, &result);
+    break;
+  default:
+    return NULL;
+  }
+
+  if (result_size == -1) {
+    if (result) {
+      rm_free(result);
+      result = NULL;
+    }
+  }
+
+  if (size) {
+    *size = result_size;
+  }
+
+  return result;
+}
+
+static inline int bitmap64_stat_json(const Bitmap64* bitmap, char** result) {
+  roaring64_statistics_t stats;
+  roaring64_bitmap_statistics(bitmap, &stats);
+
+  return asprintf(result,
+    "{"
+    "\"type\":\"bitmap64\","
+    "\"cardinality\":\"%llu\","
+    "\"number_of_containers\":\"%llu\","
+    "\"max_value\":\"%llu\","
+    "\"min_value\":\"%llu\","
+    "\"array_container\":{"
+    "\"number_of_containers\":\"%llu\","
+    "\"container_cardinality\":\"%llu\","
+    "\"container_allocated_bytes\":\"%llu\"},"
+    "\"bitset_container\":{"
+    "\"number_of_containers\":\"%llu\","
+    "\"container_cardinality\":\"%llu\","
+    "\"container_allocated_bytes\":\"%llu\"},"
+    "\"run_container\":{"
+    "\"number_of_containers\":\"%llu\","
+    "\"container_cardinality\":\"%llu\","
+    "\"container_allocated_bytes\":\"%llu\"}"
+    "}",
+    roaring64_bitmap_get_cardinality(bitmap),
+    stats.n_containers,
+    roaring64_bitmap_maximum(bitmap),
+    roaring64_bitmap_minimum(bitmap),
+    stats.n_array_containers,
+    stats.n_values_array_containers,
+    stats.n_bytes_array_containers,
+    stats.n_bitset_containers,
+    stats.n_values_bitset_containers,
+    stats.n_bytes_bitset_containers,
+    stats.n_run_containers,
+    stats.n_values_run_containers,
+    stats.n_bytes_run_containers
+  );
+}
+
+static inline int bitmap64_stat_plain(const Bitmap64* bitmap, char** result) {
+  roaring64_statistics_t stats;
+  roaring64_bitmap_statistics(bitmap, &stats);
+
+  return asprintf(result,
+    "type: bitmap64\n"
+    "cardinality: %llu\n"
+    "number of containers: %llu\n"
+    "max value: %llu\n"
+    "min value: %llu\n"
+    "number of array containers: %llu\n"
+    "\tarray container values: %llu\n"
+    "\tarray container bytes: %llu\n"
+    "bitset  containers: %llu\n"
+    "\tbitset  container values: %llu\n"
+    "\tbitset  container bytes: %llu\n"
+    "run containers: %llu\n"
+    "\trun container values: %llu\n"
+    "\trun container bytes: %llu\n"
+    ,
+    roaring64_bitmap_get_cardinality(bitmap),
+    stats.n_containers,
+    roaring64_bitmap_maximum(bitmap),
+    roaring64_bitmap_minimum(bitmap),
+    stats.n_array_containers,
+    stats.n_values_array_containers,
+    stats.n_bytes_array_containers,
+    stats.n_bitset_containers,
+    stats.n_values_bitset_containers,
+    stats.n_bytes_bitset_containers,
+    stats.n_run_containers,
+    stats.n_values_run_containers,
+    stats.n_bytes_run_containers
+  );
+}
+
+/**
+ * Computes string statistics of roaring bitmap64
+ * Returns `NULL` when failed.
+ * You is responsible for calling `free()`
+ */
+char* bitmap64_statistics_str(const Bitmap64* bitmap, int format, int* size) {
+  if (!bitmap) {
+    return NULL;
+  }
+
+  char* result = NULL;
+  int result_size = -1;
+
+  switch (format) {
+  case BITMAP_STATISTICS_FORMAT_JSON:
+    result_size = bitmap64_stat_json(bitmap, &result);
+    break;
+  case BITMAP_STATISTICS_FORMAT_PLAIN_TEXT:
+    result_size = bitmap64_stat_plain(bitmap, &result);
+    break;
+  default:
+    return NULL;
+  }
+
+  if (result_size == -1) {
+    if (result) {
+      rm_free(result);
+      result = NULL;
+    }
+  }
+
+  if (size) {
+    *size = result_size;
+  }
+
+  return result;
+}

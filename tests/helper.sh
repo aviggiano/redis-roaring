@@ -87,8 +87,8 @@ function rcall_assert() {
   else
     echo -e "\x1b[31m✗\x1b[0m $description"
     echo "  Command: $cmd"
-    echo "  Expected: $expected"
-    echo "  Got: $result"
+    echo "  Expected: '$expected'"
+    echo "  Got: '$result'"
     return 1
   fi
 }
