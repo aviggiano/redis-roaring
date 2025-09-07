@@ -44,6 +44,8 @@ The performance tests can take a while, since they run on a real dataset of inte
 
 ## API
 
+**📖 Complete Documentation**: For detailed command documentation including syntax, parameters, examples, and usage notes, see [docs/commands/index.md](docs/commands/index.md)
+
 The following operations are supported
 
 - `R.SETBIT` (same as [SETBIT](https://redis.io/commands/setbit))
