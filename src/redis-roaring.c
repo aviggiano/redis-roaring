@@ -10,6 +10,7 @@ static Bitmap64* BITMAP64_NILL;
 static Bitmap* BITMAP_NILL;
 
 #define BITMAP_ENCODING_VERSION 1
+#define BITMAP_MAX_RANGE_SIZE 100000000
 
 void ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value) {
   if (value <= INT64_MAX) {
@@ -292,8 +293,12 @@ int R64RangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int a
 
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
-  int type = RedisModule_KeyType(key);
-  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != Bitmap64Type) {
+
+  if (RedisModule_KeyType(key) == REDISMODULE_KEYTYPE_EMPTY) {
+    return RedisModule_ReplyWithEmptyArray(ctx);
+  }
+
+  if (RedisModule_ModuleTypeGetType(key) != Bitmap64Type) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
@@ -304,37 +309,40 @@ int R64RangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int a
 
   unsigned long long end;
   if ((RedisModule_StringToULongLong(argv[3], &end) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid start: must be an unsigned 64 bit integer");
+    return RedisModule_ReplyWithError(ctx, "ERR invalid end: must be an unsigned 64 bit integer");
   }
 
-  if (start < 0 || end < 0) {
-    return RedisModule_ReplyWithError(ctx, "ERR start and end must be >= 0");
+  if (start > end) {
+    return RedisModule_ReplyWithEmptyArray(ctx);
   }
 
-  Bitmap64* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
-  uint64_t* array = NULL;
-  uint64_t n = 0;
-  if (bitmap != NULL) {
-    unsigned long long count = (unsigned long long) bitmap64_get_cardinality(bitmap);
+  // Check for potential overflow in range calculation
+  uint64_t range_size = (end - start) + 1;
 
-    if (start > count - 1 || start > end) {
-      n = 0;
-    } else {
-      n = end - start + 1;
-    }
-    if (n > 0) {
-      array = bitmap64_range_int_array(bitmap, start, n);
-    }
-  } else {
-    n = 0;
+  if (range_size > BITMAP_MAX_RANGE_SIZE) {
+    return RedisModule_ReplyWithErrorFormat(ctx, "ERR range too large: maximum %llu elements", BITMAP_MAX_RANGE_SIZE);
   }
-  RedisModule_ReplyWithArray(ctx, n);
-  for (size_t i = 0; i < n; i++) {
+
+  uint64_t count;
+  Bitmap64* bitmap = RedisModule_ModuleTypeGetValue(key);
+  uint64_t* array = bitmap64_range_int_array(bitmap, start, end, &count);
+
+  if (array == NULL) {
+    return RedisModule_ReplyWithError(ctx, "ERR out of memory");
+  }
+
+  if (count == 0) {
+    rm_free(array);
+    return RedisModule_ReplyWithEmptyArray(ctx);
+  }
+
+  RedisModule_ReplyWithArray(ctx, (long) count);
+
+  for (uint64_t i = 0; i < count; i++) {
     ReplyWithUint64(ctx, array[i]);
   }
-  if (array != NULL) {
-    rm_free(array);
-  }
+
+  rm_free(array);
   return REDISMODULE_OK;
 }
 
@@ -1349,48 +1357,56 @@ int RRangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
 
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
-  int type = RedisModule_KeyType(key);
-  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
+
+  if (RedisModule_KeyType(key) == REDISMODULE_KEYTYPE_EMPTY) {
+    return RedisModule_ReplyWithEmptyArray(ctx);
+  }
+
+  if (RedisModule_ModuleTypeGetType(key) != BitmapType) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
   long long start;
-  if ((RedisModule_StringToLongLong(argv[2], &start) != REDISMODULE_OK)) {
+  if ((RedisModule_StringToLongLong(argv[2], &start) != REDISMODULE_OK) || start < 0 || start > UINT32_MAX) {
     return RedisModule_ReplyWithError(ctx, "ERR invalid start: must be an unsigned 32 bit integer");
   }
 
   long long end;
-  if ((RedisModule_StringToLongLong(argv[3], &end) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid start: must be an unsigned 32 bit integer");
+  if ((RedisModule_StringToLongLong(argv[3], &end) != REDISMODULE_OK) || end < 0 || end > UINT32_MAX) {
+    return RedisModule_ReplyWithError(ctx, "ERR invalid end: must be an unsigned 32 bit integer");
   }
 
-  if (start < 0 || end < 0) {
-    return RedisModule_ReplyWithError(ctx, "ERR start and end must be >= 0");
+  if (start > end) {
+    return RedisModule_ReplyWithEmptyArray(ctx);
   }
 
-  Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
-  uint32_t* array = NULL;
-  size_t n = 0;
-  if (bitmap != NULL) {
-    long long count = (long long) bitmap_get_cardinality(bitmap);
-    if (start > count - 1 || start > end) {
-      n = 0;
-    } else {
-      n = end - start + 1;
-    }
-    if (n > 0) {
-      array = bitmap_range_int_array(bitmap, (size_t) start, n);
-    }
-  } else {
-    n = 0;
+  // Check for potential overflow in range calculation
+  uint32_t range_size = (end - start) + 1;
+
+  if (range_size > BITMAP_MAX_RANGE_SIZE) {
+    return RedisModule_ReplyWithErrorFormat(ctx, "ERR range too large: maximum %llu elements", BITMAP_MAX_RANGE_SIZE);
   }
-  RedisModule_ReplyWithArray(ctx, n);
-  for (size_t i = 0; i < n; i++) {
-    RedisModule_ReplyWithLongLong(ctx, array[i]);
+
+  size_t count;
+  Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
+  uint32_t* array = bitmap_range_int_array(bitmap, start, end, &count);
+
+  if (array == NULL) {
+    return RedisModule_ReplyWithError(ctx, "ERR out of memory");
   }
-  if (array != NULL) {
+
+  if (count == 0) {
     rm_free(array);
+    return RedisModule_ReplyWithEmptyArray(ctx);
   }
+
+  RedisModule_ReplyWithArray(ctx, (long) count);
+
+  for (uint64_t i = 0; i < count; i++) {
+    RedisModule_ReplyWithLongLong(ctx, (long long) array[i]);
+  }
+
+  rm_free(array);
   return REDISMODULE_OK;
 }
 

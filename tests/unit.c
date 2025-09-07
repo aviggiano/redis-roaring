@@ -6,6 +6,7 @@
 #include "unit/test_bitmap_free.c"
 #include "unit/test_bitmap_from_bit_array.c"
 #include "unit/test_bitmap_from_int_array.c"
+#include "unit/test_bitmap_range_int_array.c"
 #include "unit/test_bitmap64_range_int_array.c"
 #include "unit/test_bitmap_get_nth_element.c"
 #include "unit/test_bitmap_not.c"
@@ -57,6 +58,7 @@ int main(int argc, char* argv[]) {
   test_bitmap64_andor();
   test_bitmap64_one();
   test_bitmap_one();
+  test_bitmap_range_int_array();
 
   test_end();
 

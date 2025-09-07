@@ -83,8 +83,8 @@ Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array);
 Bitmap64* bitmap64_from_int_array(size_t n, const uint64_t* array);
 uint32_t* bitmap_get_int_array(const Bitmap* bitmap, size_t* n);
 uint64_t* bitmap64_get_int_array(const Bitmap64* bitmap, uint64_t* n);
-uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t offset, size_t n);
-uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t offset, uint64_t n);
+uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t start_offset, size_t end_offset, size_t* result_count);
+uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t start_offset, uint64_t end_offset, uint64_t* result_count);
 /**
  * Creates a Bitmap from a buffer composed from ASCII '0's and '1's
  *

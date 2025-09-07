@@ -16,3 +16,4 @@ src/amalgamation_demo.cpp
 src/roaring.hh
 .vscode
 .editorconfig
+appendonlydir

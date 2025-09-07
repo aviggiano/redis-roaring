@@ -420,21 +420,93 @@ uint64_t* bitmap64_get_int_array(const Bitmap64* bitmap, uint64_t* n) {
   return ans;
 }
 
-uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t offset, size_t n) {
-  uint32_t* ans = rm_calloc(n, sizeof(*ans));
-  roaring_bitmap_range_uint32_array(bitmap, offset, n, ans);
+uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t start_offset, size_t end_offset, size_t* result_count) {
+  if (result_count) *result_count = 0;
+
+  // Validate input parameters
+  if (bitmap == NULL) {
+    return NULL;
+  }
+
+  // Validate range parameters
+  if (start_offset > end_offset) {
+    return NULL;
+  }
+
+  uint32_t range_size = (end_offset - start_offset) + 1;
+
+  // Check for overflow
+  if (range_size < (end_offset - start_offset)) {
+    return NULL;
+  }
+
+  uint32_t* ans = rm_calloc_try(range_size, sizeof(uint32_t));
+
+  roaring_bitmap_range_uint32_array(bitmap, start_offset, range_size, ans);
+
+  // Determine actual count of set bits by finding the first zero entry
+  // Special case: when querying from offset 0, verify that bit 0 is actually set
+  // since zero values in the array are ambiguous (could be unset bit or actual zero offset)
+  if (start_offset == 0 && ans[0] == 0) {
+    if (!roaring_bitmap_contains(bitmap, 0)) {
+      return ans;
+    }
+  } else if (ans[0] == 0) {
+    // No set bits found in range (first element is zero and we're not starting from offset 0)
+    return ans;
+  }
+
+  uint32_t actual_count = 1;
+
+  // Count consecutive non-zero entries to determine actual result size
+  while (actual_count < range_size) {
+    if (ans[actual_count] == 0) break;
+    actual_count++;
+  }
+
+  if (result_count) *result_count = actual_count;
+
   return ans;
 }
 
-uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t offset, uint64_t n) {
-  uint64_t* ans = rm_calloc(n, sizeof(*ans));
+uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t start_offset, uint64_t end_offset, uint64_t* result_count) {
+  if (result_count) *result_count = 0;
+
+  // Validate input parameters
+  if (bitmap == NULL) {
+    return NULL;
+  }
+
+  // Validate range parameters
+  if (start_offset > end_offset) {
+    return NULL;
+  }
+
+  uint64_t range_size = (end_offset - start_offset) + 1;
+
+  // Check for overflow
+  if (range_size < (end_offset - start_offset)) {
+    return NULL;
+  }
+
+  uint64_t* ans = rm_calloc_try(range_size, sizeof(uint64_t));
+
+  if (ans == NULL) {
+    return NULL;
+  }
+
+  uint64_t i = 0;
 
   // [TODO] replace with roaring64_bitmap_range_uint64_array in next version of CRoaring
-  for (uint64_t i = 0; i < n; i++) {
-    if (!roaring64_bitmap_select(bitmap, offset + i, &ans[i])) {
+  while (i < range_size) {
+    if (!roaring64_bitmap_select(bitmap, start_offset + i, &ans[i])) {
       break;
     }
+
+    i++;
   }
+
+  if (result_count) *result_count = i;
 
   return ans;
 }
