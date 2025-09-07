@@ -8,18 +8,14 @@ static RedisModuleType* BitmapType;
 static RedisModuleType* Bitmap64Type;
 static Bitmap64* BITMAP64_NILL;
 static Bitmap* BITMAP_NILL;
+static char REPLY_UINT64_BUFFER[21];
 
 #define BITMAP_ENCODING_VERSION 1
 #define BITMAP_MAX_RANGE_SIZE 100000000
 
 void ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value) {
-  if (value <= INT64_MAX) {
-    RedisModule_ReplyWithLongLong(ctx, (long long) value);
-  } else {
-    char buffer[21];
-    size_t len = uint64_to_string(value, buffer);
-    RedisModule_ReplyWithBigNumber(ctx, buffer, len);
-  }
+  size_t len = uint64_to_string(value, REPLY_UINT64_BUFFER);
+  RedisModule_ReplyWithBigNumber(ctx, REPLY_UINT64_BUFFER, len);
 }
 
 void BitmapRdbSave(RedisModuleIO* rdb, void* value);
