@@ -1130,8 +1130,8 @@ int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return REDISMODULE_ERR;
   }
 
-  RedisModule_ReplyWithVerbatimString(ctx, stat, strlen(stat));
-  rm_free(stat);
+  RedisModule_ReplyWithVerbatimString(ctx, stat, stat_len);
+  free(stat); // use system free() instead of rm_free() because asprintf uses system malloc
 
   return REDISMODULE_OK;
 }
