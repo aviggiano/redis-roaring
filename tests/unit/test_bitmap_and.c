@@ -16,7 +16,8 @@ void test_bitmap_and() {
       bitmap_setbit(six, 2, 1);
 
       Bitmap* bitmaps[] = { twelve, four, six };
-      Bitmap* and = bitmap_and(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
+      Bitmap* and = bitmap_alloc();
+      bitmap_and(and, sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
       roaring_uint32_iterator_t* iterator = roaring_iterator_create(and);
       int expected[] = { 2 };
       for (int i = 0; iterator->has_value; i++) {
@@ -30,6 +31,21 @@ void test_bitmap_and() {
       bitmap_free(six);
       bitmap_free(four);
       bitmap_free(twelve);
+    }
+
+    IT("Should clear destination bitmap when passed zero bitmaps even if dest was not empty initially")
+    {
+      // Create a destination bitmap with some initial values
+      uint32_t initial_values[] = { 10, 20, 30, 40, 50 };
+      Bitmap* result = roaring_bitmap_of_ptr(ARRAY_LENGTH(initial_values), initial_values);
+
+      // Call bitmap_one with zero bitmaps
+      bitmap_and(result, 0, NULL);
+
+      // Verify destination is now empty
+      ASSERT_BITMAP_SIZE(0, result);
+
+      roaring_bitmap_free(result);
     }
   }
 }

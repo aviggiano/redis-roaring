@@ -6,6 +6,7 @@
 #include "unit/test_bitmap_free.c"
 #include "unit/test_bitmap_from_bit_array.c"
 #include "unit/test_bitmap_from_int_array.c"
+#include "unit/test_bitmap_range_int_array.c"
 #include "unit/test_bitmap64_range_int_array.c"
 #include "unit/test_bitmap_get_nth_element.c"
 #include "unit/test_bitmap_not.c"
@@ -24,6 +25,10 @@
 #include "unit/test_bitmap64_setbit.c"
 #include "unit/test_bitmap64_xor.c"
 #include "unit/test_bitmap64_not.c"
+#include "unit/test_bitmap_andor.c"
+#include "unit/test_bitmap64_andor.c"
+#include "unit/test_bitmap_one.c"
+#include "unit/test_bitmap64_one.c"
 
 int main(int argc, char* argv[]) {
   test_start();
@@ -49,8 +54,13 @@ int main(int argc, char* argv[]) {
   test_bitmap_xor();
   test_bitmap_and();
   test_bitmap_or();
+  test_bitmap_andor();
+  test_bitmap64_andor();
+  test_bitmap64_one();
+  test_bitmap_one();
+  test_bitmap_range_int_array();
 
   test_end();
 
-  return 0;
+  return test_total_failed > 0 ? 1 : 0;
 }

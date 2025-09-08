@@ -140,47 +140,232 @@ uint64_t bitmap64_get_nth_element_not_present_slow(const Bitmap64* bitmap, uint6
   return element;
 }
 
-Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps) {
-  return roaring_bitmap_or_many_heap(n, bitmaps);
-}
-
-Bitmap64* bitmap64_or(uint32_t n, const Bitmap64** bitmaps) {
-  Bitmap64* result = roaring64_bitmap_copy(bitmaps[0]);
-
-  for (uint32_t i = 1; i < n; i++) {
-    roaring64_bitmap_or_inplace(result, bitmaps[i]);
+// [TODO] Replace with roaring64_bitmap_overwrite in next CRoaring release 
+static void _roaring64_bitmap_overwrite(Bitmap64* dest, const Bitmap64* src) {
+  if (!roaring64_bitmap_is_empty(dest)) {
+    roaring64_bitmap_clear(dest);
   }
 
-  return result;
+  roaring64_bitmap_or_inplace(dest, src);
 }
 
-Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps) {
-  Bitmap* result = roaring_bitmap_copy(bitmaps[0]);
-  for (uint32_t i = 1; i < n; i++) {
-    roaring_bitmap_and_inplace(result, bitmaps[i]);
+void bitmap_or(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
+  if (n == 0) {
+    return roaring_bitmap_clear(r);
   }
-  return result;
-}
-
-Bitmap64* bitmap64_and(uint32_t n, const Bitmap64** bitmaps) {
-  Bitmap64* result = roaring64_bitmap_copy(bitmaps[0]);
-  for (uint32_t i = 1; i < n; i++) {
-    roaring64_bitmap_and_inplace(result, bitmaps[i]);
-  }
-  return result;
-}
-
-Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps) {
-  return roaring_bitmap_xor_many(n, bitmaps);
-}
-
-Bitmap64* bitmap64_xor(uint32_t n, const Bitmap64** bitmaps) {
-  Bitmap64* result = roaring64_bitmap_copy(bitmaps[0]);
-  for (uint32_t i = 1; i < n; i++) {
-    roaring64_bitmap_xor_inplace(result, bitmaps[i]);
+  if (n == 1) {
+    roaring_bitmap_overwrite(r, bitmaps[0]);
+    return;
   }
 
-  return result;
+  roaring_bitmap_overwrite(r, bitmaps[0]);
+
+  for (size_t i = 1; i < n; i++) {
+    roaring_bitmap_lazy_or_inplace(r, (Bitmap*) bitmaps[i], false);
+  }
+
+  roaring_bitmap_repair_after_lazy(r);
+}
+
+void bitmap64_or(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
+  if (n == 0) {
+    return roaring64_bitmap_clear(r);
+  }
+  if (n == 1) {
+    _roaring64_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+
+  _roaring64_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring64_bitmap_or_inplace(r, bitmaps[i]);
+  }
+}
+
+void bitmap_and(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
+  if (n == 0) {
+    return roaring_bitmap_clear(r);
+  }
+  if (n == 1) {
+    roaring_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+
+  roaring_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring_bitmap_and_inplace(r, bitmaps[i]);
+  }
+}
+
+void bitmap64_and(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
+  if (n == 0) {
+    return roaring64_bitmap_clear(r);
+  }
+  if (n == 1) {
+    _roaring64_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+
+  _roaring64_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring64_bitmap_and_inplace(r, bitmaps[i]);
+  }
+}
+
+void bitmap_xor(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
+  if (n == 0) {
+    return roaring_bitmap_clear(r);
+  }
+  if (n == 1) {
+    roaring_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+
+  roaring_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring_bitmap_lazy_xor_inplace(r, bitmaps[i]);
+  }
+
+  roaring_bitmap_repair_after_lazy(r);
+}
+
+void bitmap64_xor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
+  if (n == 0) {
+    return roaring64_bitmap_clear(r);
+  }
+  if (n == 1) {
+    _roaring64_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+
+  _roaring64_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring64_bitmap_xor_inplace(r, bitmaps[i]);
+  }
+}
+
+void bitmap_andor(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
+  if (n == 0) {
+    return roaring_bitmap_clear(r);
+  }
+  if (n == 1) {
+    roaring_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+  if (n < 2) {
+    return bitmap_and(r, n, bitmaps);
+  }
+
+  const Bitmap* x = bitmaps[0];
+
+  roaring_bitmap_overwrite(r, bitmaps[1]);
+
+  for (size_t i = 2; i < n; i++) {
+    roaring_bitmap_lazy_or_inplace(r, bitmaps[i], false);
+  }
+
+  roaring_bitmap_repair_after_lazy(r);
+
+  roaring_bitmap_and_inplace(r, x);
+}
+
+void bitmap64_andor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
+  if (n == 0) {
+    return roaring64_bitmap_clear(r);
+  }
+  if (n == 1) {
+    _roaring64_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+  if (n < 2) {
+    return bitmap64_and(r, n, bitmaps);
+  }
+
+  const Bitmap64* x = bitmaps[0];
+
+  _roaring64_bitmap_overwrite(r, bitmaps[1]);
+
+  for (size_t i = 2; i < n; i++) {
+    roaring64_bitmap_or_inplace(r, bitmaps[i]);
+  }
+
+  roaring64_bitmap_and_inplace(r, x);
+}
+
+void bitmap_one(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
+  if (n == 0) {
+    return roaring_bitmap_clear(r);
+  }
+  if (n == 1) {
+    roaring_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+  // Do simple xor for two bitmaps
+  if (n < 2) {
+    return bitmap_xor(r, n, bitmaps);
+  }
+
+  // Helper bitmap to track bits seen in more than one key
+  Bitmap* helper = roaring_bitmap_create();
+
+  // Start with the first bitmap
+  roaring_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    // Track bits that appear in both current result and new bitmap
+    // These are bits that now appear in more than one key
+    Bitmap* intersection = roaring_bitmap_and(r, bitmaps[i]);
+    roaring_bitmap_or_inplace(helper, intersection);
+    roaring_bitmap_free(intersection);
+
+    // XOR the new bitmap with current result
+    roaring_bitmap_xor_inplace(r, bitmaps[i]);
+
+    // Remove bits that have been seen in more than one key
+    roaring_bitmap_andnot_inplace(r, helper);
+  }
+
+  roaring_bitmap_free(helper);
+}
+
+void bitmap64_one(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
+  if (n == 0) {
+    return roaring64_bitmap_clear(r);
+  }
+  if (n == 1) {
+    return _roaring64_bitmap_overwrite(r, bitmaps[0]);
+  }
+  // Do simple xor for two bitmaps
+  if (n < 2) {
+    return bitmap64_xor(r, n, bitmaps);
+  }
+
+  // Helper bitmap to track bits seen in more than one key
+  Bitmap64* helper = roaring64_bitmap_create();
+
+  // Start with the first bitmap
+  _roaring64_bitmap_overwrite(r, bitmaps[0]);
+
+  for (uint32_t i = 1; i < n; i++) {
+    // Track bits that appear in both current result and new bitmap
+    // These are bits that now appear in more than one key
+    Bitmap64* intersection = roaring64_bitmap_and(r, bitmaps[i]);
+    roaring64_bitmap_or_inplace(helper, intersection);
+    roaring64_bitmap_free(intersection);
+
+    // XOR the new bitmap with current result
+    roaring64_bitmap_xor_inplace(r, bitmaps[i]);
+
+    // Remove bits that have been seen in more than one key
+    roaring64_bitmap_andnot_inplace(r, helper);
+  }
+
+  roaring64_bitmap_free(helper);
 }
 
 Bitmap* bitmap_not_array(uint32_t unused, const Bitmap** bitmaps) {
@@ -235,21 +420,93 @@ uint64_t* bitmap64_get_int_array(const Bitmap64* bitmap, uint64_t* n) {
   return ans;
 }
 
-uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t offset, size_t n) {
-  uint32_t* ans = rm_calloc(n, sizeof(*ans));
-  roaring_bitmap_range_uint32_array(bitmap, offset, n, ans);
+uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t start_offset, size_t end_offset, size_t* result_count) {
+  if (result_count) *result_count = 0;
+
+  // Validate input parameters
+  if (bitmap == NULL) {
+    return NULL;
+  }
+
+  // Validate range parameters
+  if (start_offset > end_offset) {
+    return NULL;
+  }
+
+  uint32_t range_size = (end_offset - start_offset) + 1;
+
+  // Check for overflow
+  if (range_size < (end_offset - start_offset)) {
+    return NULL;
+  }
+
+  uint32_t* ans = rm_calloc_try(range_size, sizeof(uint32_t));
+
+  roaring_bitmap_range_uint32_array(bitmap, start_offset, range_size, ans);
+
+  // Determine actual count of set bits by finding the first zero entry
+  // Special case: when querying from offset 0, verify that bit 0 is actually set
+  // since zero values in the array are ambiguous (could be unset bit or actual zero offset)
+  if (start_offset == 0 && ans[0] == 0) {
+    if (!roaring_bitmap_contains(bitmap, 0)) {
+      return ans;
+    }
+  } else if (ans[0] == 0) {
+    // No set bits found in range (first element is zero and we're not starting from offset 0)
+    return ans;
+  }
+
+  uint32_t actual_count = 1;
+
+  // Count consecutive non-zero entries to determine actual result size
+  while (actual_count < range_size) {
+    if (ans[actual_count] == 0) break;
+    actual_count++;
+  }
+
+  if (result_count) *result_count = actual_count;
+
   return ans;
 }
 
-uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t offset, uint64_t n) {
-  uint64_t* ans = rm_calloc(n, sizeof(*ans));
+uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t start_offset, uint64_t end_offset, uint64_t* result_count) {
+  if (result_count) *result_count = 0;
+
+  // Validate input parameters
+  if (bitmap == NULL) {
+    return NULL;
+  }
+
+  // Validate range parameters
+  if (start_offset > end_offset) {
+    return NULL;
+  }
+
+  uint64_t range_size = (end_offset - start_offset) + 1;
+
+  // Check for overflow
+  if (range_size < (end_offset - start_offset)) {
+    return NULL;
+  }
+
+  uint64_t* ans = rm_calloc_try(range_size, sizeof(uint64_t));
+
+  if (ans == NULL) {
+    return NULL;
+  }
+
+  uint64_t i = 0;
 
   // [TODO] replace with roaring64_bitmap_range_uint64_array in next version of CRoaring
-  for (uint64_t i = 0; i < n; i++) {
-    if (!roaring64_bitmap_select(bitmap, offset + i, &ans[i])) {
+  while (i < range_size) {
+    if (!roaring64_bitmap_select(bitmap, start_offset + i, &ans[i])) {
       break;
     }
+
+    i++;
   }
+
+  if (result_count) *result_count = i;
 
   return ans;
 }
@@ -311,10 +568,20 @@ void bitmap_free_bit_array(char* array) {
 }
 
 Bitmap* bitmap_from_range(uint64_t from, uint64_t to) {
+  // allocate empty bitmap when invalid range
+  if (from == to) {
+    return bitmap_alloc();
+  }
+
   return roaring_bitmap_from_range(from, to, 1);
 }
 
 Bitmap64* bitmap64_from_range(uint64_t from, uint64_t to) {
+  // allocate empty bitmap when invalid range
+  if (from == to) {
+    return bitmap64_alloc();
+  }
+
   return roaring64_bitmap_from_range(from, to, 1);
 }
 
@@ -392,4 +659,233 @@ size_t uint64_to_string(uint64_t value, char* buffer) {
   }
 
   return len;
+}
+
+
+static inline int bitmap_stat_json(const Bitmap* bitmap, char** result) {
+  roaring_statistics_t stats;
+  roaring_bitmap_statistics(bitmap, &stats);
+
+  return asprintf(result,
+    "{"
+    "\"type\":\"bitmap\","
+    "\"cardinality\":\"%llu\","
+    "\"number_of_containers\":\"%u\","
+    "\"max_value\":\"%u\","
+    "\"min_value\":\"%u\","
+    "\"array_container\":{"
+    "\"number_of_containers\":\"%u\","
+    "\"container_cardinality\":\"%u\","
+    "\"container_allocated_bytes\":\"%u\"},"
+    "\"bitset_container\":{"
+    "\"number_of_containers\":\"%u\","
+    "\"container_cardinality\":\"%u\","
+    "\"container_allocated_bytes\":\"%u\"},"
+    "\"run_container\":{"
+    "\"number_of_containers\":\"%u\","
+    "\"container_cardinality\":\"%u\","
+    "\"container_allocated_bytes\":\"%u\"}"
+    "}",
+    roaring_bitmap_get_cardinality(bitmap),
+    stats.n_containers,
+    roaring_bitmap_maximum(bitmap),
+    roaring_bitmap_minimum(bitmap),
+    stats.n_array_containers,
+    stats.n_values_array_containers,
+    stats.n_bytes_array_containers,
+    stats.n_bitset_containers,
+    stats.n_values_bitset_containers,
+    stats.n_bytes_bitset_containers,
+    stats.n_run_containers,
+    stats.n_values_run_containers,
+    stats.n_bytes_run_containers
+  );
+}
+
+static inline int bitmap_stat_plain(const Bitmap* bitmap, char** result) {
+  roaring_statistics_t stats;
+  roaring_bitmap_statistics(bitmap, &stats);
+
+  return asprintf(result,
+    "type: bitmap\n"
+    "cardinality: %llu\n"
+    "number of containers: %u\n"
+    "max value: %u\n"
+    "min value: %u\n"
+    "number of array containers: %u\n"
+    "\tarray container values: %u\n"
+    "\tarray container bytes: %u\n"
+    "bitset  containers: %u\n"
+    "\tbitset  container values: %u\n"
+    "\tbitset  container bytes: %u\n"
+    "run containers: %u\n"
+    "\trun container values: %u\n"
+    "\trun container bytes: %u\n"
+    ,
+    roaring_bitmap_get_cardinality(bitmap),
+    stats.n_containers,
+    roaring_bitmap_maximum(bitmap),
+    roaring_bitmap_minimum(bitmap),
+    stats.n_array_containers,
+    stats.n_values_array_containers,
+    stats.n_bytes_array_containers,
+    stats.n_bitset_containers,
+    stats.n_values_bitset_containers,
+    stats.n_bytes_bitset_containers,
+    stats.n_run_containers,
+    stats.n_values_run_containers,
+    stats.n_bytes_run_containers
+  );
+}
+
+/**
+ * Computes string statistics of roaring bitmap
+ * Returns `NULL` when failed.
+ * You is responsible for calling `free()`
+ */
+char* bitmap_statistics_str(const Bitmap* bitmap, int format, int* size) {
+  if (!bitmap) {
+    return NULL;
+  }
+
+  char* result = NULL;
+  int result_size = -1;
+
+  switch (format) {
+  case BITMAP_STATISTICS_FORMAT_JSON:
+    result_size = bitmap_stat_json(bitmap, &result);
+    break;
+  case BITMAP_STATISTICS_FORMAT_PLAIN_TEXT:
+    result_size = bitmap_stat_plain(bitmap, &result);
+    break;
+  default:
+    return NULL;
+  }
+
+  if (result_size == -1) {
+    if (result) {
+      rm_free(result);
+      result = NULL;
+    }
+  }
+
+  if (size) {
+    *size = result_size;
+  }
+
+  return result;
+}
+
+static inline int bitmap64_stat_json(const Bitmap64* bitmap, char** result) {
+  roaring64_statistics_t stats;
+  roaring64_bitmap_statistics(bitmap, &stats);
+
+  return asprintf(result,
+    "{"
+    "\"type\":\"bitmap64\","
+    "\"cardinality\":\"%llu\","
+    "\"number_of_containers\":\"%llu\","
+    "\"max_value\":\"%llu\","
+    "\"min_value\":\"%llu\","
+    "\"array_container\":{"
+    "\"number_of_containers\":\"%llu\","
+    "\"container_cardinality\":\"%llu\","
+    "\"container_allocated_bytes\":\"%llu\"},"
+    "\"bitset_container\":{"
+    "\"number_of_containers\":\"%llu\","
+    "\"container_cardinality\":\"%llu\","
+    "\"container_allocated_bytes\":\"%llu\"},"
+    "\"run_container\":{"
+    "\"number_of_containers\":\"%llu\","
+    "\"container_cardinality\":\"%llu\","
+    "\"container_allocated_bytes\":\"%llu\"}"
+    "}",
+    roaring64_bitmap_get_cardinality(bitmap),
+    stats.n_containers,
+    roaring64_bitmap_maximum(bitmap),
+    roaring64_bitmap_minimum(bitmap),
+    stats.n_array_containers,
+    stats.n_values_array_containers,
+    stats.n_bytes_array_containers,
+    stats.n_bitset_containers,
+    stats.n_values_bitset_containers,
+    stats.n_bytes_bitset_containers,
+    stats.n_run_containers,
+    stats.n_values_run_containers,
+    stats.n_bytes_run_containers
+  );
+}
+
+static inline int bitmap64_stat_plain(const Bitmap64* bitmap, char** result) {
+  roaring64_statistics_t stats;
+  roaring64_bitmap_statistics(bitmap, &stats);
+
+  return asprintf(result,
+    "type: bitmap64\n"
+    "cardinality: %llu\n"
+    "number of containers: %llu\n"
+    "max value: %llu\n"
+    "min value: %llu\n"
+    "number of array containers: %llu\n"
+    "\tarray container values: %llu\n"
+    "\tarray container bytes: %llu\n"
+    "bitset  containers: %llu\n"
+    "\tbitset  container values: %llu\n"
+    "\tbitset  container bytes: %llu\n"
+    "run containers: %llu\n"
+    "\trun container values: %llu\n"
+    "\trun container bytes: %llu\n"
+    ,
+    roaring64_bitmap_get_cardinality(bitmap),
+    stats.n_containers,
+    roaring64_bitmap_maximum(bitmap),
+    roaring64_bitmap_minimum(bitmap),
+    stats.n_array_containers,
+    stats.n_values_array_containers,
+    stats.n_bytes_array_containers,
+    stats.n_bitset_containers,
+    stats.n_values_bitset_containers,
+    stats.n_bytes_bitset_containers,
+    stats.n_run_containers,
+    stats.n_values_run_containers,
+    stats.n_bytes_run_containers
+  );
+}
+
+/**
+ * Computes string statistics of roaring bitmap64
+ * Returns `NULL` when failed.
+ * You is responsible for calling `free()`
+ */
+char* bitmap64_statistics_str(const Bitmap64* bitmap, int format, int* size) {
+  if (!bitmap) {
+    return NULL;
+  }
+
+  char* result = NULL;
+  int result_size = -1;
+
+  switch (format) {
+  case BITMAP_STATISTICS_FORMAT_JSON:
+    result_size = bitmap64_stat_json(bitmap, &result);
+    break;
+  case BITMAP_STATISTICS_FORMAT_PLAIN_TEXT:
+    result_size = bitmap64_stat_plain(bitmap, &result);
+    break;
+  default:
+    return NULL;
+  }
+
+  if (result_size == -1) {
+    if (result) {
+      rm_free(result);
+      result = NULL;
+    }
+  }
+
+  if (size) {
+    *size = result_size;
+  }
+
+  return result;
 }

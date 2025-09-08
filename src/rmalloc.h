@@ -22,6 +22,12 @@ static inline void *rm_malloc(size_t n) {
 static inline void *rm_calloc(size_t nelem, size_t elemsz) {
   return RedisModule_Calloc(nelem, elemsz);
 }
+static inline void *rm_malloc_try(size_t n) {
+  return RedisModule_TryAlloc(n);
+}
+static inline void *rm_calloc_try(size_t nelem, size_t elemsz) {
+  return RedisModule_TryCalloc(nelem, elemsz);
+}
 static inline void *rm_realloc(void *p, size_t n) {
   if (n == 0) {
     RedisModule_Free(p);
@@ -74,8 +80,10 @@ static int rm_asprintf(char **__ptr, const char *__restrict __fmt, ...) {
 #ifndef REDIS_MODULE_TARGET
 /* for non redis module targets */
 #define rm_malloc malloc
+#define rm_malloc_try malloc
 #define rm_free free
 #define rm_calloc calloc
+#define rm_calloc_try calloc
 #define rm_realloc realloc
 #define rm_strdup strdup
 #define rm_strndup strndup
@@ -84,5 +92,9 @@ static int rm_asprintf(char **__ptr, const char *__restrict __fmt, ...) {
 #endif
 
 #define rm_new(x) rm_malloc(sizeof(x))
+
+static inline void *rm_aligned_malloc(size_t alignment, size_t size) {
+	return rm_malloc(size);
+}
 
 #endif /* __RMUTIL_ALLOC__ */

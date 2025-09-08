@@ -311,16 +311,16 @@ static inline void test_failed() {
     } while(0)
 
 // Equality assertion macros
-#define ASSERT_EQ(expected, actual) \
+#define ASSERT_EQ_IMPL(expected, actual, op_name) \
     do { \
         if ((expected) == (actual)) { \
-            printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_EQ(", get_test_padding()); \
+            printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " " op_name "(", get_test_padding()); \
             printf_test(GET_FORMAT_SPECIFIER(expected), (expected)); \
             printf_test(", "); \
             printf_test(GET_FORMAT_SPECIFIER(actual), (actual)); \
             printf_test(")\n"); \
         } else { \
-            printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_EQ(", get_test_padding()); \
+            printf_test("%s" COLOR_RED "✗" COLOR_RESET " " op_name "(", get_test_padding()); \
             printf_test(GET_FORMAT_SPECIFIER(expected), (expected)); \
             printf_test(", "); \
             printf_test(GET_FORMAT_SPECIFIER(actual), (actual)); \
@@ -329,6 +329,8 @@ static inline void test_failed() {
             test_failed(); \
         } \
     } while(0)
+
+#define ASSERT_EQ(expected, actual) ASSERT_EQ_IMPL(expected, actual, "ASSERT_EQ")
 
 // Equality assertion macros
 #define ASSERT_NOT_EQ(expected, actual) \
@@ -388,7 +390,7 @@ static inline void test_failed() {
         printf_test("%sArray %s[%zu]:\t[", get_test_padding(), name, (size_t)(length)); \
         for (size_t _i = 0; _i < (length); _i++) { \
             printf_test(GET_FORMAT_SPECIFIER((array)[0]), (array)[_i]); \
-            if (_i < (length) - 1) printf(", "); \
+            if (_i < (length) - 1) printf_test(", "); \
         } \
         printf_test("]\n"); \
     } while(0)
@@ -429,7 +431,9 @@ static inline void test_failed() {
     } while(0)
 
 // Advanced array assertions with explicit lengths (supports different lengths)
-#define ASSERT_ARRAY_EQ(expected, actual, exp_len, act_len) \
+#define ASSERT_ARRAY_EQ(expected, actual, exp_len, act_len) ASSERT_ARRAY_EQ_IMPL(expected, actual, exp_len, act_len, "ASSERT_ARRAY_EQ")
+
+#define ASSERT_ARRAY_EQ_IMPL(expected, actual, exp_len, act_len, op_name) \
     do { \
         size_t _exp_len = (size_t)(exp_len); \
         size_t _act_len = (size_t)(act_len); \
@@ -437,16 +441,17 @@ static inline void test_failed() {
         \
         /* Check if lengths match */ \
         if (_exp_len != _act_len) { \
-            printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_ARRAY_EQ - FAILED (length mismatch: expected=%zu, actual=%zu)\n", get_test_padding(), _exp_len, _act_len); \
+            printf_test("%s" COLOR_RED "✗" COLOR_RESET " " op_name " - FAILED (length mismatch: expected=%zu, actual=%zu)\n", get_test_padding(), _exp_len, _act_len); \
             PRINT_ARRAYS_ON_MISMATCH(expected, actual, _exp_len, _act_len, "due length comparison"); \
             _arrays_equal = 0; \
         } else { \
             /* Check elements */ \
             for (size_t _i = 0; _i < _exp_len; _i++) { \
                 if ((expected)[_i] != (actual)[_i]) { \
-                    printf_test("%s" COLOR_RED "✗" COLOR_RESET " ASSERT_ARRAY_EQ - FAILED\n", get_test_padding()); \
+                    printf_test("%s" COLOR_RED "✗" COLOR_RESET " " op_name " - FAILED\n", get_test_padding()); \
                     char *desc;\
-                    asprintf(&desc, "at index %zu", _i);\
+                    int ret = asprintf(&desc, "at index %zu", _i); \
+                    if (ret == -1) desc = NULL; \
                     PRINT_ARRAYS_ON_MISMATCH(expected, actual, _exp_len, _act_len, desc); \
                     free(desc); \
                     _arrays_equal = 0; \
@@ -456,11 +461,55 @@ static inline void test_failed() {
         } \
         \
         if (_arrays_equal) { \
-            printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " ASSERT_ARRAY_EQ (all %zu elements match)\n", get_test_padding(), _exp_len); \
+            printf_test("%s" COLOR_GREEN "✓" COLOR_RESET " " op_name " (all %zu elements match)\n", get_test_padding(), _exp_len); \
         } else { \
           print_line(__FILE__, __LINE__); \
           test_failed(); \
         } \
     } while(0)
+
+#define ASSERT_BITMAP_EQ(expected, actual) \
+    do { \
+      size_t expected_size; \
+      uint32_t* expected_array = bitmap_get_int_array(expected, &expected_size); \
+      size_t actual_size; \
+      uint32_t* actual_array = bitmap_get_int_array(actual, &actual_size); \
+      ASSERT_ARRAY_EQ_IMPL(expected_array, actual_array, expected_size, actual_size, "ASSERT_BITMAP_EQ"); \
+      SAFE_FREE(expected_array); \
+      SAFE_FREE(actual_array); \
+    } while(0)
+
+#define ASSERT_BITMAP_EQ_ARRAY(expected, expected_len, actual) \
+    do { \
+      size_t actual_len; \
+      uint32_t* actual_array = bitmap_get_int_array(actual, &actual_len); \
+      ASSERT_ARRAY_EQ_IMPL(expected, actual_array, expected_len, actual_len, "ASSERT_BITMAP_EQ_ARRAY"); \
+      SAFE_FREE(actual_array); \
+    } while(0)
+
+#define ASSERT_BITMAP_SIZE(expected_size, bitmap) \
+  ASSERT_EQ_IMPL(expected_size, roaring_bitmap_get_cardinality(bitmap), "ASSERT_BITMAP_SIZE")
+
+#define ASSERT_BITMAP64_EQ(expected, actual) \
+    do { \
+      uint64_t expected_size; \
+      uint64_t* expected_array = bitmap64_get_int_array(expected, &expected_size); \
+      uint64_t actual_size; \
+      uint64_t* actual_array = bitmap64_get_int_array(actual, &actual_size); \
+      ASSERT_ARRAY_EQ_IMPL(expected_array, actual_array, expected_size, actual_size, "ASSERT_BITMAP64_EQ"); \
+      SAFE_FREE(expected_array); \
+      SAFE_FREE(actual_array); \
+    } while(0)
+
+#define ASSERT_BITMAP64_EQ_ARRAY(expected, expected_len, actual) \
+    do { \
+      uint64_t actual_len; \
+      uint64_t* actual_array = bitmap64_get_int_array(actual, &actual_len); \
+      ASSERT_ARRAY_EQ_IMPL(expected, actual_array, expected_len, actual_len, "ASSERT_BITMAP64_EQ_ARRAY"); \
+      SAFE_FREE(actual_array); \
+    } while(0)
+
+#define ASSERT_BITMAP64_SIZE(expected_size, bitmap) \
+  ASSERT_EQ_IMPL(expected_size, roaring64_bitmap_get_cardinality(bitmap), "ASSERT_BITMAP64_SIZE")
 
 #endif // TEST_UTILS_H

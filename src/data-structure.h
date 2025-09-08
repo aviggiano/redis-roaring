@@ -3,6 +3,9 @@
 
 #include "roaring.h"
 
+#define BITMAP_STATISTICS_FORMAT_PLAIN_TEXT 0
+#define BITMAP_STATISTICS_FORMAT_JSON 1
+
 typedef roaring_bitmap_t Bitmap;
 typedef roaring_statistics_t Bitmap_statistics;
 
@@ -48,14 +51,20 @@ uint64_t bitmap64_get_nth_element_not_present(const Bitmap64* bitmap, uint64_t n
  */
 int64_t bitmap_get_nth_element_not_present_slow(const Bitmap* bitmap, uint64_t n);
 uint64_t bitmap64_get_nth_element_not_present_slow(const Bitmap64* bitmap, uint64_t n, bool* found);
-Bitmap* bitmap_or(uint32_t n, const Bitmap** bitmaps);
-Bitmap64* bitmap64_or(uint32_t n, const Bitmap64** bitmaps);
-Bitmap* bitmap_and(uint32_t n, const Bitmap** bitmaps);
-Bitmap64* bitmap64_and(uint32_t n, const Bitmap64** bitmaps);
-Bitmap* bitmap_xor(uint32_t n, const Bitmap** bitmaps);
-Bitmap64* bitmap64_xor(uint32_t n, const Bitmap64** bitmaps);
+void bitmap_or(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
+void bitmap64_or(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
+void bitmap_and(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
+void bitmap64_and(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
+void bitmap_xor(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
+void bitmap64_xor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
+void bitmap_andor(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
+void bitmap64_andor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
+void bitmap_one(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
+void bitmap64_one(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
 Bitmap* bitmap_flip(const Bitmap* bitmap, uint32_t end);
 Bitmap64* bitmap64_flip(const Bitmap64* bitmap, uint64_t end);
+char* bitmap_statistics_str(const Bitmap* bitmap, int format, int* size_out);
+char* bitmap64_statistics_str(const Bitmap64* bitmap, int format, int* size_out);
 /**
  * Returns a bitmap equals to the inverted set of first bitmap of the `bitmaps` array,
  * ignoring the first parameter of the function.  * The purpose of this function is to
@@ -74,8 +83,8 @@ Bitmap* bitmap_from_int_array(size_t n, const uint32_t* array);
 Bitmap64* bitmap64_from_int_array(size_t n, const uint64_t* array);
 uint32_t* bitmap_get_int_array(const Bitmap* bitmap, size_t* n);
 uint64_t* bitmap64_get_int_array(const Bitmap64* bitmap, uint64_t* n);
-uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t offset, size_t n);
-uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t offset, uint64_t n);
+uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t start_offset, size_t end_offset, size_t* result_count);
+uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t start_offset, uint64_t end_offset, uint64_t* result_count);
 /**
  * Creates a Bitmap from a buffer composed from ASCII '0's and '1's
  *

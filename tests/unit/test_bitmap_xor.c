@@ -16,7 +16,8 @@ void test_bitmap_xor() {
       bitmap_setbit(six, 2, 1);
 
       Bitmap* bitmaps[] = { twelve, four, six };
-      Bitmap* xor = bitmap_xor(sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
+      Bitmap* xor = bitmap_alloc();
+      bitmap_xor(xor, sizeof(bitmaps) / sizeof(*bitmaps), (const Bitmap**) bitmaps);
       roaring_uint32_iterator_t* iterator = roaring_iterator_create(xor);
       int expected[] = { 1, 2, 3 };
       for (int i = 0; iterator->has_value; i++) {
@@ -30,6 +31,21 @@ void test_bitmap_xor() {
       bitmap_free(six);
       bitmap_free(four);
       bitmap_free(twelve);
+    }
+
+    IT("Should clear destination bitmap when passed zero bitmaps even if dest was not empty initially")
+    {
+      // Create a destination bitmap with some initial values
+      Bitmap* result = roaring_bitmap_create();
+      roaring_bitmap_add(result, 1);
+
+      // Call bitmap_one with zero bitmaps
+      bitmap_xor(result, 0, NULL);
+
+      // Verify destination is now empty
+      ASSERT_BITMAP_SIZE(0, result);
+
+      roaring_bitmap_free(result);
     }
   }
 }

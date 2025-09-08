@@ -16,7 +16,8 @@ void test_bitmap64_range_int_array() {
       }
 
       // Test extracting from offset 0, n=5
-      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 5);
+      uint64_t result_len;
+      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 5, &result_len);
       ASSERT_NOT_NULL(result);
 
       // Verify results using array comparison
@@ -28,21 +29,16 @@ void test_bitmap64_range_int_array() {
 
     IT("Range extraction with offset")
     {
-      Bitmap64* bitmap = roaring64_bitmap_create();
-      uint64_t test_values[] = { 100, 200, 300, 400, 500, 600, 700, 800 };
-      size_t test_values_len = ARRAY_LENGTH(test_values);
-
-      for (size_t i = 0; i < test_values_len; i++) {
-        roaring64_bitmap_add(bitmap, test_values[i]);
-      }
+      Bitmap64* bitmap = roaring64_bitmap_from(100, 200, 300, 400, 500, 600, 700, 800);
 
       // Extract 3 values starting from offset 2
-      uint64_t* result = bitmap64_range_int_array(bitmap, 2, 3);
+      uint64_t result_len;
+      uint64_t* result = bitmap64_range_int_array(bitmap, 2, 3, &result_len);
       ASSERT_NOT_NULL(result);
 
       // Create expected array for comparison
-      uint64_t expected[] = { 300, 400, 500 };
-      ASSERT_ARRAY_EQ(expected, result, 3, 3);
+      uint64_t expected[] = { 300, 400 };
+      ASSERT_ARRAY_EQ(expected, result, 2, result_len);
 
       SAFE_FREE(result);
       roaring64_bitmap_free(bitmap);
@@ -63,7 +59,7 @@ void test_bitmap64_range_int_array() {
         roaring64_bitmap_add(bitmap, large_values[i]);
       }
 
-      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 4);
+      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 4, NULL);
       ASSERT_NOT_NULL(result);
 
       // Use verbose comparison to see hex values on failure
@@ -84,11 +80,12 @@ void test_bitmap64_range_int_array() {
       }
 
       // Request 10 elements but only 3 are available
-      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 10);
+      uint64_t result_len;
+      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 10, &result_len);
       ASSERT_NOT_NULL(result);
 
       // Check available values match
-      ASSERT_ARRAY_EQ(few_values, result, 3, 3);
+      ASSERT_ARRAY_EQ(few_values, result, 3, result_len);
 
       // Check that remaining elements are zero (from calloc)
       ASSERT_ARRAY_RANGE_ZERO(result, 3, 7);
@@ -101,8 +98,10 @@ void test_bitmap64_range_int_array() {
     {
       Bitmap64* bitmap = roaring64_bitmap_create();
 
-      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 5);
+      uint64_t result_len;
+      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 5, &result_len);
       ASSERT_NOT_NULL(result);
+      ASSERT_EQ(0, result_len);
 
       // All values should be 0 (from calloc)
       ASSERT_ARRAY_RANGE_ZERO(result, 0, 5);
@@ -113,21 +112,11 @@ void test_bitmap64_range_int_array() {
 
     IT("Offset beyond available elements")
     {
-      Bitmap64* bitmap = roaring64_bitmap_create();
-      uint64_t values[] = { 10, 20, 30 };
-      size_t values_len = ARRAY_LENGTH(values);
-
-      for (size_t i = 0; i < values_len; i++) {
-        roaring64_bitmap_add(bitmap, values[i]);
-      }
+      Bitmap64* bitmap = roaring64_bitmap_from(10, 20, 30);
 
       // Start from offset 5, but we only have 3 elements
-      uint64_t* result = bitmap64_range_int_array(bitmap, 5, 3);
-      ASSERT_NOT_NULL(result);
-
-      // All should be 0 since offset is beyond available elements
-      ASSERT_ARRAY_RANGE_ZERO(result, 0, 3);
-
+      uint64_t* result = bitmap64_range_int_array(bitmap, 5, 3, NULL);
+      ASSERT_NULL(result);
       SAFE_FREE(result);
       roaring64_bitmap_free(bitmap);
     }
@@ -137,7 +126,7 @@ void test_bitmap64_range_int_array() {
       Bitmap64* bitmap = roaring64_bitmap_create();
       roaring64_bitmap_add(bitmap, 42);
 
-      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 0);
+      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 0, NULL);
       ASSERT_NOT_NULL(result);
 
       SAFE_FREE(result);
@@ -150,12 +139,12 @@ void test_bitmap64_range_int_array() {
       uint64_t single_value = 12345;
       roaring64_bitmap_add(bitmap, single_value);
 
-      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 1);
+      uint64_t* result = bitmap64_range_int_array(bitmap, 0, 1, NULL);
       ASSERT_NOT_NULL(result);
       ASSERT_EQ(single_value, result[0]);
 
       // Test requesting more than available
-      uint64_t* result2 = bitmap64_range_int_array(bitmap, 0, 3);
+      uint64_t* result2 = bitmap64_range_int_array(bitmap, 0, 3, NULL);
       ASSERT_NOT_NULL(result2);
       ASSERT_EQ(single_value, result2[0]);
       ASSERT_ARRAY_RANGE_ZERO(result2, 1, 2);
@@ -178,19 +167,21 @@ void test_bitmap64_range_int_array() {
       }
 
       // Extract all values
-      uint64_t* result = bitmap64_range_int_array(bitmap, 0, fib_len);
+      uint64_t result_len;
+      uint64_t* result = bitmap64_range_int_array(bitmap, 0, fib_len, &result_len);
       ASSERT_NOT_NULL(result);
 
       // Compare with original array (exclude duplicates)
-      uint64_t fibonacci_undup[] = { 0, 1, 2, 3, 5, 8, 13, 21, 0 };
-      ASSERT_ARRAY_EQ(fibonacci_undup, result, fib_len, fib_len);
+      uint64_t fibonacci_undup[] = { 0, 1, 2, 3, 5, 8, 13, 21 };
+      ASSERT_ARRAY_EQ(fibonacci_undup, result, ARRAY_LENGTH(fibonacci_undup), result_len);
 
       // Test partial extraction from middle
-      uint64_t* partial = bitmap64_range_int_array(bitmap, 4, 8);
+      uint64_t partial_len;
+      uint64_t* partial = bitmap64_range_int_array(bitmap, 4, 8, &partial_len);
       ASSERT_NOT_NULL(partial);
 
       uint64_t expected_partial[] = { 5, 8, 13, 21 };
-      ASSERT_ARRAY_EQ(expected_partial, partial, 4, 4);
+      ASSERT_ARRAY_EQ(expected_partial, partial, 4, partial_len);
 
       SAFE_FREE(result);
       SAFE_FREE(partial);

@@ -2,100 +2,60 @@
 
 set -eu
 
-function test_setbit_getbit()
-{
-  echo "test_setbit_getbit"
+. "$(dirname "$0")/helper.sh"
 
-  EXPECTED="0"
-  FOUND=$(echo "R.SETBIT test_setbit_getbit 0 1" | ./deps/redis/src/redis-cli)
-  [ "$FOUND" == "$EXPECTED" ]
-  EXPECTED="1"
-  FOUND=$(echo "R.GETBIT test_setbit_getbit 0" | ./deps/redis/src/redis-cli)
-  [ "$FOUND" == "$EXPECTED" ]
+function test_setbit_getbit() {
+  print_test_header "test_setbit_getbit"
 
-  EXPECTED="ERR wrong number of arguments for 'R.SETBIT' command"
-  FOUND=$(echo "R.SETBIT test_setbit_getbit 0" | ./deps/redis/src/redis-cli)
-  [ "$FOUND" == "$EXPECTED" ]
-  EXPECTED="ERR wrong number of arguments for 'R.GETBIT' command"
-  FOUND=$(echo "R.GETBIT key 0 1" | ./deps/redis/src/redis-cli)
-  [ "$FOUND" == "$EXPECTED" ]
+  rcall_assert "R.SETBIT test_setbit_getbit 0 1" "0" "Set bit at position 0 to 1"
+  rcall_assert "R.GETBIT test_setbit_getbit 0" "1" "Get bit at position 0"
+
+  rcall_assert "R.SETBIT test_setbit_getbit 0" "ERR wrong number of arguments for 'R.SETBIT' command" "SETBIT with wrong number of arguments"
+  rcall_assert "R.GETBIT key 0 1" "ERR wrong number of arguments for 'R.GETBIT' command" "GETBIT with wrong number of arguments"
 }
-function test_bitop()
-{
-  echo "test_bitop"
-  function wrong_arity()
-  {
-    EXPECTED="ERR syntax error"
-    FOUND=$(echo "R.BITOP test_bitop_wrong_arity NOOP srckey1 srckey2" | ./deps/redis/src/redis-cli)
-    [ "$FOUND" == "$EXPECTED" ]
-  }
-  function setup()
-  {
-    FOUND=$(echo "R.SETBIT test_bitop_4 1 1" | ./deps/redis/src/redis-cli)
-    FOUND=$(echo "R.SETBIT test_bitop_4 2 1" | ./deps/redis/src/redis-cli)
-    FOUND=$(echo "R.SETBIT test_bitop_2 1 1" | ./deps/redis/src/redis-cli)
+
+function test_bitop() {
+  print_test_header "test_bitop"
+
+  function wrong_arity() {
+    rcall_assert "R.BITOP test_bitop_wrong_arity NOOP srckey1 srckey2" "ERR syntax error" "BITOP with invalid operation"
   }
 
-  function and()
-  {
-    FOUND=$(echo "R.BITOP AND test_bitop_dest_2 test_bitop_2 test_bitop_4" | ./deps/redis/src/redis-cli)
-    EXPECTED="1"
-    [ "$FOUND" == "$EXPECTED" ]
-    FOUND=$(echo "R.GETBIT test_bitop_dest_2 1" | ./deps/redis/src/redis-cli)
-    EXPECTED="1"
-    [ "$FOUND" == "$EXPECTED" ]
+  function setup() {
+    rcall "R.SETBIT test_bitop_4 1 1"
+    rcall "R.SETBIT test_bitop_4 2 1"
+    rcall "R.SETBIT test_bitop_2 1 1"
   }
 
-  function or()
-  {
-    FOUND=$(echo "R.BITOP OR test_bitop_dest_6 test_bitop_2 test_bitop_4" | ./deps/redis/src/redis-cli)
-    EXPECTED="2"
-    [ "$FOUND" == "$EXPECTED" ]
-    FOUND=$(echo "R.GETBIT test_bitop_dest_6 1" | ./deps/redis/src/redis-cli)
-    EXPECTED="1"
-    [ "$FOUND" == "$EXPECTED" ]
-    FOUND=$(echo "R.GETBIT test_bitop_dest_6 2" | ./deps/redis/src/redis-cli)
-    EXPECTED="1"
-    [ "$FOUND" == "$EXPECTED" ]
+  function and() {
+    rcall_assert "R.BITOP AND test_bitop_dest_2 test_bitop_2 test_bitop_4" "1" "BITOP AND operation"
+    rcall_assert "R.GETBIT test_bitop_dest_2 1" "1" "Check result of AND operation at bit 1"
   }
 
-  function xor()
-  {
-    FOUND=$(echo "R.BITOP XOR test_bitop_dest_4 test_bitop_2 test_bitop_4" | ./deps/redis/src/redis-cli)
-    EXPECTED="1"
-    [ "$FOUND" == "$EXPECTED" ]
-    FOUND=$(echo "R.GETBIT test_bitop_dest_4 2" | ./deps/redis/src/redis-cli)
-    EXPECTED="1"
-    [ "$FOUND" == "$EXPECTED" ]
+  function or() {
+    rcall_assert "R.BITOP OR test_bitop_dest_6 test_bitop_2 test_bitop_4" "2" "BITOP OR operation"
+    rcall_assert "R.GETBIT test_bitop_dest_6 1" "1" "Check result of OR operation at bit 1"
+    rcall_assert "R.GETBIT test_bitop_dest_6 2" "1" "Check result of OR operation at bit 2"
   }
 
-  function not()
-  {
-    FOUND=$(echo "R.BITOP NOT test_bitop_dest_3 test_bitop_4" | ./deps/redis/src/redis-cli)
-    EXPECTED="1"
-    [ "$FOUND" == "$EXPECTED" ]
-    FOUND=$(echo "R.GETBIT test_bitop_dest_3 0" | ./deps/redis/src/redis-cli)
-    EXPECTED="1"
-    [ "$FOUND" == "$EXPECTED" ]
-    FOUND=$(echo "R.MAX test_bitop_dest_3" | ./deps/redis/src/redis-cli)
-    EXPECTED="0"
-    [ "$FOUND" == "$EXPECTED" ]
-
-    FOUND=$(echo "R.BITOP NOT test_bitop_dest_3 test_bitop_4 3" | ./deps/redis/src/redis-cli)
-    EXPECTED="2"
-    [ "$FOUND" == "$EXPECTED" ]
-    FOUND=$(echo "R.GETBIT test_bitop_dest_3 0" | ./deps/redis/src/redis-cli)
-    EXPECTED="1"
-    [ "$FOUND" == "$EXPECTED" ]
-    FOUND=$(echo "R.MAX test_bitop_dest_3" | ./deps/redis/src/redis-cli)
-    EXPECTED="3"
-    [ "$FOUND" == "$EXPECTED" ]
+  function xor() {
+    rcall_assert "R.BITOP XOR test_bitop_dest_4 test_bitop_2 test_bitop_4" "1" "BITOP XOR operation"
+    rcall_assert "R.GETBIT test_bitop_dest_4 2" "1" "Check result of XOR operation at bit 2"
   }
 
-  function collision()
-  {
-    FOUND=$(echo "R.BITOP AND test_bitop_collision test_bitop_4 test_bitop_2" | ./deps/redis/src/redis-cli)
-    FOUND=$(echo "R.BITOP OR test_bitop_collision test_bitop_4 test_bitop_2" | ./deps/redis/src/redis-cli)
+  function not() {
+    rcall_assert "R.BITOP NOT test_bitop_dest_3 test_bitop_4" "1" "BITOP NOT operation"
+    rcall_assert "R.GETBIT test_bitop_dest_3 0" "1" "Check result of NOT operation at bit 0"
+    rcall_assert "R.MAX test_bitop_dest_3" "0" "Check max value after NOT operation"
+
+    rcall_assert "R.BITOP NOT test_bitop_dest_3 test_bitop_4 3" "2" "BITOP NOT operation with size parameter"
+    rcall_assert "R.GETBIT test_bitop_dest_3 0" "1" "Check result of NOT operation at bit 0 (with size)"
+    rcall_assert "R.MAX test_bitop_dest_3" "3" "Check max value after NOT operation (with size)"
+  }
+
+  function collision() {
+    rcall "R.BITOP AND test_bitop_collision test_bitop_4 test_bitop_2"
+    rcall "R.BITOP OR test_bitop_collision test_bitop_4 test_bitop_2"
   }
 
   setup
@@ -106,235 +66,244 @@ function test_bitop()
   and
   collision
 }
-function test_bitcount()
-{
-  echo "test_bitcount"
-  FOUND=$(echo "R.SETBIT test_bitcount 1 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitcount 1 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitcount 2 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitcount 3 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitcount 5 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitcount 8 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitcount 13 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.BITCOUNT test_bitcount" | ./deps/redis/src/redis-cli)
-  EXPECTED="6"
-  [ "$FOUND" == "$EXPECTED" ]
+function test_bitcount() {
+  print_test_header "test_bitcount"
+
+  rcall "R.SETBIT test_bitcount 1 1"
+  rcall "R.SETBIT test_bitcount 1 1"
+  rcall "R.SETBIT test_bitcount 2 1"
+  rcall "R.SETBIT test_bitcount 3 1"
+  rcall "R.SETBIT test_bitcount 5 1"
+  rcall "R.SETBIT test_bitcount 8 1"
+  rcall "R.SETBIT test_bitcount 13 1"
+
+  rcall_assert "R.BITCOUNT test_bitcount" "6" "Count all set bits"
 }
-function test_bitpos()
-{
-  echo "test_bitpos"
-  FOUND=$(echo "R.SETBIT test_bitpos_1 3 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_1 6 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_1 4 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_1 12 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_1 10 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.BITPOS test_bitpos_1 1" | ./deps/redis/src/redis-cli)
-  EXPECTED="3"
-  [ "$FOUND" == "$EXPECTED" ]
 
-  FOUND=$(echo "R.SETBIT test_bitpos_0 0 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_0 1 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_0 2 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_0 3 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_0 4 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETBIT test_bitpos_0 6 1" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.BITPOS test_bitpos_0 0" | ./deps/redis/src/redis-cli)
-  EXPECTED="5"
-  [ "$FOUND" == "$EXPECTED" ]
+function test_bitpos() {
+  print_test_header "test_bitpos"
+
+  rcall "R.SETBIT test_bitpos_1 3 1"
+  rcall "R.SETBIT test_bitpos_1 6 1"
+  rcall "R.SETBIT test_bitpos_1 4 1"
+  rcall "R.SETBIT test_bitpos_1 12 1"
+  rcall "R.SETBIT test_bitpos_1 10 1"
+  rcall_assert "R.BITPOS test_bitpos_1 1" "3" "Find first set bit position"
+
+  rcall "R.SETBIT test_bitpos_0 0 1"
+  rcall "R.SETBIT test_bitpos_0 1 1"
+  rcall "R.SETBIT test_bitpos_0 2 1"
+  rcall "R.SETBIT test_bitpos_0 3 1"
+  rcall "R.SETBIT test_bitpos_0 4 1"
+  rcall "R.SETBIT test_bitpos_0 6 1"
+  rcall_assert "R.BITPOS test_bitpos_0 0" "5" "Find first unset bit position"
 }
-function test_getintarray_setintarray()
-{
-  echo "test_getintarray_setintarray"
 
-  FOUND=$(echo "R.SETINTARRAY test_getintarray_setintarray 0" | ./deps/redis/src/redis-cli)
-  EXPECTED="OK"
-  [ "$FOUND" == "$EXPECTED" ]
-  FOUND=$(echo "R.GETINTARRAY test_getintarray_setintarray" | ./deps/redis/src/redis-cli)
-  EXPECTED="0"
-  [ "$FOUND" == "$EXPECTED" ]
+function test_getintarray_setintarray() {
+  print_test_header "test_getintarray_setintarray"
 
-  FOUND=$(echo "R.SETINTARRAY test_getintarray_setintarray 1 10 100 1000 10000 100000" | ./deps/redis/src/redis-cli)
-  EXPECTED="OK"
-  [ "$FOUND" == "$EXPECTED" ]
-  FOUND=$(echo "R.GETINTARRAY test_getintarray_setintarray" | ./deps/redis/src/redis-cli)
-  EXPECTED=$(echo -e "1\n10\n100\n1000\n10000\n100000")
-  [ "$FOUND" == "$EXPECTED" ]
+  rcall_assert "R.SETINTARRAY test_getintarray_setintarray 0" "OK" "Set integer array with single value 0"
+  rcall_assert "R.GETINTARRAY test_getintarray_setintarray" "0" "Get integer array with single value"
 
-  FOUND=$(echo "R.SETINTARRAY test_getintarray_setintarray 2 4 8 16 32 64 128" | ./deps/redis/src/redis-cli)
-  EXPECTED="OK"
-  [ "$FOUND" == "$EXPECTED" ]
-  FOUND=$(echo "R.GETINTARRAY test_getintarray_setintarray" | ./deps/redis/src/redis-cli)
-  EXPECTED=$(echo -e "2\n4\n8\n16\n32\n64\n128")
-  [ "$FOUND" == "$EXPECTED" ]
+  rcall_assert "R.SETINTARRAY test_getintarray_setintarray 1 10 100 1000 10000 100000" "OK" "Set integer array with multiple values"
+  rcall_assert "R.GETINTARRAY test_getintarray_setintarray" "$(echo -e "1\n10\n100\n1000\n10000\n100000")" "Get integer array with multiple values"
 
-  FOUND=$(echo "R.GETINTARRAY test_getintarray_setintarray_empty_key" | ./deps/redis/src/redis-cli)
-  EXPECTED=""
-  [ "$FOUND" == "$EXPECTED" ]
+  rcall_assert "R.SETINTARRAY test_getintarray_setintarray 2 4 8 16 32 64 128" "OK" "Set integer array with powers of 2"
+  rcall_assert "R.GETINTARRAY test_getintarray_setintarray" "$(echo -e "2\n4\n8\n16\n32\n64\n128")" "Get integer array with powers of 2"
+
+  rcall_assert "R.GETINTARRAY test_getintarray_setintarray_empty_key" "" "Get integer array from empty key"
 }
-function test_getbitarray_setbitarray()
-{
-  echo "test_getbitarray_setbitarray"
 
-  FOUND=$(echo "R.SETBITARRAY test_getbitarray_setbitarray 0" | ./deps/redis/src/redis-cli)
-  EXPECTED="OK"
-  [ "$FOUND" == "$EXPECTED" ]
-  FOUND=$(echo "R.GETBITARRAY test_getbitarray_setbitarray" | ./deps/redis/src/redis-cli)
-  EXPECTED="0"
-  [ "$FOUND" == "$EXPECTED" ]
+function test_getbitarray_setbitarray() {
+  print_test_header "test_getbitarray_setbitarray"
 
-  FOUND=$(echo "R.SETBITARRAY test_getbitarray_setbitarray 0110100100010010011001000" | ./deps/redis/src/redis-cli)
-  EXPECTED="OK"
-  [ "$FOUND" == "$EXPECTED" ]
-  FOUND=$(echo "R.GETBITARRAY test_getbitarray_setbitarray" | ./deps/redis/src/redis-cli)
-  EXPECTED="0110100100010010011001"
-  [ "$FOUND" == "$EXPECTED" ]
-  FOUND=$(echo "R.GETBIT test_getbitarray_setbitarray 0" | ./deps/redis/src/redis-cli)
-  EXPECTED="0"
-  [ "$FOUND" == "$EXPECTED" ]
-  FOUND=$(echo "R.GETBIT test_getbitarray_setbitarray 1" | ./deps/redis/src/redis-cli)
-  EXPECTED="1"
-  [ "$FOUND" == "$EXPECTED" ]
-  FOUND=$(echo "R.GETBIT test_getbitarray_setbitarray 24" | ./deps/redis/src/redis-cli)
-  EXPECTED="0"
-  [ "$FOUND" == "$EXPECTED" ]
-  FOUND=$(echo "R.GETBIT test_getbitarray_setbitarray 21" | ./deps/redis/src/redis-cli)
-  EXPECTED="1"
-  [ "$FOUND" == "$EXPECTED" ]
+  rcall_assert "R.SETBITARRAY test_getbitarray_setbitarray 0" "OK" "Set bit array with single 0"
+  rcall_assert "R.GETBITARRAY test_getbitarray_setbitarray" "0" "Get bit array with single 0"
 
-  FOUND=$(echo "R.GETBITARRAY test_getbitarray_setbitarray_empty_key" | ./deps/redis/src/redis-cli)
-  EXPECTED=""
-  [ "$FOUND" == "$EXPECTED" ]
+  rcall_assert "R.SETBITARRAY test_getbitarray_setbitarray 0110100100010010011001000" "OK" "Set bit array with binary string"
+  rcall_assert "R.GETBITARRAY test_getbitarray_setbitarray" "0110100100010010011001" "Get bit array binary string"
+  rcall_assert "R.GETBIT test_getbitarray_setbitarray 0" "0" "Check bit 0 in bit array"
+  rcall_assert "R.GETBIT test_getbitarray_setbitarray 1" "1" "Check bit 1 in bit array"
+  rcall_assert "R.GETBIT test_getbitarray_setbitarray 24" "0" "Check bit 24 in bit array"
+  rcall_assert "R.GETBIT test_getbitarray_setbitarray 21" "1" "Check bit 21 in bit array"
+
+  rcall_assert "R.GETBITARRAY test_getbitarray_setbitarray_empty_key" "" "Get bit array from empty key"
 }
-function test_min_max()
-{
-  echo "test_min_max"
 
-  FOUND=$(echo "R.MIN test_min_max" | ./deps/redis/src/redis-cli)
-  EXPECTED="-1"
-  [ "$FOUND" == "$EXPECTED" ]
+function test_appendintarray_deleteintarray() {
+  print_test_header "test_appendintarray_deleteintarray"
 
-  FOUND=$(echo "R.MAX test_min_max" | ./deps/redis/src/redis-cli)
-  EXPECTED="-1"
-  [ "$FOUND" == "$EXPECTED" ]
-
-  echo "R.SETBIT test_min_max 100 1" | ./deps/redis/src/redis-cli
-
-  FOUND=$(echo "R.MIN test_min_max" | ./deps/redis/src/redis-cli)
-  EXPECTED="100"
-  [ "$FOUND" == "$EXPECTED" ]
-
-  FOUND=$(echo "R.MAX test_min_max" | ./deps/redis/src/redis-cli)
-  EXPECTED="100"
-  [ "$FOUND" == "$EXPECTED" ]
-
-  echo "R.SETBIT test_min_max 0 1" | ./deps/redis/src/redis-cli
-
-  FOUND=$(echo "R.MIN test_min_max" | ./deps/redis/src/redis-cli)
-  EXPECTED="0"
-  [ "$FOUND" == "$EXPECTED" ]
-
-  FOUND=$(echo "R.MAX test_min_max" | ./deps/redis/src/redis-cli)
-  EXPECTED="100"
-  [ "$FOUND" == "$EXPECTED" ]
-
-  FOUND=$(echo "R.SETBIT test_min_max 0 0" | ./deps/redis/src/redis-cli)
-  EXPECTED="1"
-  [ "$FOUND" == "$EXPECTED" ]
-
-  FOUND=$(echo "R.SETBIT test_min_max 100 0" | ./deps/redis/src/redis-cli)
-   EXPECTED="1"
-  [ "$FOUND" == "$EXPECTED" ]
-
-  FOUND=$(echo "R.MIN test_min_max" | ./deps/redis/src/redis-cli)
-  EXPECTED="-1"
-  [ "$FOUND" == "$EXPECTED" ]
-
-  FOUND=$(echo "R.MAX test_min_max" | ./deps/redis/src/redis-cli)
-  EXPECTED="-1"
-  [ "$FOUND" == "$EXPECTED" ]
-
+  rcall_assert "R.APPENDINTARRAY test_appendintarray_deleteintarray 1 2 3" "OK" "Initialize bitmap with values"
+  rcall_assert "R.GETINTARRAY test_appendintarray_deleteintarray" "$(echo -e "1\n2\n3")" "Get array after initialization"
+  rcall_assert "R.DELETEINTARRAY test_appendintarray_deleteintarray 1 3" "OK" "Delete values 1 and 3"
+  rcall_assert "R.GETINTARRAY test_appendintarray_deleteintarray" "2" "Get array after deletion"
 }
-function test_diff()
-{
-  echo "test_diff"
 
-  EXPECTED="ERR wrong number of arguments for 'R.DIFF' command"
-  FOUND=$(echo "R.DIFF test_diff_res" | ./deps/redis/src/redis-cli)
-  [ "$FOUND" == "$EXPECTED" ]
+function test_min_max() {
+  print_test_header "test_min_max"
 
-  EXPECTED="WRONGTYPE Operation against a key holding the wrong kind of value"
-  FOUND=$(echo "R.DIFF test_diff_res empty_key_1 empty_key_2" | ./deps/redis/src/redis-cli)
-  [ "$FOUND" == "$EXPECTED" ]
+  rcall_assert "R.MIN test_min_max" "-1" "Get min from empty bitmap"
+  rcall_assert "R.MAX test_min_max" "-1" "Get max from empty bitmap"
 
-  FOUND=$(echo "R.SETINTARRAY test_diff_1 1 2 3 4" | ./deps/redis/src/redis-cli)
-  FOUND=$(echo "R.SETINTARRAY test_diff_2 3 4 5 6" | ./deps/redis/src/redis-cli)
+  rcall_assert "R.SETBIT test_min_max 100 1" "0" "Set bit 100"
+  rcall_assert "R.MIN test_min_max" "100" "Get min after setting bit 100"
+  rcall_assert "R.MAX test_min_max" "100" "Get max after setting bit 100"
 
-  EXPECTED="OK"
-  FOUND=$(echo "R.DIFF test_diff_res test_diff_1 test_diff_2" | ./deps/redis/src/redis-cli)
-  [ "$FOUND" == "$EXPECTED" ]
- 
-  FOUND=$(echo "R.GETINTARRAY test_diff_res" | ./deps/redis/src/redis-cli)
-  EXPECTED=$(echo -e "1\n2")
-  [ "$FOUND" == "$EXPECTED" ]
+  rcall_assert "R.SETBIT test_min_max 0 1" "0" "Set bit 0"
+  rcall_assert "R.MIN test_min_max" "0" "Get min after setting bit 0"
+  rcall_assert "R.MAX test_min_max" "100" "Get max after setting both bits"
 
-  EXPECTED="OK"
-  FOUND=$(echo "R.DIFF test_diff_res test_diff_2 test_diff_1" | ./deps/redis/src/redis-cli)
-  [ "$FOUND" == "$EXPECTED" ]
- 
-  FOUND=$(echo "R.GETINTARRAY test_diff_res" | ./deps/redis/src/redis-cli)
-  EXPECTED=$(echo -e "5\n6")
-  [ "$FOUND" == "$EXPECTED" ]
-
+  rcall_assert "R.SETBIT test_min_max 0 0" "1" "Unset bit 0"
+  rcall_assert "R.SETBIT test_min_max 100 0" "1" "Unset bit 100"
+  rcall_assert "R.MIN test_min_max" "-1" "Get min after unsetting all bits"
+  rcall_assert "R.MAX test_min_max" "-1" "Get max after unsetting all bits"
 }
-function test_optimize_nokey()
-{
-  echo "test_optimize nokey"
-  FOUND=$(echo "R.OPTIMIZE no-key" | ./deps/redis/src/redis-cli)
-  EXPECTED="ERR no such key"
-  [ "$FOUND" == "$EXPECTED" ]
+
+function test_bitop_one() {
+  print_test_header "test_bitop_one"
+
+  # Test 1: Empty bitmap array
+  rcall_assert "R.BITOP ONE test_bitop_one_result_empty" "ERR wrong number of arguments for 'R.BITOP' command" "BITOP ONE with no source bitmaps"
+
+  # Test 2: Single bitmap
+  rcall_assert "R.BITOP ONE test_bitop_one_result_single test_bitop_one_key1" "ERR wrong number of arguments for 'R.BITOP' command" "BITOP ONE with single bitmap"
+
+  # Test 3: Two non-overlapping bitmaps
+  rcall_assert "R.SETINTARRAY test_bitop_one_key1 1 3 5" "OK" "Set bits in test_bitop_one_key1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key2 2 4 6" "OK" "Set bits in test_bitop_one_key2"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_non_overlap test_bitop_one_key1 test_bitop_one_key2" "6" "BITOP ONE with non-overlapping bitmaps"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_non_overlap" "1\n2\n3\n4\n5\n6" "Result should contain all bits from both keys"
+
+  # Test 4: Two overlapping bitmaps
+  rcall_assert "R.SETINTARRAY test_bitop_one_key3 1 2 3" "OK" "Set bits in test_bitop_one_key3"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key4 3 4 5" "OK" "Set bits in test_bitop_one_key4"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_overlap test_bitop_one_key3 test_bitop_one_key4" "4" "BITOP ONE with overlapping bitmaps"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_overlap" "1\n2\n4\n5" "Result should contain only non-overlapping bits"
+
+  # Test 5: Three bitmaps - Redis example
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_a 0 4 5 6" "OK" "Set bits in test_bitop_one_key_a"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_b 1 5 6" "OK" "Set bits in test_bitop_one_key_b"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_c 2 3 5 6 7" "OK" "Set bits in test_bitop_one_key_c"
+  
+  rcall_assert "R.BITOP ONE test_bitop_one_result_three test_bitop_one_key_a test_bitop_one_key_b test_bitop_one_key_c" "6" "BITOP ONE with three bitmaps"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_three" "0\n1\n2\n3\n4\n7" "Result should contain bits appearing exactly once"
+
+  # Test 6: All bitmaps have same bits
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_same1 10 20 30" "OK" "Set bits in test_bitop_one_key_same1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_same2 10 20 30" "OK" "Set bits in test_bitop_one_key_same2"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_same3 10 20 30" "OK" "Set bits in test_bitop_one_key_same3"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_same test_bitop_one_key_same1 test_bitop_one_key_same2 test_bitop_one_key_same3" "0" "BITOP ONE with identical bitmaps"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_same" "" "Result should be empty array"
+
+  # Test 7: One empty bitmap among others
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_with_bits1 1 2 3" "OK" "Set bits in test_bitop_one_key_with_bits1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_with_bits2 3 4 5" "OK" "Set bits in test_bitop_one_key_with_bits2"
+
+  rcall "DEL test_bitop_one_key_empty"
+  rcall_assert "R.BITOP ONE test_bitop_one_result_mixed test_bitop_one_key_with_bits1 test_bitop_one_key_empty test_bitop_one_key_with_bits2" "4" "BITOP ONE with one empty bitmap"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_mixed" "1\n2\n4\n5" "Result should contain non-overlapping bits"
+
+  # Test 8: Complex overlaps with four bitmaps
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_complex1 1 2 3 4 5" "OK" "Set bits in test_bitop_one_key_complex1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_complex2 2 3 4 6 7" "OK" "Set bits in test_bitop_one_key_complex2"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_complex3 3 4 5 7 8" "OK" "Set bits in test_bitop_one_key_complex3"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_complex4 4 5 6 8 9" "OK" "Set bits in test_bitop_one_key_complex4"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_complex test_bitop_one_key_complex1 test_bitop_one_key_complex2 test_bitop_one_key_complex3 test_bitop_one_key_complex4" "2" "BITOP ONE with complex overlaps"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_complex" "1\n9" "Result should contain only bits appearing exactly once"
+
+  # Test 9: Large bit values
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_large1 1000000 2000000" "OK" "Set large bits in key_large1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_large2 2000000 3000000" "OK" "Set large bits in key_large2"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_large test_bitop_one_key_large1 test_bitop_one_key_large2" "2" "BITOP ONE with large bit values"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_large" "1000000\n3000000" "Result should contain non-overlapping large bits"
+
+  # Test 10: Destination already has content
+  rcall_assert "R.SETINTARRAY test_bitop_one_result_preexist 100 200 300" "OK" "Set bits in test_bitop_one_result_preexist"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_overwrite1 1 2" "OK" "Set bits in test_bitop_one_key_overwrite1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_overwrite2 2 3" "OK" "Set bits in test_bitop_one_key_overwrite2"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_preexist test_bitop_one_key_overwrite1 test_bitop_one_key_overwrite2" "2" "BITOP ONE should overwrite destination"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_preexist" "1\n3" "Result should only contain new operation result"
+
+  # Test 11: Input bitmaps should remain unchanged
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_immutable1 10 20 30" "OK" "Set bits in test_bitop_one_key_immutable1"
+  rcall_assert "R.SETINTARRAY test_bitop_one_key_immutable2 20 30 40" "OK" "Set bits in test_bitop_one_key_immutable2"
+
+  rcall_assert "R.BITOP ONE test_bitop_one_result_immutable test_bitop_one_key_immutable1 test_bitop_one_key_immutable2" "2" "BITOP ONE operation"
+  rcall_assert "R.GETINTARRAY test_bitop_one_key_immutable1" "10\n20\n30" "key_immutable1 should remain unchanged"
+  rcall_assert "R.GETINTARRAY test_bitop_one_key_immutable2" "20\n30\n40" "key_immutable2 should remain unchanged"
+  rcall_assert "R.GETINTARRAY test_bitop_one_result_immutable" "10\n40" "Result should contain bits appearing exactly once"
 }
-function test_setfull()
-{
-  echo "test_setfull"
-  echo "del foo" | ./deps/redis/src/redis-cli
-  echo "R.SETFULL foo" | ./deps/redis/src/redis-cli
-  FOUND=$(echo "R.BITCOUNT foo" | ./deps/redis/src/redis-cli)
-  EXPECTED="4294967296"
-  [ "$FOUND" == "$EXPECTED" ]
+
+function test_diff() {
+  print_test_header "test_diff"
+
+  rcall_assert "R.DIFF test_diff_res" "ERR wrong number of arguments for 'R.DIFF' command" "DIFF with wrong number of arguments"
+  rcall_assert "R.DIFF test_diff_res empty_key_1 empty_key_2" "WRONGTYPE Operation against a key holding the wrong kind of value" "DIFF with empty keys"
+
+  rcall_assert "R.SETINTARRAY test_diff_1 1 2 3 4" "OK" "Set first array for diff test"
+  rcall_assert "R.SETINTARRAY test_diff_2 3 4 5 6" "OK" "Set second array for diff test"
+
+  rcall_assert "R.DIFF test_diff_res test_diff_1 test_diff_2" "OK" "Compute difference test_diff_1 - test_diff_2"
+  rcall_assert "R.GETINTARRAY test_diff_res" "$(echo -e "1\n2")" "Get result of first difference"
+
+  rcall_assert "R.DIFF test_diff_res test_diff_2 test_diff_1" "OK" "Compute difference test_diff_2 - test_diff_1"
+  rcall_assert "R.GETINTARRAY test_diff_res" "$(echo -e "5\n6")" "Get result of second difference"
 }
-function test_del()
-{
-  echo "test_del"
 
-  FOUND=$(echo "R.SETBIT test_del 0 1" | ./deps/redis/src/redis-cli)
-  EXPECTED="0"
-  [ "$FOUND" == "$EXPECTED" ]
+function test_setrage() {
+  print_test_header "test_setrage"
 
-  FOUND=$(echo "DEL test_del" | ./deps/redis/src/redis-cli)
-  EXPECTED="1"
-  [ "$FOUND" == "$EXPECTED" ]
+  rcall_assert "R.SETRANGE test_setrange 0 5" "OK" "Should set range from 0 to 5"
+  rcall_assert "R.GETINTARRAY test_setrange" "$(echo -e "0\n1\n2\n3\n4")" "Validate range from 0 5"
+  rcall_assert "R.SETRANGE test_setrange 5 5" "OK" "Should handle zero range"
 }
-function test_stat()
-{
-  echo "test_stat"
 
-  EXPECTED="0"
-  FOUND=$(echo "R.SETBIT test_stat 100 1" | ./deps/redis/src/redis-cli)
-  [ "$FOUND" == "$EXPECTED" ]
+function test_optimize_nokey() {
+  print_test_header "test_optimize nokey"
+  rcall_assert "R.OPTIMIZE no-key" "ERR no such key" "Optimize non-existent key"
+}
 
-  FOUND=$(echo "R.STAT test_stat" | ./deps/redis/src/redis-cli)
-  EXPECTED=$'cardinality: 1\nnumber of containers: 1\nmax value: 100\nmin value: 100
+function test_setfull() {
+  print_test_header "test_setfull"
+
+  rcall "del foo"
+  rcall "R.SETFULL foo"
+  rcall_assert "R.BITCOUNT foo" "4294967296" "Count bits in full bitmap"
+}
+
+function test_del() {
+  print_test_header "test_del"
+
+  rcall_assert "R.SETBIT test_del 0 1" "0" "Set bit for deletion test"
+  rcall_assert "DEL test_del" "1" "Delete key test_del"
+}
+
+function test_stat() {
+  print_test_header "test_stat"
+
+  rcall_assert "R.SETBIT test_stat 100 1" "0" "Set bit 100 for stat test"
+
+  EXPECTED_STAT=$'type: bitmap\ncardinality: 1\nnumber of containers: 1\nmax value: 100\nmin value: 100
 number of array containers: 1\n\tarray container values: 1\n\tarray container bytes: 2
 bitset  containers: 0\n\tbitset  container values: 0\n\tbitset  container bytes: 0
 run containers: 0\n\trun container values: 0\n\trun container bytes: 0'
-  [ "$FOUND" == "$EXPECTED" ]
-}
-function test_save()
-{
-  echo "test_save"
+  
+  rcall_assert "R.STAT test_stat" "$EXPECTED_STAT" "Get bitmap statistics"
 
-  FOUND=$(echo "SAVE" | ./deps/redis/src/redis-cli)
-  EXPECTED="OK"
+  EXPECTED_STAT=$'{"type":"bitmap","cardinality":"1","number_of_containers":"1","max_value":"100","min_value":"100","array_container":{"number_of_containers":"1","container_cardinality":"1","container_allocated_bytes":"2"},"bitset_container":{"number_of_containers":"0","container_cardinality":"0","container_allocated_bytes":"0"},"run_container":{"number_of_containers":"0","container_cardinality":"0","container_allocated_bytes":"0"}}'
+
+  rcall_assert "R.STAT test_stat JSON" "$EXPECTED_STAT" "Get bitmap statistics (json)"
+}
+
+function test_save() {
+  print_test_header "test_save"
+  rcall_assert "SAVE" "OK" "Save Redis database"
 }
 
 test_setbit_getbit
@@ -343,7 +312,10 @@ test_bitcount
 test_bitpos
 test_getintarray_setintarray
 test_getbitarray_setbitarray
+test_appendintarray_deleteintarray
 test_min_max
+test_bitop_one
+test_setrage
 test_diff
 test_optimize_nokey
 test_setfull
