@@ -17,3 +17,5 @@ src/roaring.hh
 .vscode
 .editorconfig
 appendonlydir
+node_modules
+**/.vitepress/cache/
