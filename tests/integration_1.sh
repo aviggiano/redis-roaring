@@ -264,6 +264,15 @@ function test_setrage() {
   rcall_assert "R.SETRANGE test_setrange 5 5" "OK" "Should handle zero range"
 }
 
+function test_clear() {
+  print_test_header "test_clear"
+
+  rcall_assert "R.SETINTARRAY test_clear 1 2 3 4 5" "OK" "Set bits for deletion test"
+  rcall_assert "R.CLEAR test_clear" "5" "Clear key test_clear"
+  rcall_assert "R.BITCOUNT test_clear" "0" "Should be empty after clear"
+  rcall_assert "R.CLEAR test_clear_not_exists" "" "Should return nil for non exist key"
+}
+
 function test_optimize_nokey() {
   print_test_header "test_optimize nokey"
   rcall_assert "R.OPTIMIZE no-key" "ERR no such key" "Optimize non-existent key"
@@ -316,6 +325,7 @@ test_appendintarray_deleteintarray
 test_min_max
 test_bitop_one
 test_setrage
+test_clear
 test_diff
 test_optimize_nokey
 test_setfull
