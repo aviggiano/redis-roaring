@@ -1,0 +1,14 @@
+{
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Redis roaring documentation package",
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}

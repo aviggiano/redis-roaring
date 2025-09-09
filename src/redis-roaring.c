@@ -941,6 +941,40 @@ int R64MaxCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   return REDISMODULE_OK;
 }
 
+/**
+ * R64.CLEAR <key>
+ * */
+int R64ClearCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+
+  if (RedisModule_KeyType(key) == REDISMODULE_KEYTYPE_EMPTY) {
+    return RedisModule_ReplyWithNull(ctx);
+  }
+
+  if (RedisModule_ModuleTypeGetType(key) != Bitmap64Type) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  Bitmap64* bitmap = RedisModule_ModuleTypeGetValue(key);
+
+  uint64_t count = bitmap64_get_cardinality(bitmap);
+
+  if (count > 0) {
+    roaring64_bitmap_clear(bitmap);
+  }
+
+  RedisModule_ReplicateVerbatim(ctx);
+  RedisModule_ReplyWithLongLong(ctx, (long long) count);
+
+  return REDISMODULE_OK;
+}
+
+
 /* === Bitmap type commands === */
 
 /**
@@ -1786,6 +1820,39 @@ int RMaxCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   return REDISMODULE_OK;
 }
 
+/**
+ * R.CLEAR <key>
+ * */
+int RClearCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+
+  if (RedisModule_KeyType(key) == REDISMODULE_KEYTYPE_EMPTY) {
+    return RedisModule_ReplyWithNull(ctx);
+  }
+
+  if (RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
+
+  uint64_t count = bitmap_get_cardinality(bitmap);
+
+  if (count > 0) {
+    roaring_bitmap_clear(bitmap);
+  }
+
+  RedisModule_ReplicateVerbatim(ctx);
+  RedisModule_ReplyWithLongLong(ctx, (long long) count);
+
+  return REDISMODULE_OK;
+}
+
 void RedisModule_OnShutdown(RedisModuleCtx* ctx, RedisModuleEvent e, uint64_t sub, void* data) {
   REDISMODULE_NOT_USED(e);
   REDISMODULE_NOT_USED(data);
@@ -1904,6 +1971,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   if (RedisModule_CreateCommand(ctx, "R.MAX", RMaxCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
+  if (RedisModule_CreateCommand(ctx, "R.CLEAR", RClearCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
   if (RedisModule_CreateCommand(ctx, "R64.SETBIT", R64SetBitCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
@@ -1956,6 +2026,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.MAX", R64MaxCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R64.CLEAR", R64ClearCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
 
