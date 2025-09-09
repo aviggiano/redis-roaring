@@ -21,6 +21,15 @@ function test_getbits() {
   rcall_assert "R64.GETBITS test_getbits 1 2 3 4 5" "1\n1\n0\n1\n1" "Get bit at position 1-5"
 }
 
+function test_clearbits() {
+  print_test_header "test_clearbits (64)"
+
+  rcall_assert "R64.SETINTARRAY test_clearbits 1 2 3 4 5" "OK" "Set bits 1-5"
+  rcall_assert "R64.CLEARBITS test_clearbits 1 2 3" "OK" "Clear bit at position 1 3"
+  rcall_assert "R64.BITCOUNT test_clearbits" "2" "Validate count"
+  rcall_assert "R64.CLEARBITS test_clearbits 4 5 COUNT" "2" "Clear bit with count"
+}
+
 function test_bitop() {
   print_test_header "test_bitop (64)"
 
@@ -324,6 +333,7 @@ function test_save() {
 
 test_setbit_getbit
 test_getbits
+test_clearbits
 test_bitop
 test_bitcount
 test_bitpos

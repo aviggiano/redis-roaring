@@ -81,6 +81,52 @@ bool* bitmap64_getbits(const Bitmap64* bitmap, size_t n_offsets, const uint64_t*
   return results;
 }
 
+bool bitmap_clearbits(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets) {
+  if (bitmap == NULL) return false;
+  if (offsets == NULL) return true;
+
+  roaring_bitmap_remove_many(bitmap, n_offsets, offsets);
+
+  return true;
+}
+
+bool bitmap64_clearbits(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets) {
+  if (bitmap == NULL) return false;
+  if (offsets == NULL) return true;
+
+  roaring64_bitmap_remove_many(bitmap, n_offsets, offsets);
+
+  return true;
+}
+
+size_t bitmap_clearbits_count(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets) {
+  if (bitmap == NULL || offsets == NULL) return 0;
+
+  size_t count = 0;
+
+  for (size_t i = 0; i < n_offsets; i++) {
+    if (roaring_bitmap_remove_checked(bitmap, offsets[i])) {
+      count++;
+    }
+  }
+
+  return count++;
+}
+
+size_t bitmap64_clearbits_count(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets) {
+  if (bitmap == NULL || offsets == NULL) return 0;
+
+  size_t count = 0;
+
+  for (size_t i = 0; i < n_offsets; i++) {
+    if (roaring64_bitmap_remove_checked(bitmap, offsets[i])) {
+      count++;
+    }
+  }
+
+  return count++;
+}
+
 int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {
   roaring_uint32_iterator_t* iterator = roaring_iterator_create(bitmap);
   int64_t element = -1;

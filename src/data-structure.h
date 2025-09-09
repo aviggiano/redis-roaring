@@ -24,6 +24,10 @@ bool bitmap_getbit(const Bitmap* bitmap, uint32_t offset);
 bool bitmap64_getbit(const Bitmap64* bitmap, uint64_t offset);
 bool* bitmap64_getbits(const Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets);
 bool* bitmap_getbits(const Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets);
+bool bitmap_clearbits(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets);
+bool bitmap64_clearbits(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets);
+size_t bitmap_clearbits_count(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets);
+size_t bitmap64_clearbits_count(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets);
 /**
  * Gets the n-th element of the set.
  *

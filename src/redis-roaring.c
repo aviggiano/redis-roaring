@@ -13,9 +13,34 @@ static char REPLY_UINT64_BUFFER[21];
 #define BITMAP_ENCODING_VERSION 1
 #define BITMAP_MAX_RANGE_SIZE 100000000
 
+#define ERRORMSG_WRONGARG_UINT32(arg_name) "ERR invalid " arg_name ": must be an unsigned 32 bit integer"
+#define ERRORMSG_WRONGARG_UINT64(arg_name) "ERR invalid " arg_name ": must be an unsigned 64 bit integer"
+
 void ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value) {
   size_t len = uint64_to_string(value, REPLY_UINT64_BUFFER);
   RedisModule_ReplyWithBigNumber(ctx, REPLY_UINT64_BUFFER, len);
+}
+
+bool StrToUInt32(const RedisModuleString* str, uint32_t* ull) {
+  long long value;
+
+  if ((RedisModule_StringToLongLong(str, &value) != REDISMODULE_OK) || value < 0 || value > UINT32_MAX) {
+    return false;
+  }
+
+  *ull = (uint32_t) value;
+  return true;
+}
+
+bool StrToUInt64(const RedisModuleString* str, uint64_t* ull) {
+  unsigned long long value;
+
+  if ((RedisModule_StringToULongLong(str, &value) != REDISMODULE_OK) || value > UINT64_MAX) {
+    return false;
+  }
+
+  *ull = (uint64_t) value;
+  return true;
 }
 
 void BitmapRdbSave(RedisModuleIO* rdb, void* value);
@@ -235,7 +260,7 @@ int R64GetBitManyCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc
   size_t n_offsets = (size_t) (argc - 2);
   uint64_t* offsets = rm_malloc(sizeof(*offsets) * n_offsets);
 
-  for (int i = 0; i < n_offsets; i++) {
+  for (size_t i = 0; i < n_offsets; i++) {
     unsigned long long value;
     if ((RedisModule_StringToULongLong(argv[2 + i], &value) != REDISMODULE_OK) || value > UINT64_MAX) {
       rm_free(offsets);
@@ -254,6 +279,60 @@ int R64GetBitManyCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc
 
   rm_free(offsets);
   rm_free(results);
+
+  return REDISMODULE_OK;
+}
+
+/**
+ * R64.CLEARBITS <key> offset [offset1 offset2 ... offsetN] [COUNT]
+ * */
+int R64ClearBitsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+
+  if (RedisModule_KeyType(key) == REDISMODULE_KEYTYPE_EMPTY) {
+    return RedisModule_ReplyWithNull(ctx);
+  }
+
+  if (RedisModule_ModuleTypeGetType(key) != Bitmap64Type) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  Bitmap64* bitmap = RedisModule_ModuleTypeGetValue(key);
+
+  size_t n_offsets = (size_t) (argc - 2);
+  bool count_mode = false;
+
+  const char* last_arg = RedisModule_StringPtrLen(argv[argc - 1], NULL);
+
+  if (strcmp(last_arg, "COUNT") == 0) {
+    count_mode = true;
+    n_offsets--;
+  }
+
+  uint64_t* offsets = rm_malloc(sizeof(*offsets) * n_offsets);
+
+  for (size_t i = 0; i < n_offsets; i++) {
+    if (!StrToUInt64(argv[2 + i], &offsets[i])) {
+      rm_free(offsets);
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("offset"));
+    }
+  }
+
+  RedisModule_ReplicateVerbatim(ctx);
+
+  if (count_mode) {
+    size_t count = bitmap64_clearbits_count(bitmap, n_offsets, offsets);
+    RedisModule_ReplyWithLongLong(ctx, (long long) count);
+  } else {
+    bitmap64_clearbits(bitmap, n_offsets, offsets);
+    RedisModule_ReplyWithSimpleString(ctx, "OK");
+  }
+
+  rm_free(offsets);
 
   return REDISMODULE_OK;
 }
@@ -1213,6 +1292,60 @@ int RGetBitManyCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
 }
 
 /**
+ * R.CLEARBITS <key> offset [offset1 offset2 ... offsetN] [COUNT]
+ * */
+int RClearBitsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+
+  if (RedisModule_KeyType(key) == REDISMODULE_KEYTYPE_EMPTY) {
+    return RedisModule_ReplyWithNull(ctx);
+  }
+
+  if (RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
+
+  size_t n_offsets = (size_t) (argc - 2);
+  bool count_mode = false;
+
+  const char* last_arg = RedisModule_StringPtrLen(argv[argc - 1], NULL);
+
+  if (strcmp(last_arg, "COUNT") == 0) {
+    count_mode = true;
+    n_offsets--;
+  }
+
+  uint32_t* offsets = rm_malloc(sizeof(*offsets) * n_offsets);
+
+  for (int i = 0; i < n_offsets; i++) {
+    if (!StrToUInt32(argv[2 + i], &offsets[i])) {
+      rm_free(offsets);
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("offset"));
+    }
+  }
+
+  RedisModule_ReplicateVerbatim(ctx);
+
+  if (count_mode) {
+    size_t count = bitmap_clearbits_count(bitmap, n_offsets, offsets);
+    RedisModule_ReplyWithLongLong(ctx, (long long) count);
+  } else {
+    bitmap_clearbits(bitmap, n_offsets, offsets);
+    RedisModule_ReplyWithSimpleString(ctx, "OK");
+  }
+
+  rm_free(offsets);
+
+  return REDISMODULE_OK;
+}
+
+/**
  * R.STAT <key> [format]
  * */
 int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
@@ -2014,6 +2147,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   if (RedisModule_CreateCommand(ctx, "R.GETBITS", RGetBitManyCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
+  if (RedisModule_CreateCommand(ctx, "R.CLEARBITS", RClearBitsCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
   if (RedisModule_CreateCommand(ctx, "R.SETINTARRAY", RSetIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
@@ -2126,6 +2262,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.CLEAR", R64ClearCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R64.CLEARBITS", R64ClearBitsCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
 
