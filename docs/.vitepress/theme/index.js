@@ -1,4 +1,11 @@
 import DefaultTheme from "vitepress/theme";
+import TheContributors from "./components/TheContributors.vue";
 import "./styles.css";
 
-export default DefaultTheme;
+/** @type {import('vitepress').Theme} */
+export default {
+  extends: DefaultTheme,
+  enhanceApp({ app }) {
+    app.component("TheContributors", TheContributors);
+  },
+};
