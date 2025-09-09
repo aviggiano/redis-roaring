@@ -6,7 +6,7 @@ hero:
   name: "Redis Roaring"
   text: "A better compressed bitset"
   image:
-    src: /assets/logo.svg
+    src: /logo.svg
     alt: VitePress
   actions:
     - theme: brand
