@@ -29,12 +29,15 @@
 #include "unit/test_bitmap64_andor.c"
 #include "unit/test_bitmap_one.c"
 #include "unit/test_bitmap64_one.c"
+#include "unit/test_bitmap64_getbits.c"
+#include "unit/test_bitmap_getbits.c"
 
 int main(int argc, char* argv[]) {
   test_start();
 
   test_bitmap_free();
   test_bitmap_setbit();
+  test_bitmap_getbits();
   test_bitmap_from_bit_array();
   test_bitmap_from_int_array();
   test_bitmap64_free();
@@ -44,6 +47,7 @@ int main(int argc, char* argv[]) {
   test_bitmap64_xor();
   test_bitmap64_range_int_array();
   test_bitmap64_getbit();
+  test_bitmap64_getbits();
   test_bitmap64_setbit();
   test_bitmap64_get_bit_array();
   test_bitmap64_from_bit_array();

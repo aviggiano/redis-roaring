@@ -53,6 +53,34 @@ bool bitmap64_getbit(const Bitmap64* bitmap, uint64_t offset) {
   return roaring64_bitmap_contains(bitmap, offset);
 }
 
+bool* bitmap_getbits(const Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets) {
+  if (bitmap == NULL) return NULL;
+
+  roaring_bulk_context_t context = CROARING_ZERO_INITIALIZER;
+
+  bool* results = rm_malloc(sizeof(bool) * n_offsets);
+
+  for (size_t i = 0; i < n_offsets; i++) {
+    results[i] = roaring_bitmap_contains_bulk(bitmap, &context, offsets[i]);
+  }
+
+  return results;
+}
+
+bool* bitmap64_getbits(const Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets) {
+  if (bitmap == NULL) return NULL;
+
+  roaring64_bulk_context_t context = CROARING_ZERO_INITIALIZER;
+
+  bool* results = rm_malloc(sizeof(bool) * n_offsets);
+
+  for (size_t i = 0; i < n_offsets; i++) {
+    results[i] = roaring64_bitmap_contains_bulk(bitmap, &context, offsets[i]);
+  }
+
+  return results;
+}
+
 int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {
   roaring_uint32_iterator_t* iterator = roaring_iterator_create(bitmap);
   int64_t element = -1;

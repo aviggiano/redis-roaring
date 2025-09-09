@@ -213,6 +213,52 @@ int R64GetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 }
 
 /**
+ * R64.GETBITS <key> offset [offset1 offset2 ... offsetN]
+ * */
+int R64GetBitManyCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+
+  if (RedisModule_KeyType(key) == REDISMODULE_KEYTYPE_EMPTY) {
+    return RedisModule_ReplyWithEmptyArray(ctx);
+  }
+
+  if (RedisModule_ModuleTypeGetType(key) != Bitmap64Type) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  Bitmap64* bitmap = RedisModule_ModuleTypeGetValue(key);
+
+  size_t n_offsets = (size_t) (argc - 2);
+  uint64_t* offsets = rm_malloc(sizeof(*offsets) * n_offsets);
+
+  for (int i = 0; i < n_offsets; i++) {
+    unsigned long long value;
+    if ((RedisModule_StringToULongLong(argv[2 + i], &value) != REDISMODULE_OK) || value > UINT64_MAX) {
+      rm_free(offsets);
+      return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be an unsigned 64 bit integer");
+    }
+    offsets[i] = (uint64_t) value;
+  }
+
+  bool* results = bitmap64_getbits(bitmap, n_offsets, offsets);
+
+  RedisModule_ReplyWithArray(ctx, n_offsets);
+
+  for (size_t i = 0; i < n_offsets; i++) {
+    RedisModule_ReplyWithLongLong(ctx, (long long) results[i]);
+  }
+
+  rm_free(offsets);
+  rm_free(results);
+
+  return REDISMODULE_OK;
+}
+
+/**
  * R64.SETINTARRAY <key> <value1> [<value2> <value3> ... <valueN>]
  * */
 int R64SetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
@@ -1121,6 +1167,52 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 }
 
 /**
+ * R.GETBITS <key> offset [offset1 offset2 ... offsetN]
+ * */
+int RGetBitManyCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+  RedisModule_AutoMemory(ctx);
+  RedisModuleKey* key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+
+  if (RedisModule_KeyType(key) == REDISMODULE_KEYTYPE_EMPTY) {
+    return RedisModule_ReplyWithEmptyArray(ctx);
+  }
+
+  if (RedisModule_ModuleTypeGetType(key) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
+
+  size_t n_offsets = (size_t) (argc - 2);
+  uint32_t* offsets = rm_malloc(sizeof(*offsets) * n_offsets);
+
+  for (int i = 0; i < n_offsets; i++) {
+    long long value;
+    if ((RedisModule_StringToLongLong(argv[2 + i], &value) != REDISMODULE_OK) || value < 0 || value > UINT32_MAX) {
+      rm_free(offsets);
+      return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be an unsigned 32 bit integer");
+    }
+    offsets[i] = (uint32_t) value;
+  }
+
+  bool* results = bitmap_getbits(bitmap, n_offsets, offsets);
+
+  RedisModule_ReplyWithArray(ctx, n_offsets);
+
+  for (size_t i = 0; i < n_offsets; i++) {
+    RedisModule_ReplyWithLongLong(ctx, (long long) results[i]);
+  }
+
+  rm_free(offsets);
+  rm_free(results);
+
+  return REDISMODULE_OK;
+}
+
+/**
  * R.STAT <key> [format]
  * */
 int RStatBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
@@ -1919,7 +2011,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   if (RedisModule_CreateCommand(ctx, "R.GETBIT", RGetBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
-
+  if (RedisModule_CreateCommand(ctx, "R.GETBITS", RGetBitManyCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
   if (RedisModule_CreateCommand(ctx, "R.SETINTARRAY", RSetIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
@@ -1978,6 +2072,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.GETBIT", R64GetBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R64.GETBITS", R64GetBitManyCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.SETINTARRAY", R64SetIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {

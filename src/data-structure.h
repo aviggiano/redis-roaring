@@ -22,6 +22,8 @@ void bitmap_setbit(Bitmap* bitmap, uint32_t offset, bool value);
 void bitmap64_setbit(Bitmap64* bitmap, uint64_t offset, bool value);
 bool bitmap_getbit(const Bitmap* bitmap, uint32_t offset);
 bool bitmap64_getbit(const Bitmap64* bitmap, uint64_t offset);
+bool* bitmap64_getbits(const Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets);
+bool* bitmap_getbits(const Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets);
 /**
  * Gets the n-th element of the set.
  *
