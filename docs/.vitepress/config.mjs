@@ -2,7 +2,7 @@ import { globSync } from "node:fs";
 import path from "node:path";
 import { defineConfig } from "vitepress";
 
-const BASE_URL = "/redis-roaring/";
+const BASE_URL = "/";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
