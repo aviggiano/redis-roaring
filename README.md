@@ -10,7 +10,6 @@ calls, according to microbenchmarks, while consuming less memory than their unco
 
 Pull requests are welcome.
 
-
 ## Dependencies
 
 - CRoaring (bitmap compression library used by this redis module)
