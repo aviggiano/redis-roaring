@@ -13,8 +13,10 @@ static char REPLY_UINT64_BUFFER[21];
 #define BITMAP_ENCODING_VERSION 1
 #define BITMAP_MAX_RANGE_SIZE 100000000
 
-#define ERRORMSG_WRONGARG_UINT32(arg_name) "ERR invalid " arg_name ": must be an unsigned 32 bit integer"
-#define ERRORMSG_WRONGARG_UINT64(arg_name) "ERR invalid " arg_name ": must be an unsigned 64 bit integer"
+#define ERRORMSG_WRONGARG(arg_name, description) "ERR invalid " arg_name ": " description
+#define ERRORMSG_WRONGARG_UINT32(arg_name) ERRORMSG_WRONGARG(arg_name, "must be an unsigned 32 bit integer")
+#define ERRORMSG_WRONGARG_UINT64(arg_name) ERRORMSG_WRONGARG(arg_name, "must be an unsigned 64 bit integer")
+#define ERRORMSG_WRONGARG_BIT(arg_name) ERRORMSG_WRONGARG(arg_name, "must be either 0 or 1")
 
 void ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value) {
   size_t len = uint64_to_string(value, REPLY_UINT64_BUFFER);
@@ -40,6 +42,17 @@ bool StrToUInt64(const RedisModuleString* str, uint64_t* ull) {
   }
 
   *ull = (uint64_t) value;
+  return true;
+}
+
+bool StrToBool(const RedisModuleString* str, bool* ull) {
+  long long value;
+
+  if ((RedisModule_StringToLongLong(str, &value) != REDISMODULE_OK) || value < 0 || value > 1) {
+    return false;
+  }
+
+  *ull = (char) value;
   return true;
 }
 
@@ -175,13 +188,13 @@ int R64SetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
-  unsigned long long offset;
-  if ((RedisModule_StringToULongLong(argv[2], &offset) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be an unsigned 64 bit integer");
+  uint64_t offset;
+  if (!StrToUInt64(argv[2], &offset)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("offset"));
   }
-  long long value;
-  if ((RedisModule_StringToLongLong(argv[3], &value) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be either 0 or 1");
+  bool value;
+  if (!StrToBool(argv[3], &value)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_BIT("value"));
   }
 
   /* Create an empty value object if the key is currently empty. */
@@ -218,9 +231,9 @@ int R64GetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
-  unsigned long long offset;
-  if ((RedisModule_StringToULongLong(argv[2], &offset) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be an unsigned 64 bit integer");
+  uint64_t offset;
+  if (!StrToUInt64(argv[2], &offset)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("offset"));
   }
 
   char value;
@@ -261,12 +274,10 @@ int R64GetBitManyCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc
   uint64_t* offsets = rm_malloc(sizeof(*offsets) * n_offsets);
 
   for (size_t i = 0; i < n_offsets; i++) {
-    unsigned long long value;
-    if ((RedisModule_StringToULongLong(argv[2 + i], &value) != REDISMODULE_OK) || value > UINT64_MAX) {
+    if (!StrToUInt64(argv[2 + i], &offsets[i])) {
       rm_free(offsets);
-      return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be an unsigned 64 bit integer");
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("offset"));
     }
-    offsets[i] = (uint64_t) value;
   }
 
   bool* results = bitmap64_getbits(bitmap, n_offsets, offsets);
@@ -354,12 +365,10 @@ int R64SetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
   size_t length = (size_t) (argc - 2);
   uint64_t* values = rm_malloc(sizeof(*values) * length);
   for (int i = 0; i < length; i++) {
-    unsigned long long value;
-    if ((RedisModule_StringToULongLong(argv[2 + i], &value) != REDISMODULE_OK)) {
+    if (!StrToUInt64(argv[2 + i], &values[i])) {
       rm_free(values);
-      return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be an unsigned 64 bit integer");
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("value"));
     }
-    values[i] = (uint64_t) value;
   }
 
   Bitmap64* bitmap = bitmap64_from_int_array(length, values);
@@ -423,14 +432,14 @@ int R64RangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int a
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
-  unsigned long long start;
-  if ((RedisModule_StringToULongLong(argv[2], &start) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid start: must be an unsigned 64 bit integer");
+  uint64_t start;
+  if (!StrToUInt64(argv[2], &start)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("start"));
   }
 
-  unsigned long long end;
-  if ((RedisModule_StringToULongLong(argv[3], &end) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid end: must be an unsigned 64 bit integer");
+  uint64_t end;
+  if (!StrToUInt64(argv[3], &end)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("end"));
   }
 
   if (start > end) {
@@ -492,12 +501,10 @@ int R64AppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int 
   size_t length = (size_t) (argc - 2);
   uint64_t* values = rm_malloc(sizeof(*values) * length);
   for (int i = 0; i < length; i++) {
-    unsigned long long value;
-    if ((RedisModule_StringToULongLong(argv[2 + i], &value) != REDISMODULE_OK)) {
+    if (!StrToUInt64(argv[2 + i], &values[i])) {
       rm_free(values);
-      return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be an unsigned 64 bit integer");
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("value"));
     }
-    values[i] = (uint64_t) value;
   }
 
   roaring64_bitmap_add_many(bitmap, length, values);
@@ -545,12 +552,10 @@ int R64DeleteIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int 
   size_t length = (size_t) (argc - 2);
   uint64_t* values = rm_malloc(sizeof(*values) * length);
   for (int i = 0; i < length; i++) {
-    unsigned long long value;
-    if ((RedisModule_StringToULongLong(argv[2 + i], &value) != REDISMODULE_OK)) {
+    if (!StrToUInt64(argv[2 + i], &values[i])) {
       rm_free(values);
-      return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be an unsigned 64 bit integer");
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("value"));
     }
-    values[i] = (uint64_t) value;
   }
 
   roaring64_bitmap_remove_many(bitmap, length, values);
@@ -637,20 +642,16 @@ int R64SetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != Bitmap64Type) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
-  unsigned long long start_num;
-  if ((RedisModule_StringToULongLong(argv[2], &start_num) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid start_num: must be an unsigned 64 bit integer");
+  uint64_t start_num;
+  if (!StrToUInt64(argv[2], &start_num)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("start"));
   }
-  unsigned long long end_num;
-  if ((RedisModule_StringToULongLong(argv[3], &end_num) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid end_num: must be an unsigned 64 bit integer");
+  uint64_t end_num;
+  if (!StrToUInt64(argv[3], &end_num)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("end"));
   }
-  if (start_num < 0 || end_num < 0 || end_num < start_num) {
-    return RedisModule_ReplyWithError(ctx, "start_num and end_num must >=0 and end_num must >= start_num");
-  }
-
-  if ((uint64_t) start_num > UINT64_MAX || (uint64_t) end_num > UINT64_MAX) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid end_num: must be an unsigned 64 bit integer");
+  if (end_num < start_num) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG("end", "must >= start"));
   }
 
   Bitmap64* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
@@ -765,11 +766,11 @@ int R64BitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return REDISMODULE_OK;
   }
 
-  unsigned long long last = 0;
+  uint64_t last = 0;
 
   if (argc == 5) {
-    if ((RedisModule_StringToULongLong(argv[4], &last) != REDISMODULE_OK)) {
-      return RedisModule_ReplyWithError(ctx, "ERR invalid last: must be an unsigned 64 bit integer");
+    if (!StrToUInt64(argv[4], &last)) {
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("last"));
     }
   } else if (argc > 5) {
     return RedisModule_WrongArity(ctx);
@@ -978,8 +979,11 @@ int R64BitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != Bitmap64Type) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
-  long long bit;
-  RedisModule_StringToLongLong(argv[2], &bit);
+
+  bool bit;
+  if (!StrToBool(argv[2], &bit)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_BIT("bit"));
+  }
 
   bool found = false;
   uint64_t pos;
@@ -1138,20 +1142,16 @@ int RSetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
-  long long start_num;
-  if ((RedisModule_StringToLongLong(argv[2], &start_num) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid start_num: must be an unsigned 32 bit integer");
+  uint32_t start_num;
+  if (!StrToUInt32(argv[2], &start_num)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("start"));
   }
-  long long end_num;
-  if ((RedisModule_StringToLongLong(argv[3], &end_num) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid end_num: must be an unsigned 32 bit integer");
+  uint32_t end_num;
+  if (!StrToUInt32(argv[3], &end_num)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("end"));
   }
-  if (start_num < 0 || end_num < 0 || end_num < start_num) {
-    return RedisModule_ReplyWithError(ctx, "start_num and end_num must >=0 and end_num must >= start_num");
-  }
-
-  if ((uint32_t) start_num > UINT32_MAX || (uint32_t) end_num > UINT32_MAX) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid end_num: must be an unsigned 32 bit integer");
+  if (end_num < start_num) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG("end", "must be >= start"));
   }
 
   Bitmap* bitmap = (type == REDISMODULE_KEYTYPE_EMPTY) ? NULL : RedisModule_ModuleTypeGetValue(key);
@@ -1183,13 +1183,13 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
-  long long offset;
-  if ((RedisModule_StringToLongLong(argv[2], &offset) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be an unsigned 32 bit integer");
+  uint32_t offset;
+  if (!StrToUInt32(argv[2], &offset)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("offset"));
   }
-  long long value;
-  if ((RedisModule_StringToLongLong(argv[3], &value) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be either 0 or 1");
+  bool value;
+  if (!StrToBool(argv[3], &value)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_BIT("value"));
   }
 
   /* Create an empty value object if the key is currently empty. */
@@ -1202,8 +1202,8 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   /* Set bit with value */
-  char old_value = bitmap_getbit(bitmap, (uint32_t) offset);
-  bitmap_setbit(bitmap, (uint32_t) offset, (char) value);
+  char old_value = bitmap_getbit(bitmap, offset);
+  bitmap_setbit(bitmap, offset, value);
 
   RedisModule_ReplicateVerbatim(ctx);
   // Integer reply: the original bit value stored at offset.
@@ -1226,9 +1226,9 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
-  long long offset;
-  if ((RedisModule_StringToLongLong(argv[2], &offset) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be an unsigned 32 bit integer");
+  uint32_t offset;
+  if (!StrToUInt32(argv[2], &offset)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("offset"));
   }
 
   char value;
@@ -1269,12 +1269,10 @@ int RGetBitManyCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
   uint32_t* offsets = rm_malloc(sizeof(*offsets) * n_offsets);
 
   for (int i = 0; i < n_offsets; i++) {
-    long long value;
-    if ((RedisModule_StringToLongLong(argv[2 + i], &value) != REDISMODULE_OK) || value < 0 || value > UINT32_MAX) {
+    if (!StrToUInt32(argv[2 + i], &offsets[i])) {
       rm_free(offsets);
-      return RedisModule_ReplyWithError(ctx, "ERR invalid offset: must be an unsigned 32 bit integer");
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("offset"));
     }
-    offsets[i] = (uint32_t) value;
   }
 
   bool* results = bitmap_getbits(bitmap, n_offsets, offsets);
@@ -1448,12 +1446,10 @@ int RSetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
   size_t length = (size_t) (argc - 2);
   uint32_t* values = rm_malloc(sizeof(*values) * length);
   for (int i = 0; i < length; i++) {
-    long long value;
-    if ((RedisModule_StringToLongLong(argv[2 + i], &value) != REDISMODULE_OK)) {
+    if (!StrToUInt32(argv[2 + i], &values[i])) {
       rm_free(values);
-      return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be an unsigned 32 bit integer");
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("value"));
     }
-    values[i] = (uint32_t) value;
   }
 
   Bitmap* bitmap = bitmap_from_int_array(length, values);
@@ -1463,7 +1459,6 @@ int RSetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
 
   RedisModule_ReplicateVerbatim(ctx);
   RedisModule_ReplyWithSimpleString(ctx, "OK");
-
 
   return REDISMODULE_OK;
 }
@@ -1530,12 +1525,10 @@ int RAppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int ar
   size_t length = (size_t) (argc - 2);
   uint32_t* values = rm_malloc(sizeof(*values) * length);
   for (int i = 0; i < length; i++) {
-    long long value;
-    if ((RedisModule_StringToLongLong(argv[2 + i], &value) != REDISMODULE_OK)) {
+    if (!StrToUInt32(argv[2 + i], &values[i])) {
       rm_free(values);
-      return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be an unsigned 32 bit integer");
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("value"));
     }
-    values[i] = (uint32_t) value;
   }
 
   roaring_bitmap_add_many(bitmap, length, values);
@@ -1583,12 +1576,10 @@ int RDeleteIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int ar
   size_t length = (size_t) (argc - 2);
   uint32_t* values = rm_malloc(sizeof(*values) * length);
   for (int i = 0; i < length; i++) {
-    long long value;
-    if ((RedisModule_StringToLongLong(argv[2 + i], &value) != REDISMODULE_OK)) {
+    if (!StrToUInt32(argv[2 + i], &values[i])) {
       rm_free(values);
-      return RedisModule_ReplyWithError(ctx, "ERR invalid value: must be an unsigned 32 bit integer");
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("value"));
     }
-    values[i] = (uint32_t) value;
   }
 
   roaring_bitmap_remove_many(bitmap, length, values);
@@ -1621,14 +1612,14 @@ int RRangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
 
-  long long start;
-  if ((RedisModule_StringToLongLong(argv[2], &start) != REDISMODULE_OK) || start < 0 || start > UINT32_MAX) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid start: must be an unsigned 32 bit integer");
+  uint32_t start;
+  if (!StrToUInt32(argv[2], &start)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("start"));
   }
 
-  long long end;
-  if ((RedisModule_StringToLongLong(argv[3], &end) != REDISMODULE_OK) || end < 0 || end > UINT32_MAX) {
-    return RedisModule_ReplyWithError(ctx, "ERR invalid end: must be an unsigned 32 bit integer");
+  uint32_t end;
+  if (!StrToUInt32(argv[3], &end)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("end"));
   }
 
   if (start > end) {
@@ -1828,9 +1819,11 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 
   long long last = -1;
   if (argc == 5) {
-    if ((RedisModule_StringToLongLong(argv[4], &last) != REDISMODULE_OK) || last < 0) {
-      return RedisModule_ReplyWithError(ctx, "ERR invalid last: must be an unsigned 32 bit integer");
+    uint32_t last_pared;
+    if (!StrToUInt32(argv[4], &last_pared)) {
+      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("last"));
     }
+    last = (long long) last_pared;
   } else if (argc > 5) {
     return RedisModule_WrongArity(ctx);
   }
@@ -1969,15 +1962,18 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != BitmapType) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
-  long long bit;
-  RedisModule_StringToLongLong(argv[2], &bit);
+
+  bool bit;
+  if (!StrToBool(argv[2], &bit)) {
+    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_BIT("bit"));
+  }
 
   int64_t pos;
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
     pos = -1;
   } else {
     Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-    if (bit == 1) {
+    if (bit) {
       pos = bitmap_get_nth_element_present(bitmap, 1);
     } else {
       pos = bitmap_get_nth_element_not_present(bitmap, 1);
