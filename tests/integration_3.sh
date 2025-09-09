@@ -14,6 +14,13 @@ function test_setbit_getbit() {
   rcall_assert "R64.GETBIT key 0 1" "ERR wrong number of arguments for 'R64.GETBIT' command" "GETBIT with wrong number of arguments"
 }
 
+function test_getbits() {
+  print_test_header "test_getbits (64)"
+
+  rcall_assert "R64.SETINTARRAY test_getbits 1 2 4 5" "OK" "Set bits 1-5"
+  rcall_assert "R64.GETBITS test_getbits 1 2 3 4 5" "1\n1\n0\n1\n1" "Get bit at position 1-5"
+}
+
 function test_bitop() {
   print_test_header "test_bitop (64)"
 
@@ -316,6 +323,7 @@ function test_save() {
 }
 
 test_setbit_getbit
+test_getbits
 test_bitop
 test_bitcount
 test_bitpos
