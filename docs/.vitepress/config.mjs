@@ -7,6 +7,7 @@ export default defineConfig({
   title: "Redis Roaring",
   lang: "en-US",
   description: "Roaring Bitmaps for Redis",
+  base: "/redis-roaring/",
   themeConfig: {
     search: {
       provider: "local",
