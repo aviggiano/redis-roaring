@@ -90,6 +90,7 @@ void test_bitmap_getbits() {
       ASSERT_NOT_NULL(results);
       ASSERT_ARRAY_EQ(expected, results, ARRAY_LENGTH(expected), n_offsets);
 
+      SAFE_FREE(results);
       roaring_bitmap_free(bitmap);
     }
 
