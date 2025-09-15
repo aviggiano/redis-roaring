@@ -1,4 +1,4 @@
-redis-roaring ![CI/CD](https://github.com/aviggiano/redis-roaring/actions/workflows/ci.yml/badge.svg)
+redis-roaring ![CI/CD](https://github.com/aviggiano/redis-roaring/actions/workflows/ci.yml/badge.svg) [![Static Badge](https://img.shields.io/badge/documentation-passing-blue)](https://redisroaring.com)
 ===========
 Roaring Bitmaps for Redis
 
@@ -9,7 +9,6 @@ These commands can have the same performance as redis' native bitmaps for *O(1)*
 calls, according to microbenchmarks, while consuming less memory than their uncompressed counterparts (benchmark pending).
 
 Pull requests are welcome.
-
 
 ## Dependencies
 
