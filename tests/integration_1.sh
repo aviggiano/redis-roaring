@@ -396,6 +396,35 @@ function test_contains() {
   rcall_assert "R.CONTAINS test_contains_range1 test_contains_range2 ALL_STRICT" "1" "Sparse range strict subset test"
 }
 
+function test_jaccard() {
+  print_test_header "test_jaccard"
+
+  # Setup test data
+  rcall_assert "R.SETINTARRAY jaccard1 1 2 3 4 5" "OK" "Setup jaccard1 with [1,2,3,4,5]"
+  rcall_assert "R.SETINTARRAY jaccard2 3 4 5 6 7" "OK" "Setup jaccard2 with [3,4,5,6,7]"
+  rcall_assert "R.SETINTARRAY jaccard3 1 2 3" "OK" "Setup jaccard3 with [1,2,3]"
+  rcall_assert "R.SETBIT jaccard_empty1 0 1" "0" "Setup jaccard_empty1"
+  rcall_assert "R.CLEAR jaccard_empty1" "1" "Cleanup jaccard_empty1"
+  rcall_assert "R.SETBIT jaccard_empty2 0 1" "0" "Setup jaccard_empty2"
+  rcall_assert "R.CLEAR jaccard_empty2" "1" "Cleanup jaccard_empty2"
+  rcall_assert "R.SETINTARRAY jaccard_single 42" "OK" "Setup jaccard_single with [42]"
+  rcall_assert "R.SETINTARRAY jaccard_single2 42" "OK" "Setup jaccard_single2 with [42]"
+  rcall_assert "R.SETINTARRAY jaccard_no_overlap1 1 2" "OK" "Setup jaccard_no_overlap1 with [1,2]"
+  rcall_assert "R.SETINTARRAY jaccard_no_overlap2 3 4" "OK" "Setup jaccard_no_overlap2 with [3,4]"
+
+  # Test cases
+  rcall_assert "R.JACCARD jaccard1 jaccard2" "0.42857142857142855" "Jaccard index of [1,2,3,4,5] and [3,4,5,6,7]"
+  rcall_assert "R.JACCARD jaccard3 jaccard3" "1" "Jaccard index of identical sets"
+  rcall_assert "R.JACCARD jaccard3 jaccard1" "0.6" "Jaccard index where one set is subset of another"
+  rcall_assert "R.JACCARD jaccard_no_overlap1 jaccard_no_overlap2" "0" "Jaccard index with no overlap"
+  rcall_assert "R.JACCARD jaccard_empty1 jaccard_empty2" "-1" "Jaccard index of two empty bitmaps"
+  rcall_assert "R.JACCARD jaccard3 jaccard_empty1" "0" "Jaccard index with one empty bitmap"
+  rcall_assert "R.JACCARD jaccard_single jaccard_single2" "1" "Jaccard index of identical single element bitmaps"
+  rcall_assert "R.JACCARD jaccard_no_overlap1 jaccard_single" "0" "Jaccard index with single element and no overlap"
+  rcall_assert "R.JACCARD nonexistent1 nonexistent2" "${ERRORMSG_WRONGTYPE}" "Jaccard index with non-existent keys"
+  rcall_assert "R.JACCARD jaccard1 nonexistent" "${ERRORMSG_WRONGTYPE}" "Jaccard index with one non-existent key"
+}
+
 function test_stat() {
   print_test_header "test_stat"
 
@@ -436,5 +465,6 @@ test_optimize_nokey
 test_setfull
 test_del
 test_contains
+test_jaccard
 test_stat
 test_save

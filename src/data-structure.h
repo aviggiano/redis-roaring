@@ -35,6 +35,8 @@ bool bitmap_intersect(const Bitmap* b1, const Bitmap* b2, uint32_t mode);
 bool bitmap64_intersect(const Bitmap64* b1, const Bitmap64* b2, uint32_t mode);
 size_t bitmap_clearbits_count(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets);
 size_t bitmap64_clearbits_count(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets);
+double bitmap_jaccard(const Bitmap* b1, const Bitmap* b2);
+double bitmap64_jaccard(const Bitmap64* b1, const Bitmap64* b2);
 /**
  * Gets the n-th element of the set.
  *

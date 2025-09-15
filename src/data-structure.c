@@ -1,3 +1,4 @@
+#include <math.h>
 #include "data-structure.h"
 
 #include "roaring.h"
@@ -167,6 +168,30 @@ bool bitmap64_intersect(const Bitmap64* b1, const Bitmap64* b2, uint32_t mode) {
   default:
     return false;
   }
+}
+
+double bitmap_jaccard(const Bitmap* b1, const Bitmap* b2) {
+  if (b1 == NULL || b2 == NULL) return 0;
+  if (b1 == b2) return 1;
+
+  double res = roaring_bitmap_jaccard_index(b1, b2);
+
+  // both bitmaps are empty
+  if (isnan(res)) res = -1;
+
+  return res;
+}
+
+double bitmap64_jaccard(const Bitmap64* b1, const Bitmap64* b2) {
+  if (b1 == NULL || b2 == NULL) return 0;
+  if (b1 == b2) return 1;
+
+  double res = roaring64_bitmap_jaccard_index(b1, b2);
+
+  // both bitmaps are empty
+  if (isnan(res)) res = -1;
+
+  return res;
 }
 
 int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {

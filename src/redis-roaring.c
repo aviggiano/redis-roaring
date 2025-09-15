@@ -1153,6 +1153,35 @@ int R64ContainsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
   return REDISMODULE_OK;
 }
 
+/**
+ * R64.JACCARD <key1> <key2>
+ * */
+int R64JaccardCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
+  RedisModule_AutoMemory(ctx);
+
+  RedisModuleKey* key1 = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+  if (RedisModule_KeyType(key1) == REDISMODULE_KEYTYPE_EMPTY || RedisModule_ModuleTypeGetType(key1) != Bitmap64Type) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  RedisModuleKey* key2 = RedisModule_OpenKey(ctx, argv[2], REDISMODULE_READ);
+  if (RedisModule_KeyType(key2) == REDISMODULE_KEYTYPE_EMPTY || RedisModule_ModuleTypeGetType(key1) != Bitmap64Type) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  Bitmap64* b1 = RedisModule_ModuleTypeGetValue(key1);
+  Bitmap64* b2 = RedisModule_ModuleTypeGetValue(key2);
+
+  RedisModule_ReplicateVerbatim(ctx);
+  RedisModule_ReplyWithDouble(ctx, bitmap64_jaccard(b1, b2));
+
+  return REDISMODULE_OK;
+}
+
 /* === Bitmap type commands === */
 
 /**
@@ -2173,6 +2202,35 @@ int RContainsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   return REDISMODULE_OK;
 }
 
+/**
+ * R.JACCARD <key1> <key2>
+ * */
+int RJaccardCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
+  RedisModule_AutoMemory(ctx);
+
+  RedisModuleKey* key1 = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+  if (RedisModule_KeyType(key1) == REDISMODULE_KEYTYPE_EMPTY || RedisModule_ModuleTypeGetType(key1) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  RedisModuleKey* key2 = RedisModule_OpenKey(ctx, argv[2], REDISMODULE_READ);
+  if (RedisModule_KeyType(key2) == REDISMODULE_KEYTYPE_EMPTY || RedisModule_ModuleTypeGetType(key1) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  Bitmap* b1 = RedisModule_ModuleTypeGetValue(key1);
+  Bitmap* b2 = RedisModule_ModuleTypeGetValue(key2);
+
+  RedisModule_ReplicateVerbatim(ctx);
+  RedisModule_ReplyWithDouble(ctx, bitmap_jaccard(b1, b2));
+
+  return REDISMODULE_OK;
+}
+
 void RedisModule_OnShutdown(RedisModuleCtx* ctx, RedisModuleEvent e, uint64_t sub, void* data) {
   REDISMODULE_NOT_USED(e);
   REDISMODULE_NOT_USED(data);
@@ -2302,6 +2360,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   if (RedisModule_CreateCommand(ctx, "R.CONTAINS", RContainsCommand, "readonly", 1, 2, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
+  if (RedisModule_CreateCommand(ctx, "R.JACCARD", RJaccardCommand, "readonly", 1, 2, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
   if (RedisModule_CreateCommand(ctx, "R64.SETBIT", R64SetBitCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
@@ -2363,6 +2424,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.CONTAINS", R64ContainsCommand, "readonly", 1, 2, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R64.JACCARD", R64JaccardCommand, "readonly", 1, 2, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.CLEARBITS", R64ClearBitsCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
