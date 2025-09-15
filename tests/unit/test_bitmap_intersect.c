@@ -139,6 +139,30 @@ void test_bitmap_intersect() {
       roaring_bitmap_free(b2);
     }
 
+    IT("Should return true when when b2 equals b1 in EQ mode")
+    {
+      Bitmap* b1 = roaring_bitmap_from(1, 2);
+      Bitmap* b2 = roaring_bitmap_from(1, 2);
+
+      bool result = bitmap_intersect(b1, b2, BITMAP_INTERSECT_MODE_EQ);
+      ASSERT_TRUE(result);
+
+      roaring_bitmap_free(b1);
+      roaring_bitmap_free(b2);
+    }
+
+    IT("Should return false when when b2 are not equals b1 in EQ mode")
+    {
+      Bitmap* b1 = roaring_bitmap_from(1, 2);
+      Bitmap* b2 = roaring_bitmap_from(2, 2);
+
+      bool result = bitmap_intersect(b1, b2, BITMAP_INTERSECT_MODE_EQ);
+      ASSERT_FALSE(result);
+
+      roaring_bitmap_free(b1);
+      roaring_bitmap_free(b2);
+    }
+
     IT("Should return false for invalid mode")
     {
       Bitmap* b1 = roaring_bitmap_from(1);

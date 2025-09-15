@@ -322,6 +322,8 @@ function test_contains() {
   rcall_assert "R.SETBIT test_contains5 0 1" "0" "Setup empty test_contains5"
   rcall_assert "R.CLEAR test_contains5" "1" "Cleanup test_contains5"
   rcall_assert "R.SETINTARRAY test_contains6 7 8 9" "OK" "Setup test_contains6 with [7,8,9] (no intersection with test_contains1)"
+  rcall_assert "R.SETINTARRAY test_contains_eq1 1 2 3 4 5" "OK" "Setup eq1 with [1,2,3,4,5]"
+  rcall_assert "R.SETINTARRAY test_contains_eq2 1 2 3 4 5" "OK" "Setup eq2 with [1,2,3,4,5] (same as eq1)"
 
   # Test basic intersection (default mode - should be NONE)
   rcall_assert "R.CONTAINS test_contains1 test_contains2" "1" "test_contains1 contains some elements from test_contains2 (intersection exists)"
@@ -343,6 +345,14 @@ function test_contains() {
   rcall_assert "R.CONTAINS test_contains1 test_contains5 ALL_STRICT" "1" "Empty test_contains5 is strict subset of non-empty test_contains1"
   rcall_assert "R.CONTAINS test_contains5 test_contains1 ALL_STRICT" "0" "Non-empty test_contains1 is not strict subset of empty test_contains5"
   rcall_assert "R.CONTAINS test_contains5 test_contains5 ALL_STRICT" "0" "Empty bitmap is not strict subset of itself"
+
+  # Test EQ mode identical bitmaps
+  rcall_assert "R.CONTAINS test_contains_eq1 test_contains_eq2 EQ" "1" "test_contains_eq1 and test_contains_eq2 are equal"
+  rcall_assert "R.CONTAINS test_contains_eq2 test_contains_eq1 EQ" "1" "test_contains_eq2 and test_contains_eq1 are equal (symmetry test)"
+
+  # Test EQ mode non-equal bitmaps
+  rcall_assert "R.CONTAINS test_contains_eq1 test_contains6 EQ" "0" "test_contains_eq1 [1,2,3,4,5] is not equal to test_contains6"
+  rcall_assert "R.CONTAINS test_contains_eq1 test_contains5 EQ" "0" "test_contains_eq1 [1,2,3,4,5] is not equal to test_contains5"
 
   # Test with single element bitmaps
   rcall_assert "R.SETINTARRAY test_contains_single1 3" "OK" "Setup single element bitmap with [3]"

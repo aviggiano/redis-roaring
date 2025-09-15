@@ -140,6 +140,9 @@ bool bitmap_intersect(const Bitmap* b1, const Bitmap* b2, uint32_t mode) {
   case BITMAP_INTERSECT_MODE_ALL_STRICT:
     return roaring_bitmap_is_strict_subset(b2, b1);
 
+  case BITMAP_INTERSECT_MODE_EQ:
+    return roaring_bitmap_equals(b1, b2);
+
   default:
     return false;
   }
@@ -157,6 +160,9 @@ bool bitmap64_intersect(const Bitmap64* b1, const Bitmap64* b2, uint32_t mode) {
 
   case BITMAP_INTERSECT_MODE_ALL_STRICT:
     return roaring64_bitmap_is_strict_subset(b2, b1);
+
+  case BITMAP_INTERSECT_MODE_EQ:
+    return roaring64_bitmap_equals(b1, b2);
 
   default:
     return false;

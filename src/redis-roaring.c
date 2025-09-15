@@ -1132,6 +1132,8 @@ int R64ContainsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
       mode = BITMAP_INTERSECT_MODE_ALL;
     } else if (strcmp(mode_arg, "ALL_STRICT") == 0) {
       mode = BITMAP_INTERSECT_MODE_ALL_STRICT;
+    } else if (strcmp(mode_arg, "EQ") == 0) {
+      mode = BITMAP_INTERSECT_MODE_EQ;
     } else {
       return RedisModule_ReplyWithErrorFormat(ctx, "ERR invalid mode argument: %s", mode_arg);
     }
@@ -2150,6 +2152,8 @@ int RContainsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
       mode = BITMAP_INTERSECT_MODE_ALL;
     } else if (strcmp(mode_arg, "ALL_STRICT") == 0) {
       mode = BITMAP_INTERSECT_MODE_ALL_STRICT;
+    } else if (strcmp(mode_arg, "EQ") == 0) {
+      mode = BITMAP_INTERSECT_MODE_EQ;
     } else {
       return RedisModule_ReplyWithErrorFormat(ctx, "ERR invalid mode argument: %s", mode_arg);
     }

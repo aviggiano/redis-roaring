@@ -9,6 +9,7 @@
 #define BITMAP_INTERSECT_MODE_NONE 0
 #define BITMAP_INTERSECT_MODE_ALL 1
 #define BITMAP_INTERSECT_MODE_ALL_STRICT 2
+#define BITMAP_INTERSECT_MODE_EQ 3
 
 typedef roaring_bitmap_t Bitmap;
 typedef roaring_statistics_t Bitmap_statistics;
