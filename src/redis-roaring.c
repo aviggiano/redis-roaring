@@ -207,8 +207,7 @@ int R64SetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   /* Set bit with value */
-  char old_value = bitmap64_getbit(bitmap, (uint64_t) offset);
-  bitmap64_setbit(bitmap, (uint64_t) offset, (char) value);
+  bool old_value = bitmap64_setbit(bitmap, (uint64_t) offset, (char) value);
 
   RedisModule_ReplicateVerbatim(ctx);
   // Integer reply: the original bit value stored at offset.
@@ -1280,9 +1279,8 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   /* Set bit with value */
-  char old_value = bitmap_getbit(bitmap, offset);
-  bitmap_setbit(bitmap, offset, value);
 
+  bool old_value = bitmap_setbit(bitmap, offset, value);
   RedisModule_ReplicateVerbatim(ctx);
   // Integer reply: the original bit value stored at offset.
   RedisModule_ReplyWithLongLong(ctx, old_value);

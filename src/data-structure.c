@@ -30,19 +30,19 @@ uint64_t bitmap64_get_cardinality(const Bitmap64* bitmap) {
   return roaring64_bitmap_get_cardinality(bitmap);
 }
 
-void bitmap_setbit(Bitmap* bitmap, uint32_t offset, bool value) {
+bool bitmap_setbit(Bitmap* bitmap, uint32_t offset, bool value) {
   if (!value) {
-    roaring_bitmap_remove(bitmap, offset);
+    return roaring_bitmap_remove_checked(bitmap, offset);
   } else {
-    roaring_bitmap_add(bitmap, offset);
+    return !roaring_bitmap_add_checked(bitmap, offset);
   }
 }
 
-void bitmap64_setbit(Bitmap64* bitmap, uint64_t offset, bool value) {
+bool bitmap64_setbit(Bitmap64* bitmap, uint64_t offset, bool value) {
   if (!value) {
-    roaring64_bitmap_remove(bitmap, offset);
+    return roaring64_bitmap_remove_checked(bitmap, offset);
   } else {
-    roaring64_bitmap_add(bitmap, offset);
+    return !roaring64_bitmap_add_checked(bitmap, offset);
   }
 }
 
