@@ -6,6 +6,10 @@
 #define BITMAP_STATISTICS_FORMAT_PLAIN_TEXT 0
 #define BITMAP_STATISTICS_FORMAT_JSON 1
 
+#define BITMAP_INTERSECT_MODE_NONE 0
+#define BITMAP_INTERSECT_MODE_ALL 1
+#define BITMAP_INTERSECT_MODE_ALL_STRICT 2
+
 typedef roaring_bitmap_t Bitmap;
 typedef roaring_statistics_t Bitmap_statistics;
 
@@ -26,6 +30,8 @@ bool* bitmap64_getbits(const Bitmap64* bitmap, size_t n_offsets, const uint64_t*
 bool* bitmap_getbits(const Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets);
 bool bitmap_clearbits(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets);
 bool bitmap64_clearbits(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets);
+bool bitmap_intersect(const Bitmap* b1, const Bitmap* b2, uint32_t mode);
+bool bitmap64_intersect(const Bitmap64* b1, const Bitmap64* b2, uint32_t mode);
 size_t bitmap_clearbits_count(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets);
 size_t bitmap64_clearbits_count(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets);
 /**

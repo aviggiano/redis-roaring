@@ -35,6 +35,8 @@
 #include "unit/test_bitmap64_clearbits_count.c"
 #include "unit/test_bitmap64_clearbits.c"
 #include "unit/test_bitmap_clearbits_count.c"
+#include "unit/test_bitmap_intersect.c"
+#include "unit/test_bitmap64_intersect.c"
 
 int main(int argc, char* argv[]) {
   test_start();
@@ -59,6 +61,7 @@ int main(int argc, char* argv[]) {
   test_bitmap64_get_nth_element();
   test_bitmap64_clearbits();
   test_bitmap64_clearbits_count();
+  test_bitmap64_intersect();
   test_bitmap_get_nth_element();
   test_bitmap_not();
   test_bitmap_xor();
@@ -71,6 +74,7 @@ int main(int argc, char* argv[]) {
   test_bitmap_range_int_array();
   test_bitmap_clearbits();
   test_bitmap_clearbits_count();
+  test_bitmap_intersect();
 
   test_end();
 

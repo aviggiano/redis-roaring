@@ -127,6 +127,42 @@ size_t bitmap64_clearbits_count(Bitmap64* bitmap, size_t n_offsets, const uint64
   return count++;
 }
 
+bool bitmap_intersect(const Bitmap* b1, const Bitmap* b2, uint32_t mode) {
+  if (b1 == NULL || b2 == NULL) return false;
+
+  switch (mode) {
+  case BITMAP_INTERSECT_MODE_NONE:
+    return roaring_bitmap_intersect(b1, b2);
+
+  case BITMAP_INTERSECT_MODE_ALL:
+    return roaring_bitmap_is_subset(b2, b1);
+
+  case BITMAP_INTERSECT_MODE_ALL_STRICT:
+    return roaring_bitmap_is_strict_subset(b2, b1);
+
+  default:
+    return false;
+  }
+}
+
+bool bitmap64_intersect(const Bitmap64* b1, const Bitmap64* b2, uint32_t mode) {
+  if (b1 == NULL || b2 == NULL) return false;
+
+  switch (mode) {
+  case BITMAP_INTERSECT_MODE_NONE:
+    return roaring64_bitmap_intersect(b1, b2);
+
+  case BITMAP_INTERSECT_MODE_ALL:
+    return roaring64_bitmap_is_subset(b2, b1);
+
+  case BITMAP_INTERSECT_MODE_ALL_STRICT:
+    return roaring64_bitmap_is_strict_subset(b2, b1);
+
+  default:
+    return false;
+  }
+}
+
 int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {
   roaring_uint32_iterator_t* iterator = roaring_iterator_create(bitmap);
   int64_t element = -1;

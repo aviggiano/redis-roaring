@@ -1103,6 +1103,53 @@ int R64ClearCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   return REDISMODULE_OK;
 }
 
+/**
+ * R64.CONTAINS <key1> <key2> [ALL, ALL_STRICT]
+ * */
+int R64ContainsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
+  RedisModule_AutoMemory(ctx);
+
+  RedisModuleKey* key1 = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+  if (RedisModule_KeyType(key1) == REDISMODULE_KEYTYPE_EMPTY || RedisModule_ModuleTypeGetType(key1) != Bitmap64Type) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  RedisModuleKey* key2 = RedisModule_OpenKey(ctx, argv[2], REDISMODULE_READ);
+  if (RedisModule_KeyType(key2) == REDISMODULE_KEYTYPE_EMPTY || RedisModule_ModuleTypeGetType(key1) != Bitmap64Type) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  uint32_t mode = BITMAP_INTERSECT_MODE_NONE;
+
+  if (argc == 4) {
+    const char* mode_arg = RedisModule_StringPtrLen(argv[3], NULL);
+
+    if (strcmp(mode_arg, "ALL") == 0) {
+      mode = BITMAP_INTERSECT_MODE_ALL;
+    } else if (strcmp(mode_arg, "ALL_STRICT") == 0) {
+      mode = BITMAP_INTERSECT_MODE_ALL_STRICT;
+    } else {
+      return RedisModule_ReplyWithErrorFormat(ctx, "ERR invalid mode argument: %s", mode_arg);
+    }
+  }
+
+  Bitmap64* b1 = RedisModule_ModuleTypeGetValue(key1);
+  Bitmap64* b2 = RedisModule_ModuleTypeGetValue(key2);
+
+  RedisModule_ReplicateVerbatim(ctx);
+
+  if (bitmap64_intersect(b1, b2, mode)) {
+    RedisModule_ReplyWithLongLong(ctx, 1);
+  } else {
+    RedisModule_ReplyWithLongLong(ctx, 0);
+  }
+
+  return REDISMODULE_OK;
+}
 
 /* === Bitmap type commands === */
 
@@ -2074,6 +2121,54 @@ int RClearCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   return REDISMODULE_OK;
 }
 
+/**
+ * R.CONTAINS <key1> <key2> [ALL, ALL_STRICT]
+ * */
+int RContainsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
+  RedisModule_AutoMemory(ctx);
+
+  RedisModuleKey* key1 = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+  if (RedisModule_KeyType(key1) == REDISMODULE_KEYTYPE_EMPTY || RedisModule_ModuleTypeGetType(key1) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  RedisModuleKey* key2 = RedisModule_OpenKey(ctx, argv[2], REDISMODULE_READ);
+  if (RedisModule_KeyType(key2) == REDISMODULE_KEYTYPE_EMPTY || RedisModule_ModuleTypeGetType(key1) != BitmapType) {
+    return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+  }
+
+  uint32_t mode = BITMAP_INTERSECT_MODE_NONE;
+
+  if (argc == 4) {
+    const char* mode_arg = RedisModule_StringPtrLen(argv[3], NULL);
+
+    if (strcmp(mode_arg, "ALL") == 0) {
+      mode = BITMAP_INTERSECT_MODE_ALL;
+    } else if (strcmp(mode_arg, "ALL_STRICT") == 0) {
+      mode = BITMAP_INTERSECT_MODE_ALL_STRICT;
+    } else {
+      return RedisModule_ReplyWithErrorFormat(ctx, "ERR invalid mode argument: %s", mode_arg);
+    }
+  }
+
+  Bitmap* b1 = RedisModule_ModuleTypeGetValue(key1);
+  Bitmap* b2 = RedisModule_ModuleTypeGetValue(key2);
+
+  RedisModule_ReplicateVerbatim(ctx);
+
+  if (bitmap_intersect(b1, b2, mode)) {
+    RedisModule_ReplyWithLongLong(ctx, 1);
+  } else {
+    RedisModule_ReplyWithLongLong(ctx, 0);
+  }
+
+  return REDISMODULE_OK;
+}
+
 void RedisModule_OnShutdown(RedisModuleCtx* ctx, RedisModuleEvent e, uint64_t sub, void* data) {
   REDISMODULE_NOT_USED(e);
   REDISMODULE_NOT_USED(data);
@@ -2200,6 +2295,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   if (RedisModule_CreateCommand(ctx, "R.CLEAR", RClearCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
+  if (RedisModule_CreateCommand(ctx, "R.CONTAINS", RContainsCommand, "readonly", 1, 2, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
   if (RedisModule_CreateCommand(ctx, "R64.SETBIT", R64SetBitCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
@@ -2258,6 +2356,9 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.CLEAR", R64ClearCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    return REDISMODULE_ERR;
+  }
+  if (RedisModule_CreateCommand(ctx, "R64.CONTAINS", R64ContainsCommand, "readonly", 1, 2, 1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
   if (RedisModule_CreateCommand(ctx, "R64.CLEARBITS", R64ClearBitsCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
