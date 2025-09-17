@@ -6,6 +6,11 @@
 #define BITMAP_STATISTICS_FORMAT_PLAIN_TEXT 0
 #define BITMAP_STATISTICS_FORMAT_JSON 1
 
+#define BITMAP_INTERSECT_MODE_NONE 0
+#define BITMAP_INTERSECT_MODE_ALL 1
+#define BITMAP_INTERSECT_MODE_ALL_STRICT 2
+#define BITMAP_INTERSECT_MODE_EQ 3
+
 typedef roaring_bitmap_t Bitmap;
 typedef roaring_statistics_t Bitmap_statistics;
 
@@ -18,10 +23,20 @@ void bitmap_free(Bitmap* bitmap);
 void bitmap64_free(Bitmap64* bitmap);
 uint64_t bitmap_get_cardinality(const Bitmap* bitmap);
 uint64_t bitmap64_get_cardinality(const Bitmap64* bitmap);
-void bitmap_setbit(Bitmap* bitmap, uint32_t offset, bool value);
-void bitmap64_setbit(Bitmap64* bitmap, uint64_t offset, bool value);
+bool bitmap_setbit(Bitmap* bitmap, uint32_t offset, bool value);
+bool bitmap64_setbit(Bitmap64* bitmap, uint64_t offset, bool value);
 bool bitmap_getbit(const Bitmap* bitmap, uint32_t offset);
 bool bitmap64_getbit(const Bitmap64* bitmap, uint64_t offset);
+bool* bitmap64_getbits(const Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets);
+bool* bitmap_getbits(const Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets);
+bool bitmap_clearbits(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets);
+bool bitmap64_clearbits(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets);
+bool bitmap_intersect(const Bitmap* b1, const Bitmap* b2, uint32_t mode);
+bool bitmap64_intersect(const Bitmap64* b1, const Bitmap64* b2, uint32_t mode);
+size_t bitmap_clearbits_count(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets);
+size_t bitmap64_clearbits_count(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets);
+double bitmap_jaccard(const Bitmap* b1, const Bitmap* b2);
+double bitmap64_jaccard(const Bitmap64* b1, const Bitmap64* b2);
 /**
  * Gets the n-th element of the set.
  *

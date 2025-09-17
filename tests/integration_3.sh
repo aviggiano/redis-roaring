@@ -4,6 +4,8 @@ set -eu
 
 . "$(dirname "$0")/helper.sh"
 
+ERRORMSG_WRONGTYPE="WRONGTYPE Operation against a key holding the wrong kind of value";
+
 function test_setbit_getbit() {
   print_test_header "test_setbit_getbit (64)"
 
@@ -12,6 +14,22 @@ function test_setbit_getbit() {
 
   rcall_assert "R64.SETBIT test_setbit_getbit 0" "ERR wrong number of arguments for 'R64.SETBIT' command" "SETBIT with wrong number of arguments"
   rcall_assert "R64.GETBIT key 0 1" "ERR wrong number of arguments for 'R64.GETBIT' command" "GETBIT with wrong number of arguments"
+}
+
+function test_getbits() {
+  print_test_header "test_getbits (64)"
+
+  rcall_assert "R64.SETINTARRAY test_getbits 1 2 4 5" "OK" "Set bits 1-5"
+  rcall_assert "R64.GETBITS test_getbits 1 2 3 4 5" "1\n1\n0\n1\n1" "Get bit at position 1-5"
+}
+
+function test_clearbits() {
+  print_test_header "test_clearbits (64)"
+
+  rcall_assert "R64.SETINTARRAY test_clearbits 1 2 3 4 5" "OK" "Set bits 1-5"
+  rcall_assert "R64.CLEARBITS test_clearbits 1 2 3" "OK" "Clear bit at position 1 3"
+  rcall_assert "R64.BITCOUNT test_clearbits" "2" "Validate count"
+  rcall_assert "R64.CLEARBITS test_clearbits 4 5 COUNT" "2" "Clear bit with count"
 }
 
 function test_bitop() {
@@ -244,7 +262,7 @@ function test_diff() {
   print_test_header "test_diff (64)"
 
   rcall_assert "R64.DIFF test_diff_res" "ERR wrong number of arguments for 'R64.DIFF' command" "DIFF with wrong number of arguments"
-  rcall_assert "R64.DIFF test_diff_res empty_key_1 empty_key_2" "WRONGTYPE Operation against a key holding the wrong kind of value" "DIFF with empty keys"
+  rcall_assert "R64.DIFF test_diff_res empty_key_1 empty_key_2" "${ERRORMSG_WRONGTYPE}" "DIFF with empty keys"
 
   rcall_assert "R64.SETINTARRAY test_diff_1 1 2 3 4" "OK" "Set first array for diff test"
   rcall_assert "R64.SETINTARRAY test_diff_2 3 4 5 6" "OK" "Set second array for diff test"
@@ -293,6 +311,121 @@ function test_del() {
   rcall_assert "DEL test_del" "1" "Delete key test_del"
 }
 
+function test_contains() {
+  print_test_header "test_contains (64)"
+
+  # Setup test data
+  rcall_assert "R64.SETINTARRAY test_contains1 1 2 3 4 5" "OK" "Setup test_contains1 with [1,2,3,4,5]"
+  rcall_assert "R64.SETINTARRAY test_contains2 2 3" "OK" "Setup test_contains2 with [2,3]"
+  rcall_assert "R64.SETINTARRAY test_contains3 3 4 6" "OK" "Setup test_contains3 with [3,4,6]"
+  rcall_assert "R64.SETINTARRAY test_contains4 1 2 3 4 5" "OK" "Setup test_contains4 with [1,2,3,4,5] (same as test_contains1)"
+  rcall_assert "R64.SETBIT test_contains5 0 1" "0" "Setup empty test_contains5"
+  rcall_assert "R64.CLEAR test_contains5" "1" "Cleanup test_contains5"
+  rcall_assert "R64.SETINTARRAY test_contains6 7 8 9" "OK" "Setup test_contains6 with [7,8,9] (no intersection with test_contains1)"
+  rcall_assert "R64.SETINTARRAY test_contains_eq1 1 2 3 4 5" "OK" "Setup eq1 with [1,2,3,4,5]"
+  rcall_assert "R64.SETINTARRAY test_contains_eq2 1 2 3 4 5" "OK" "Setup eq2 with [1,2,3,4,5] (same as eq1)"
+
+
+  # Test basic intersection (default mode - should be NONE)
+  rcall_assert "R64.CONTAINS test_contains1 test_contains2" "1" "test_contains1 contains some elements from test_contains2 (intersection exists)"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains6" "0" "test_contains1 doesn't intersect with test_contains6"
+  rcall_assert "R64.CONTAINS test_contains5 test_contains1" "0" "Empty test_contains5 doesn't intersect with test_contains1"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains5" "0" "test_contains1 doesn't intersect with empty test_contains5"
+
+  # Test ALL mode (test_contains2 is subset of test_contains1)
+  rcall_assert "R64.CONTAINS test_contains1 test_contains2 ALL" "1" "test_contains2 [2,3] is subset of test_contains1 [1,2,3,4,5]"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains3 ALL" "0" "test_contains3 [3,4,6] is not subset of test_contains1 (6 not in test_contains1)"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains4 ALL" "1" "test_contains4 [1,2,3,4,5] is subset of test_contains1 [1,2,3,4,5] (equal sets)"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains5 ALL" "1" "Empty test_contains5 is subset of any bitmap"
+  rcall_assert "R64.CONTAINS test_contains5 test_contains1 ALL" "0" "Non-empty test_contains1 is not subset of empty test_contains5"
+
+  # Test ALL_STRICT mode (test_contains2 is strict subset of test_contains1)
+  rcall_assert "R64.CONTAINS test_contains1 test_contains2 ALL_STRICT" "1" "test_contains2 [2,3] is strict subset of test_contains1 [1,2,3,4,5]"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains3 ALL_STRICT" "0" "test_contains3 [3,4,6] is not subset of test_contains1"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains4 ALL_STRICT" "0" "test_contains4 [1,2,3,4,5] is not strict subset of test_contains1 (equal sets)"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains5 ALL_STRICT" "1" "Empty test_contains5 is strict subset of non-empty test_contains1"
+  rcall_assert "R64.CONTAINS test_contains5 test_contains1 ALL_STRICT" "0" "Non-empty test_contains1 is not strict subset of empty test_contains5"
+  rcall_assert "R64.CONTAINS test_contains5 test_contains5 ALL_STRICT" "0" "Empty bitmap is not strict subset of itself"
+
+  # Test EQ mode identical bitmaps
+  rcall_assert "R64.CONTAINS test_contains_eq1 test_contains_eq2 EQ" "1" "test_contains_eq1 and test_contains_eq2 are equal"
+  rcall_assert "R64.CONTAINS test_contains_eq2 test_contains_eq1 EQ" "1" "test_contains_eq2 and test_contains_eq1 are equal (symmetry test)"
+
+  # Test EQ mode non-equal bitmaps
+  rcall_assert "R64.CONTAINS test_contains_eq1 test_contains6 EQ" "0" "test_contains_eq1 [1,2,3,4,5] is not equal to test_contains6"
+  rcall_assert "R64.CONTAINS test_contains_eq1 test_contains5 EQ" "0" "test_contains_eq1 [1,2,3,4,5] is not equal to test_contains5"
+
+  # Test with single element bitmaps
+  rcall_assert "R64.SETINTARRAY test_contains_single1 3" "OK" "Setup single element bitmap with [3]"
+  rcall_assert "R64.SETINTARRAY test_contains_single2 7" "OK" "Setup single element bitmap with [7]"
+  
+  rcall_assert "R64.CONTAINS test_contains1 test_contains_single1" "1" "test_contains1 intersects with test_contains_single1 [3]"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains_single2" "0" "test_contains1 doesn't intersect with test_contains_single2 [7]"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains_single1 ALL" "1" "test_contains_single1 [3] is subset of test_contains1"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains_single2 ALL" "0" "test_contains_single2 [7] is not subset of test_contains1"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains_single1 ALL_STRICT" "1" "test_contains_single1 [3] is strict subset of test_contains1"
+
+  # Test error cases
+  rcall_assert "R64.CONTAINS nonexistent test_contains1" "${ERRORMSG_WRONGTYPE}" "Should return error for non-existent first key"
+  rcall_assert "R64.CONTAINS test_contains1 nonexistent" "${ERRORMSG_WRONGTYPE}" "Should return error for non-existent second key"
+  rcall_assert "R64.CONTAINS nonexistent1 nonexistent2" "${ERRORMSG_WRONGTYPE}" "Should return error when both keys don't exist"
+  
+  # Test invalid mode
+  rcall_assert "R64.CONTAINS test_contains1 test_contains2 INVALID_MODE" "ERR invalid mode argument: INVALID_MODE" "Should return error for invalid mode"
+  rcall_assert "R64.CONTAINS test_contains1 test_contains2 all" "ERR invalid mode argument: all" "Should return error for lowercase mode (case sensitive)"
+
+  # Test with larger datasets
+  rcall_assert "R64.SETINTARRAY test_contains_large1 $(seq 1 1000 | tr '\n' ' ')" "OK" "Setup large test_contains1 with 1-1000"
+  rcall_assert "R64.SETINTARRAY test_contains_large2 $(seq 100 200 | tr '\n' ' ')" "OK" "Setup large test_contains2 with 100-200"
+  rcall_assert "R64.SETINTARRAY test_contains_large3 $(seq 1001 1100 | tr '\n' ' ')" "OK" "Setup large test_contains3 with 1001-1100"
+  
+  rcall_assert "R64.CONTAINS test_contains_large1 test_contains_large2" "1" "Large bitmaps intersection test"
+  rcall_assert "R64.CONTAINS test_contains_large1 test_contains_large3" "0" "Large bitmaps no intersection test"
+  rcall_assert "R64.CONTAINS test_contains_large1 test_contains_large2 ALL" "1" "Large bitmap subset test"
+  rcall_assert "R64.CONTAINS test_contains_large1 test_contains_large3 ALL" "0" "Large bitmap not subset test"
+  rcall_assert "R64.CONTAINS test_contains_large1 test_contains_large2 ALL_STRICT" "1" "Large bitmap strict subset test"
+
+  # Test with ranges
+  rcall_assert "R64.SETINTARRAY test_contains_range1 1 5 10 15 20" "OK" "Setup sparse range bitmap"
+  rcall_assert "R64.SETINTARRAY test_contains_range2 5 15" "OK" "Setup subset range bitmap"
+  rcall_assert "R64.SETINTARRAY test_contains_range3 5 25" "OK" "Setup partial overlap range bitmap"
+  
+  rcall_assert "R64.CONTAINS test_contains_range1 test_contains_range2" "1" "Sparse range intersection test"
+  rcall_assert "R64.CONTAINS test_contains_range1 test_contains_range3" "1" "Partial overlap intersection test"
+  rcall_assert "R64.CONTAINS test_contains_range1 test_contains_range2 ALL" "1" "Sparse range subset test"
+  rcall_assert "R64.CONTAINS test_contains_range1 test_contains_range3 ALL" "0" "Partial overlap not subset test"
+  rcall_assert "R64.CONTAINS test_contains_range1 test_contains_range2 ALL_STRICT" "1" "Sparse range strict subset test"
+}
+
+function test_jaccard() {
+  print_test_header "test_jaccard (64)"
+
+  # Setup test data
+  rcall_assert "R64.SETINTARRAY jaccard1 1 2 3 4 5" "OK" "Setup jaccard1 with [1,2,3,4,5]"
+  rcall_assert "R64.SETINTARRAY jaccard2 3 4 5 6 7" "OK" "Setup jaccard2 with [3,4,5,6,7]"
+  rcall_assert "R64.SETINTARRAY jaccard3 1 2 3" "OK" "Setup jaccard3 with [1,2,3]"
+  rcall_assert "R64.SETBIT jaccard_empty1 0 1" "0" "Setup jaccard_empty1"
+  rcall_assert "R64.CLEAR jaccard_empty1" "1" "Cleanup jaccard_empty1"
+  rcall_assert "R64.SETBIT jaccard_empty2 0 1" "0" "Setup jaccard_empty2"
+  rcall_assert "R64.CLEAR jaccard_empty2" "1" "Cleanup jaccard_empty2"
+  rcall_assert "R64.SETINTARRAY jaccard_single 42" "OK" "Setup jaccard_single with [42]"
+  rcall_assert "R64.SETINTARRAY jaccard_single2 42" "OK" "Setup jaccard_single2 with [42]"
+  rcall_assert "R64.SETINTARRAY jaccard_no_overlap1 1 2" "OK" "Setup jaccard_no_overlap1 with [1,2]"
+  rcall_assert "R64.SETINTARRAY jaccard_no_overlap2 3 4" "OK" "Setup jaccard_no_overlap2 with [3,4]"
+
+  # Test cases
+  rcall_assert "R64.JACCARD jaccard1 jaccard2" "0.42857142857142855" "Jaccard index of [1,2,3,4,5] and [3,4,5,6,7]"
+  rcall_assert "R64.JACCARD jaccard3 jaccard3" "1" "Jaccard index of identical sets"
+  rcall_assert "R64.JACCARD jaccard3 jaccard1" "0.6" "Jaccard index where one set is subset of another"
+  rcall_assert "R64.JACCARD jaccard_no_overlap1 jaccard_no_overlap2" "0" "Jaccard index with no overlap"
+  rcall_assert "R64.JACCARD jaccard_empty1 jaccard_empty2" "-1" "Jaccard index of two empty bitmaps"
+  rcall_assert "R64.JACCARD jaccard3 jaccard_empty1" "0" "Jaccard index with one empty bitmap"
+  rcall_assert "R64.JACCARD jaccard_single jaccard_single2" "1" "Jaccard index of identical single element bitmaps"
+  rcall_assert "R64.JACCARD jaccard_no_overlap1 jaccard_single" "0" "Jaccard index with single element and no overlap"
+  rcall_assert "R64.JACCARD nonexistent1 nonexistent2" "${ERRORMSG_WRONGTYPE}" "Jaccard index with non-existent keys"
+  rcall_assert "R64.JACCARD jaccard1 nonexistent" "${ERRORMSG_WRONGTYPE}" "Jaccard index with one non-existent key"
+}
+
 function test_stat() {
   print_test_header "test_stat (64)"
 
@@ -316,6 +449,8 @@ function test_save() {
 }
 
 test_setbit_getbit
+test_getbits
+test_clearbits
 test_bitop
 test_bitcount
 test_bitpos
@@ -330,5 +465,7 @@ test_diff
 test_optimize_nokey
 # test_setfull
 test_del
+test_contains
+test_jaccard
 test_stat
 test_save

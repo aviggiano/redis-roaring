@@ -1,3 +1,4 @@
+#include <math.h>
 #include "data-structure.h"
 
 #include "roaring.h"
@@ -29,19 +30,19 @@ uint64_t bitmap64_get_cardinality(const Bitmap64* bitmap) {
   return roaring64_bitmap_get_cardinality(bitmap);
 }
 
-void bitmap_setbit(Bitmap* bitmap, uint32_t offset, bool value) {
+bool bitmap_setbit(Bitmap* bitmap, uint32_t offset, bool value) {
   if (!value) {
-    roaring_bitmap_remove(bitmap, offset);
+    return roaring_bitmap_remove_checked(bitmap, offset);
   } else {
-    roaring_bitmap_add(bitmap, offset);
+    return !roaring_bitmap_add_checked(bitmap, offset);
   }
 }
 
-void bitmap64_setbit(Bitmap64* bitmap, uint64_t offset, bool value) {
+bool bitmap64_setbit(Bitmap64* bitmap, uint64_t offset, bool value) {
   if (!value) {
-    roaring64_bitmap_remove(bitmap, offset);
+    return roaring64_bitmap_remove_checked(bitmap, offset);
   } else {
-    roaring64_bitmap_add(bitmap, offset);
+    return !roaring64_bitmap_add_checked(bitmap, offset);
   }
 }
 
@@ -51,6 +52,146 @@ bool bitmap_getbit(const Bitmap* bitmap, uint32_t offset) {
 
 bool bitmap64_getbit(const Bitmap64* bitmap, uint64_t offset) {
   return roaring64_bitmap_contains(bitmap, offset);
+}
+
+bool* bitmap_getbits(const Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets) {
+  if (bitmap == NULL) return NULL;
+
+  roaring_bulk_context_t context = CROARING_ZERO_INITIALIZER;
+
+  bool* results = rm_malloc(sizeof(bool) * n_offsets);
+
+  for (size_t i = 0; i < n_offsets; i++) {
+    results[i] = roaring_bitmap_contains_bulk(bitmap, &context, offsets[i]);
+  }
+
+  return results;
+}
+
+bool* bitmap64_getbits(const Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets) {
+  if (bitmap == NULL) return NULL;
+
+  roaring64_bulk_context_t context = CROARING_ZERO_INITIALIZER;
+
+  bool* results = rm_malloc(sizeof(bool) * n_offsets);
+
+  for (size_t i = 0; i < n_offsets; i++) {
+    results[i] = roaring64_bitmap_contains_bulk(bitmap, &context, offsets[i]);
+  }
+
+  return results;
+}
+
+bool bitmap_clearbits(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets) {
+  if (bitmap == NULL) return false;
+  if (offsets == NULL) return true;
+
+  roaring_bitmap_remove_many(bitmap, n_offsets, offsets);
+
+  return true;
+}
+
+bool bitmap64_clearbits(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets) {
+  if (bitmap == NULL) return false;
+  if (offsets == NULL) return true;
+
+  roaring64_bitmap_remove_many(bitmap, n_offsets, offsets);
+
+  return true;
+}
+
+size_t bitmap_clearbits_count(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets) {
+  if (bitmap == NULL || offsets == NULL) return 0;
+
+  size_t count = 0;
+
+  for (size_t i = 0; i < n_offsets; i++) {
+    if (roaring_bitmap_remove_checked(bitmap, offsets[i])) {
+      count++;
+    }
+  }
+
+  return count++;
+}
+
+size_t bitmap64_clearbits_count(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets) {
+  if (bitmap == NULL || offsets == NULL) return 0;
+
+  size_t count = 0;
+
+  for (size_t i = 0; i < n_offsets; i++) {
+    if (roaring64_bitmap_remove_checked(bitmap, offsets[i])) {
+      count++;
+    }
+  }
+
+  return count++;
+}
+
+bool bitmap_intersect(const Bitmap* b1, const Bitmap* b2, uint32_t mode) {
+  if (b1 == NULL || b2 == NULL) return false;
+
+  switch (mode) {
+  case BITMAP_INTERSECT_MODE_NONE:
+    return roaring_bitmap_intersect(b1, b2);
+
+  case BITMAP_INTERSECT_MODE_ALL:
+    return roaring_bitmap_is_subset(b2, b1);
+
+  case BITMAP_INTERSECT_MODE_ALL_STRICT:
+    return roaring_bitmap_is_strict_subset(b2, b1);
+
+  case BITMAP_INTERSECT_MODE_EQ:
+    return roaring_bitmap_equals(b1, b2);
+
+  default:
+    return false;
+  }
+}
+
+bool bitmap64_intersect(const Bitmap64* b1, const Bitmap64* b2, uint32_t mode) {
+  if (b1 == NULL || b2 == NULL) return false;
+
+  switch (mode) {
+  case BITMAP_INTERSECT_MODE_NONE:
+    return roaring64_bitmap_intersect(b1, b2);
+
+  case BITMAP_INTERSECT_MODE_ALL:
+    return roaring64_bitmap_is_subset(b2, b1);
+
+  case BITMAP_INTERSECT_MODE_ALL_STRICT:
+    return roaring64_bitmap_is_strict_subset(b2, b1);
+
+  case BITMAP_INTERSECT_MODE_EQ:
+    return roaring64_bitmap_equals(b1, b2);
+
+  default:
+    return false;
+  }
+}
+
+double bitmap_jaccard(const Bitmap* b1, const Bitmap* b2) {
+  if (b1 == NULL || b2 == NULL) return 0;
+  if (b1 == b2) return 1;
+
+  double res = roaring_bitmap_jaccard_index(b1, b2);
+
+  // both bitmaps are empty
+  if (isnan(res)) res = -1;
+
+  return res;
+}
+
+double bitmap64_jaccard(const Bitmap64* b1, const Bitmap64* b2) {
+  if (b1 == NULL || b2 == NULL) return 0;
+  if (b1 == b2) return 1;
+
+  double res = roaring64_bitmap_jaccard_index(b1, b2);
+
+  // both bitmaps are empty
+  if (isnan(res)) res = -1;
+
+  return res;
 }
 
 int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {
