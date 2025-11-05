@@ -260,6 +260,32 @@ function test_bitop_diff() {
   rcall_assert "R64.BITOP DIFF diff_res_13 bitop_x_13 bitop_y_10" "2" "Perform DIFF"
   rcall_assert "R64.GETINTARRAY bitop_x_13" "$(echo -e "10\n20\n30")" "X should remain unchanged"
   rcall_assert "R64.GETINTARRAY bitop_y_10" "20" "Y should remain unchanged"
+
+  # Test 15: DIFF with destination key as middle source key
+  rcall_assert "R64.SETINTARRAY bitop_x_14 1 2 3 4 5 6 7 8" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_dest_src_2 2 3 4" "OK" "Set bitmap that will be dest and middle src"
+  rcall_assert "R64.SETINTARRAY bitop_y_12 6 7" "OK" "Set bitmap Y"
+  rcall_assert "R64.BITOP DIFF bitop_dest_src_2 bitop_x_14 bitop_dest_src_2 bitop_y_12" "3" "DIFF: X - dest - Y"
+  rcall_assert "R64.GETINTARRAY bitop_dest_src_2" "$(echo -e "1\n5\n8")" "Result should be {1, 5, 8}"
+
+  # Test 16: DIFF with destination key as last source key
+  rcall_assert "R64.SETINTARRAY bitop_x_15 10 20 30 40 50" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y_13 20 30" "OK" "Set bitmap Y1"
+  rcall_assert "R64.SETINTARRAY bitop_dest_src_3 40" "OK" "Set bitmap that will be dest and last src"
+  rcall_assert "R64.BITOP DIFF bitop_dest_src_3 bitop_x_15 bitop_y_13 bitop_dest_src_3" "2" "DIFF: X - Y - dest"
+  rcall_assert "R64.GETINTARRAY bitop_dest_src_3" "$(echo -e "10\n50")" "Result should be {10, 50}"
+
+  # Test 17: DIFF with destination key appearing multiple times in sources
+  rcall_assert "R64.SETINTARRAY bitop_dest_src_4 5 10 15 20" "OK" "Set bitmap for dest/multi-src test"
+  rcall_assert "R64.SETINTARRAY bitop_x_16 1 2 3 4 5 10 15 20 25 30" "OK" "Set bitmap X"
+  rcall_assert "R64.BITOP DIFF bitop_dest_src_4 bitop_x_16 bitop_dest_src_4 bitop_dest_src_4" "6" "DIFF: X - dest - dest"
+  rcall_assert "R64.GETINTARRAY bitop_dest_src_4" "$(echo -e "1\n2\n3\n4\n25\n30")" "Result should be X minus original dest values"
+
+  # Test 18: DIFF with dest as first source and empty result
+  rcall_assert "R64.SETINTARRAY bitop_dest_src_5 7 8 9" "OK" "Set bitmap for dest/src"
+  rcall_assert "R64.SETINTARRAY bitop_y_14 7 8 9 10 11" "OK" "Set bitmap Y (superset)"
+  rcall_assert "R64.BITOP DIFF bitop_dest_src_5 bitop_dest_src_5 bitop_y_14" "0" "DIFF with dest as src, empty result"
+  rcall_assert "R64.GETINTARRAY bitop_dest_src_5" "" "Dest should be empty after operation"
 }
 
 function test_bitop_one() {
