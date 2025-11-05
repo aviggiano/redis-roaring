@@ -1,16 +1,17 @@
-# R.MIN
+# R.DIFF
 
-| Category            | Description                                                                       |
-| ------------------- | --------------------------------------------------------------------------------- |
-| Syntax              | `R.DIFF destkey key1 key2`                                                        |
-| Time complexity     | O(C \* M)                                                                         |
-| Supports structures | Bitmap32                                                                          |
-| Command description | Performs difference operation on Roaring Bitmaps and stores the result in destkey |
+| Category            | Description                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------- |
+| Syntax              | `R.DIFF destkey key1 key2`                                                                   |
+| Time complexity     | O(C \* M)                                                                                    |
+| Supports structures | Bitmap32                                                                                     |
+| Command description | Performs `ANDNOT` operation (difference) on Roaring Bitmaps and stores the result in destkey |
 
-## Parameter
+## Parameters
 
 - **destkey**: The destination key that stores the result (Roaring data structure).
-- **key**: The key of the Roaring data structure.
+- **key1**: The first key (minuend) - elements FROM this bitmap.
+- **key2**: The second key (subtrahend) - elements to EXCLUDE from key1.
 
 ## Output
 
