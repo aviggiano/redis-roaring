@@ -10,8 +10,8 @@
 ## Parameter
 
 - **key**: The name of the Roaring bitmap key.
-- **start**: The start value of the interval (inclusive).
-- **end**: The end value of the interval (inclusive).
+- **start**: The start offset in the interval (inclusive). The offset is zero-indexed, where 0 refers to the lowest set bit.
+- **end**: The end offset in the interval (inclusive). The offset is zero-indexed, where 0 refers to the lowest set bit.
 
 ## Output
 
