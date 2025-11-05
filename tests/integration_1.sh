@@ -4,7 +4,7 @@ set -eu
 
 . "$(dirname "$0")/helper.sh"
 
-ERRORMSG_WRONGTYPE="WRONGTYPE Operation against a key holding the wrong kind of value";
+ERRORMSG_WRONGTYPE="WRONGTYPE Operation against a key holding the wrong kind of value"
 
 function test_setbit_getbit() {
   print_test_header "test_setbit_getbit"
@@ -177,6 +177,91 @@ function test_min_max() {
   rcall_assert "R.MAX test_min_max" "-1" "Get max after unsetting all bits"
 }
 
+function test_bitop_diff() {
+  print_test_header "test_bitop_diff"
+
+  # Test 1: Empty/non-existent keys
+  rcall_assert "R.BITOP DIFF diff_res empty_key_1 empty_key_2" "0"
+
+  # Test 2: Basic DIFF operation - X - Y (single Y key)
+  rcall_assert "R.SETINTARRAY bitop_x_2 1 2 3 4 5" "OK" "Set bitmap X with values 1-5"
+  rcall_assert "R.SETINTARRAY bitop_y_1 3 4 5 6 7" "OK" "Set bitmap Y with values 3-7"
+  rcall_assert "R.BITOP DIFF diff_res_2 bitop_x_2 bitop_y_1" "2" "DIFF X - Y"
+  rcall_assert "R.GETINTARRAY diff_res_2" "$(echo -e "1\n2")" "Result should be {1, 2}"
+
+  # Test 3: DIFF with multiple Y keys - X - Y1 - Y2
+  rcall_assert "R.SETINTARRAY bitop_x_3 1 2 3 4 5 6 7 8" "OK" "Set bitmap X with values 1-8"
+  rcall_assert "R.SETINTARRAY bitop_y1_1 2 3" "OK" "Set bitmap Y1 with values 2-3"
+  rcall_assert "R.SETINTARRAY bitop_y2_1 5 6" "OK" "Set bitmap Y2 with values 5-6"
+  rcall_assert "R.BITOP DIFF diff_res_3 bitop_x_3 bitop_y1_1 bitop_y2_1" "4" "DIFF X - Y1 - Y2"
+  rcall_assert "R.GETINTARRAY diff_res_3" "$(echo -e "1\n4\n7\n8")" "Result should be {1, 4, 7, 8}"
+
+  # Test 4: DIFF with three Y keys
+  rcall_assert "R.SETINTARRAY bitop_x_4 1 2 3 4 5 6 7 8 9 10" "OK" "Set bitmap X with values 1-10"
+  rcall_assert "R.SETINTARRAY bitop_y1_2 1 2" "OK" "Set bitmap Y1"
+  rcall_assert "R.SETINTARRAY bitop_y2_2 3 4" "OK" "Set bitmap Y2"
+  rcall_assert "R.SETINTARRAY bitop_y3_1 5 6" "OK" "Set bitmap Y3"
+  rcall_assert "R.BITOP DIFF diff_res_4 bitop_x_4 bitop_y1_2 bitop_y2_2 bitop_y3_1" "4" "DIFF X - Y1 - Y2 - Y3"
+  rcall_assert "R.GETINTARRAY diff_res_4" "$(echo -e "7\n8\n9\n10")" "Result should be {7, 8, 9, 10}"
+
+  # Test 5: DIFF where X is completely contained in Y (empty result)
+  rcall_assert "R.SETINTARRAY bitop_x_5 1 2 3" "OK" "Set bitmap X with values 1-3"
+  rcall_assert "R.SETINTARRAY bitop_y_2 1 2 3 4 5" "OK" "Set bitmap Y with superset"
+  rcall_assert "R.BITOP DIFF diff_res_5 bitop_x_5 bitop_y_2" "0" "DIFF where X subset of Y"
+  rcall_assert "R.GETINTARRAY diff_res_5" "" "Result should be empty"
+
+  # Test 6: DIFF where X and Y are disjoint (result equals X)
+  rcall_assert "R.SETINTARRAY bitop_x_6 1 2 3" "OK" "Set bitmap X"
+  rcall_assert "R.SETINTARRAY bitop_y_3 7 8 9" "OK" "Set bitmap Y (disjoint)"
+  rcall_assert "R.BITOP DIFF diff_res_6 bitop_x_6 bitop_y_3" "3" "DIFF with disjoint sets"
+  rcall_assert "R.GETINTARRAY diff_res_6" "$(echo -e "1\n2\n3")" "Result should equal X"
+
+  # Test 7: DIFF with empty X bitmap
+  rcall_assert "R.SETINTARRAY bitop_y_4 1 2 3" "OK" "Set bitmap Y"
+  rcall_assert "R.BITOP DIFF diff_res_7 bitop_x_7 bitop_y_4" "0" "DIFF with empty X"
+  rcall_assert "R.GETINTARRAY diff_res_7" "" "Result should be empty"
+
+  # Test 8: DIFF with empty Y bitmap (result equals X)
+  rcall_assert "R.SETINTARRAY bitop_x_8 1 2 3 4" "OK" "Set bitmap X"
+  rcall_assert "R.BITOP DIFF diff_res_8 bitop_x_8 bitop_y_5" "4" "DIFF with empty Y"
+  rcall_assert "R.GETINTARRAY diff_res_8" "$(echo -e "1\n2\n3\n4")" "Result should equal X"
+
+  # Test 9: DIFF with overlapping Y keys
+  rcall_assert "R.SETINTARRAY bitop_x_9 1 2 3 4 5 6" "OK" "Set bitmap X"
+  rcall_assert "R.SETINTARRAY bitop_y1_3 2 3 4" "OK" "Set bitmap Y1"
+  rcall_assert "R.SETINTARRAY bitop_y2_3 3 4 5" "OK" "Set bitmap Y2 (overlaps Y1)"
+  rcall_assert "R.BITOP DIFF diff_res_9 bitop_x_9 bitop_y1_3 bitop_y2_3" "2" "DIFF with overlapping Y keys"
+  rcall_assert "R.GETINTARRAY diff_res_9" "$(echo -e "1\n6")" "Result should be {1, 6}"
+
+  # Test 10: Overwrite existing destination key
+  rcall_assert "R.SETINTARRAY diff_res_10 99 100" "OK" "Pre-populate destination key"
+  rcall_assert "R.SETINTARRAY bitop_x_10 5 6 7" "OK" "Set bitmap X"
+  rcall_assert "R.SETINTARRAY bitop_y_6 6" "OK" "Set bitmap Y"
+  rcall_assert "R.BITOP DIFF diff_res_10 bitop_x_10 bitop_y_6" "2" "DIFF overwrites existing key"
+  rcall_assert "R.GETINTARRAY diff_res_10" "$(echo -e "5\n7")" "Destination should be overwritten, not {99, 100}"
+
+  # Test 11: DIFF with large values
+  rcall_assert "R.SETINTARRAY bitop_x_11 1000 2000 3000 4000" "OK" "Set bitmap X with large values"
+  rcall_assert "R.SETINTARRAY bitop_y_7 2000 3000" "OK" "Set bitmap Y"
+  rcall_assert "R.BITOP DIFF diff_res_11 bitop_x_11 bitop_y_7" "2" "DIFF with large values"
+  rcall_assert "R.GETINTARRAY diff_res_11" "$(echo -e "1000\n4000")" "Result should be {1000, 4000}"
+
+  # Test 12: DIFF result as input to another operation
+  rcall_assert "R.SETINTARRAY bitop_x_12 1 2 3 4 5" "OK" "Set bitmap X"
+  rcall_assert "R.SETINTARRAY bitop_y_8 3 4" "OK" "Set bitmap Y"
+  rcall_assert "R.BITOP DIFF diff_temp bitop_x_12 bitop_y_8" "3" "First DIFF operation"
+  rcall_assert "R.SETINTARRAY bitop_y_9 1" "OK" "Set another bitmap"
+  rcall_assert "R.BITOP DIFF diff_res_12 diff_temp bitop_y_9" "2" "Chain DIFF operations"
+  rcall_assert "R.GETINTARRAY diff_res_12" "$(echo -e "2\n5")" "Chained result should be {2, 5}"
+
+  # Test 13: Verify X and Y keys are not modified
+  rcall_assert "R.SETINTARRAY bitop_x_13 10 20 30" "OK" "Set bitmap X"
+  rcall_assert "R.SETINTARRAY bitop_y_10 20" "OK" "Set bitmap Y"
+  rcall_assert "R.BITOP DIFF diff_res_13 bitop_x_13 bitop_y_10" "2" "Perform DIFF"
+  rcall_assert "R.GETINTARRAY bitop_x_13" "$(echo -e "10\n20\n30")" "X should remain unchanged"
+  rcall_assert "R.GETINTARRAY bitop_y_10" "20" "Y should remain unchanged"
+}
+
 function test_bitop_one() {
   print_test_header "test_bitop_one"
 
@@ -204,7 +289,7 @@ function test_bitop_one() {
   rcall_assert "R.SETINTARRAY test_bitop_one_key_a 0 4 5 6" "OK" "Set bits in test_bitop_one_key_a"
   rcall_assert "R.SETINTARRAY test_bitop_one_key_b 1 5 6" "OK" "Set bits in test_bitop_one_key_b"
   rcall_assert "R.SETINTARRAY test_bitop_one_key_c 2 3 5 6 7" "OK" "Set bits in test_bitop_one_key_c"
-  
+
   rcall_assert "R.BITOP ONE test_bitop_one_result_three test_bitop_one_key_a test_bitop_one_key_b test_bitop_one_key_c" "6" "BITOP ONE with three bitmaps"
   rcall_assert "R.GETINTARRAY test_bitop_one_result_three" "0\n1\n2\n3\n4\n7" "Result should contain bits appearing exactly once"
 
@@ -357,7 +442,7 @@ function test_contains() {
   # Test with single element bitmaps
   rcall_assert "R.SETINTARRAY test_contains_single1 3" "OK" "Setup single element bitmap with [3]"
   rcall_assert "R.SETINTARRAY test_contains_single2 7" "OK" "Setup single element bitmap with [7]"
-  
+
   rcall_assert "R.CONTAINS test_contains1 test_contains_single1" "1" "test_contains1 intersects with test_contains_single1 [3]"
   rcall_assert "R.CONTAINS test_contains1 test_contains_single2" "0" "test_contains1 doesn't intersect with test_contains_single2 [7]"
   rcall_assert "R.CONTAINS test_contains1 test_contains_single1 ALL" "1" "test_contains_single1 [3] is subset of test_contains1"
@@ -368,7 +453,7 @@ function test_contains() {
   rcall_assert "R.CONTAINS nonexistent test_contains1" "${ERRORMSG_WRONGTYPE}" "Should return error for non-existent first key"
   rcall_assert "R.CONTAINS test_contains1 nonexistent" "${ERRORMSG_WRONGTYPE}" "Should return error for non-existent second key"
   rcall_assert "R.CONTAINS nonexistent1 nonexistent2" "${ERRORMSG_WRONGTYPE}" "Should return error when both keys don't exist"
-  
+
   # Test invalid mode
   rcall_assert "R.CONTAINS test_contains1 test_contains2 INVALID_MODE" "ERR invalid mode argument: INVALID_MODE" "Should return error for invalid mode"
   rcall_assert "R.CONTAINS test_contains1 test_contains2 all" "ERR invalid mode argument: all" "Should return error for lowercase mode (case sensitive)"
@@ -377,7 +462,7 @@ function test_contains() {
   rcall_assert "R.SETINTARRAY test_contains_large1 $(seq 1 1000 | tr '\n' ' ')" "OK" "Setup large test_contains1 with 1-1000"
   rcall_assert "R.SETINTARRAY test_contains_large2 $(seq 100 200 | tr '\n' ' ')" "OK" "Setup large test_contains2 with 100-200"
   rcall_assert "R.SETINTARRAY test_contains_large3 $(seq 1001 1100 | tr '\n' ' ')" "OK" "Setup large test_contains3 with 1001-1100"
-  
+
   rcall_assert "R.CONTAINS test_contains_large1 test_contains_large2" "1" "Large bitmaps intersection test"
   rcall_assert "R.CONTAINS test_contains_large1 test_contains_large3" "0" "Large bitmaps no intersection test"
   rcall_assert "R.CONTAINS test_contains_large1 test_contains_large2 ALL" "1" "Large bitmap subset test"
@@ -388,7 +473,7 @@ function test_contains() {
   rcall_assert "R.SETINTARRAY test_contains_range1 1 5 10 15 20" "OK" "Setup sparse range bitmap"
   rcall_assert "R.SETINTARRAY test_contains_range2 5 15" "OK" "Setup subset range bitmap"
   rcall_assert "R.SETINTARRAY test_contains_range3 5 25" "OK" "Setup partial overlap range bitmap"
-  
+
   rcall_assert "R.CONTAINS test_contains_range1 test_contains_range2" "1" "Sparse range intersection test"
   rcall_assert "R.CONTAINS test_contains_range1 test_contains_range3" "1" "Partial overlap intersection test"
   rcall_assert "R.CONTAINS test_contains_range1 test_contains_range2 ALL" "1" "Sparse range subset test"
@@ -434,7 +519,7 @@ function test_stat() {
 number of array containers: 1\n\tarray container values: 1\n\tarray container bytes: 2
 bitset  containers: 0\n\tbitset  container values: 0\n\tbitset  container bytes: 0
 run containers: 0\n\trun container values: 0\n\trun container bytes: 0'
-  
+
   rcall_assert "R.STAT test_stat" "$EXPECTED_STAT" "Get bitmap statistics"
 
   EXPECTED_STAT=$'{"type":"bitmap","cardinality":"1","number_of_containers":"1","max_value":"100","min_value":"100","array_container":{"number_of_containers":"1","container_cardinality":"1","container_allocated_bytes":"2"},"bitset_container":{"number_of_containers":"0","container_cardinality":"0","container_allocated_bytes":"0"},"run_container":{"number_of_containers":"0","container_cardinality":"0","container_allocated_bytes":"0"}}'
@@ -458,6 +543,7 @@ test_getbitarray_setbitarray
 test_appendintarray_deleteintarray
 test_min_max
 test_bitop_one
+test_bitop_diff
 test_setrage
 test_clear
 test_diff
