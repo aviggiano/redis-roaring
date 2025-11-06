@@ -956,6 +956,8 @@ int R64BitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return R64BitOp(ctx, argv, argc, bitmap64_one);
   } else if (strcmp(operation, "DIFF") == 0) {
     return R64BitOp(ctx, argv, argc, bitmap64_andnot);
+  } else if (strcmp(operation, "DIFF1") == 0) {
+    return R64BitOp(ctx, argv, argc, bitmap64_ornot);
   } else {
     if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
       return REDISMODULE_OK;
@@ -2048,6 +2050,8 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RBitOp(ctx, argv, argc, bitmap_one);
   } else if (strcmp(operation, "DIFF") == 0) {
     return RBitOp(ctx, argv, argc, bitmap_andnot);
+  } else if (strcmp(operation, "DIFF1") == 0) {
+    return RBitOp(ctx, argv, argc, bitmap_ornot);
   } else {
     if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
       return REDISMODULE_OK;

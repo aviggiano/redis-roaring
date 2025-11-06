@@ -31,6 +31,8 @@
 #include "unit/test_bitmap64_andor.c"
 #include "unit/test_bitmap_one.c"
 #include "unit/test_bitmap64_one.c"
+#include "unit/test_bitmap_ornot.c"
+#include "unit/test_bitmap64_ornot.c"
 #include "unit/test_bitmap64_getbits.c"
 #include "unit/test_bitmap_getbits.c"
 #include "unit/test_bitmap_clearbits.c"
@@ -78,6 +80,8 @@ int main(int argc, char* argv[]) {
   test_bitmap64_andor();
   test_bitmap64_one();
   test_bitmap_one();
+  test_bitmap_ornot();
+  test_bitmap64_ornot();
   test_bitmap_range_int_array();
   test_bitmap_clearbits();
   test_bitmap_clearbits_count();
