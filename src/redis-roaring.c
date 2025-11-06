@@ -3,6 +3,7 @@
 #include "hiredis/sds.h"
 #include "rmalloc.h"
 #include "roaring.h"
+#include "version.h"
 
 static RedisModuleType* BitmapType;
 static RedisModuleType* Bitmap64Type;
@@ -2306,9 +2307,14 @@ void RedisModule_OnShutdown(RedisModuleCtx* ctx, RedisModuleEvent e, uint64_t su
 
 int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   // Register the module itself
-  if (RedisModule_Init(ctx, "REDIS-ROARING", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
+  if (RedisModule_Init(ctx, REDISROARING_MODULE_NAME, REDISROARING_MODULE_VERSION, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
+
+  RedisModule_Log(ctx,
+    "notice",
+    "RedisRoaring version %d",
+    REDISROARING_MODULE_VERSION);
 
   RedisModule_SubscribeToServerEvent(ctx, RedisModuleEvent_Shutdown, RedisModule_OnShutdown);
 
