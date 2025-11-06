@@ -415,6 +415,52 @@ void bitmap_andor(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   roaring_bitmap_and_inplace(r, x);
 }
 
+void bitmap_andnot(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
+  if (n == 0) {
+    return roaring_bitmap_clear(r);
+  }
+  if (n == 1) {
+    roaring_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+  if (n == 2) {
+    roaring_bitmap_overwrite(r, bitmaps[0]);
+    roaring_bitmap_andnot_inplace(r, bitmaps[1]);
+    return;
+  }
+
+  const Bitmap* x = bitmaps[0];
+
+  roaring_bitmap_overwrite(r, x);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring_bitmap_andnot_inplace(r, bitmaps[i]);
+  }
+}
+
+void bitmap64_andnot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
+  if (n == 0) {
+    return roaring64_bitmap_clear(r);
+  }
+  if (n == 1) {
+    _roaring64_bitmap_overwrite(r, bitmaps[0]);
+    return;
+  }
+  if (n == 2) {
+    _roaring64_bitmap_overwrite(r, bitmaps[0]);
+    roaring64_bitmap_andnot_inplace(r, bitmaps[1]);
+    return;
+  }
+
+  const Bitmap64* x = bitmaps[0];
+
+  _roaring64_bitmap_overwrite(r, x);
+
+  for (uint32_t i = 1; i < n; i++) {
+    roaring64_bitmap_andnot_inplace(r, bitmaps[i]);
+  }
+}
+
 void bitmap64_andor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   if (n == 0) {
     return roaring64_bitmap_clear(r);
