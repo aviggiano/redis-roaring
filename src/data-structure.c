@@ -302,7 +302,7 @@ void bitmap_or(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   roaring_bitmap_overwrite(r, bitmaps[0]);
 
   for (size_t i = 1; i < n; i++) {
-    roaring_bitmap_lazy_or_inplace(r, (Bitmap*) bitmaps[i], false);
+    roaring_bitmap_lazy_or_inplace(r, bitmaps[i], false);
   }
 
   roaring_bitmap_repair_after_lazy(r);
