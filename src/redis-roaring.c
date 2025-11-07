@@ -935,6 +935,15 @@ int R64BitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, void (*ope
  * R64.BITOP <operation> <destkey> <key> [<key> ...]
  * */
 int R64BitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
+    if (argc > 4) {
+      for (int i = 2; i < argc; i++) {
+        RedisModule_KeyAtPos(ctx, i);
+      }
+    }
+    return REDISMODULE_OK;
+  }
+
   if (argc < 4) {
     return (RedisModule_IsKeysPositionRequest(ctx) > 0) ? REDISMODULE_OK : RedisModule_WrongArity(ctx);
   }
