@@ -138,8 +138,8 @@ uint32_t bitmap_min(const Bitmap* bitmap);
 uint64_t bitmap64_min(const Bitmap64* bitmap);
 uint32_t bitmap_max(const Bitmap* bitmap);
 uint64_t bitmap64_max(const Bitmap64* bitmap);
-void bitmap_optimize(Bitmap* bitmap, int shrink_to_fit);
-void bitmap64_optimize(Bitmap64* bitmap, int shrink_to_fit);
+bool bitmap_optimize(Bitmap* bitmap, int shrink_to_fit);
+bool bitmap64_optimize(Bitmap64* bitmap, int shrink_to_fit);
 void bitmap_statistics(const Bitmap* bitmap, Bitmap_statistics* stat);
 void bitmap64_statistics(const Bitmap64* bitmap, Bitmap64_statistics* stat);
 

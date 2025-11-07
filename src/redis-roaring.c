@@ -696,9 +696,12 @@ int R64OptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
   }
 
   Bitmap64* bitmap = RedisModule_ModuleTypeGetValue(key);
-  bitmap64_optimize(bitmap, shrink_to_fit);
+  bool was_modified = bitmap64_optimize(bitmap, shrink_to_fit);
 
-  RedisModule_ReplicateVerbatim(ctx);
+  if (was_modified) {
+    RedisModule_ReplicateVerbatim(ctx);
+  }
+
   RedisModule_ReplyWithSimpleString(ctx, "OK");
 
   return REDISMODULE_OK;
@@ -1539,9 +1542,12 @@ int ROptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
   }
 
   Bitmap* bitmap = RedisModule_ModuleTypeGetValue(key);
-  bitmap_optimize(bitmap, shrink_to_fit);
+  bool was_modified = bitmap_optimize(bitmap, shrink_to_fit);
 
-  RedisModule_ReplicateVerbatim(ctx);
+  if (was_modified) {
+    RedisModule_ReplicateVerbatim(ctx);
+  }
+
   RedisModule_ReplyWithSimpleString(ctx, "OK");
 
   return REDISMODULE_OK;

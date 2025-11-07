@@ -844,18 +844,20 @@ uint64_t bitmap64_max(const Bitmap64* bitmap) {
   return roaring64_bitmap_maximum(bitmap);
 }
 
-void bitmap_optimize(Bitmap* bitmap, int shrink_to_fit) {
-  roaring_bitmap_run_optimize(bitmap);
-  if (shrink_to_fit) {
+bool bitmap_optimize(Bitmap* bitmap, int shrink_to_fit) {
+  bool was_modified = roaring_bitmap_run_optimize(bitmap);
+  if (shrink_to_fit && was_modified) {
     roaring_bitmap_shrink_to_fit(bitmap);
   }
+  return was_modified;
 }
 
-void bitmap64_optimize(Bitmap64* bitmap, int shrink_to_fit) {
-  roaring64_bitmap_run_optimize(bitmap);
-  if (shrink_to_fit) {
+bool bitmap64_optimize(Bitmap64* bitmap, int shrink_to_fit) {
+  bool was_modified = roaring64_bitmap_run_optimize(bitmap);
+  if (shrink_to_fit && was_modified) {
     roaring64_bitmap_shrink_to_fit(bitmap);
   }
+  return was_modified;
 }
 
 void bitmap_statistics(const Bitmap* bitmap, Bitmap_statistics* stat) {
