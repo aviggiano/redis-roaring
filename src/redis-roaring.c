@@ -3,6 +3,7 @@
 #include "hiredis/sds.h"
 #include "rmalloc.h"
 #include "roaring.h"
+#include "version.h"
 
 static RedisModuleType* BitmapType;
 static RedisModuleType* Bitmap64Type;
@@ -956,6 +957,8 @@ int R64BitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return R64BitOp(ctx, argv, argc, bitmap64_one);
   } else if (strcmp(operation, "DIFF") == 0) {
     return R64BitOp(ctx, argv, argc, bitmap64_andnot);
+  } else if (strcmp(operation, "DIFF1") == 0) {
+    return R64BitOp(ctx, argv, argc, bitmap64_ornot);
   } else {
     if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
       return REDISMODULE_OK;
@@ -2048,6 +2051,8 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RBitOp(ctx, argv, argc, bitmap_one);
   } else if (strcmp(operation, "DIFF") == 0) {
     return RBitOp(ctx, argv, argc, bitmap_andnot);
+  } else if (strcmp(operation, "DIFF1") == 0) {
+    return RBitOp(ctx, argv, argc, bitmap_ornot);
   } else {
     if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
       return REDISMODULE_OK;
@@ -2302,9 +2307,14 @@ void RedisModule_OnShutdown(RedisModuleCtx* ctx, RedisModuleEvent e, uint64_t su
 
 int RedisModule_OnLoad(RedisModuleCtx* ctx) {
   // Register the module itself
-  if (RedisModule_Init(ctx, "REDIS-ROARING", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
+  if (RedisModule_Init(ctx, REDISROARING_MODULE_NAME, REDISROARING_MODULE_VERSION, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
+
+  RedisModule_Log(ctx,
+    "notice",
+    "RedisRoaring version %d",
+    REDISROARING_MODULE_VERSION);
 
   RedisModule_SubscribeToServerEvent(ctx, RedisModuleEvent_Shutdown, RedisModule_OnShutdown);
 

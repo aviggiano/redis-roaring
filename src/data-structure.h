@@ -76,6 +76,8 @@ void bitmap_andor(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
 void bitmap_andnot(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
 void bitmap64_andor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
 void bitmap64_andnot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
+void bitmap_ornot(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
+void bitmap64_ornot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
 void bitmap_one(Bitmap* r, uint32_t n, const Bitmap** bitmaps);
 void bitmap64_one(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps);
 Bitmap* bitmap_flip(const Bitmap* bitmap, uint32_t end);

@@ -53,6 +53,7 @@ static int test_current_depth = 0;
 static int test_total_count = 0;
 static int test_total_failed = 0;
 static double test_start_at = 0;
+static double test_duration_warn_trashload = 0.3f;
 static test_describe_t* test_current_describe = NULL;
 static test_it_t* test_current_it = NULL;
 
@@ -189,13 +190,19 @@ static inline void before_it(char* name) {
 static inline void after_it() {
   test_current_depth--;
 
+  double durationMs = now_ms() - test_current_it->start_at;
+
   if (!test_current_it->failed) {
     printf("%s" COLOR_GREEN "✓" COLOR_RESET " %s -> %s",
       get_test_padding(),
       test_current_describe->name,
       test_current_it->name
     );
-    printf(COLOR_GREY " %.3fms\n" COLOR_RESET, now_ms() - test_start_at);
+    if (durationMs >= test_duration_warn_trashload) {
+      printf(COLOR_YELLOW " %.3fms\n" COLOR_RESET, durationMs);
+    } else {
+      printf(COLOR_GREY " %.3fms\n" COLOR_RESET, durationMs);
+    }
     reset_test_buffer();
   } else {
     printf("%s" COLOR_RED "✗" COLOR_RESET " %s -> %s",
@@ -203,7 +210,11 @@ static inline void after_it() {
       test_current_describe->name,
       test_current_it->name
     );
-    printf(COLOR_GREY " %.3fms\n" COLOR_RESET, now_ms() - test_start_at);
+    if (durationMs >= test_duration_warn_trashload) {
+      printf(COLOR_YELLOW " %.3fms\n" COLOR_RESET, durationMs);
+    } else {
+      printf(COLOR_GREY " %.3fms\n" COLOR_RESET, durationMs);
+    }
     flush_test_buffer();
   }
 

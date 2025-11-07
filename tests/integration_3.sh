@@ -288,85 +288,237 @@ function test_bitop_diff() {
   rcall_assert "R64.GETINTARRAY bitop_dest_src_5" "" "Dest should be empty after operation"
 }
 
+function test_bitop_diff1() {
+  print_test_header "test_bitop_diff1 (64)"
+
+  # Test 1: Empty/non-existent keys - should return 0
+  rcall_assert "R64.BITOP DIFF1 diff1_res_1 empty_key_1 empty_key_2" "0" "DIFF1 with empty keys"
+
+  # Test 2: Basic DIFF1 operation - (Y OR Z) - X (single Y key)
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_1 3 4 5" "OK" "Set bitmap X with values 3-5"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_1 1 2 3 4 5 6 7" "OK" "Set bitmap Y with values 1-7"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_2 bitop_x_d1_1 bitop_y_d1_1" "4" "DIFF1 Y - X"
+  rcall_assert "R64.GETINTARRAY diff1_res_2" "$(echo -e "1\n2\n6\n7")" "Result should be {1, 2, 6, 7}"
+
+  # Test 3: DIFF1 with multiple Y keys - (Y1 OR Y2) - X
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_2 2 3 5 6" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y1_d1_1 1 2 3 4" "OK" "Set bitmap Y1"
+  rcall_assert "R64.SETINTARRAY bitop_y2_d1_1 5 6 7 8" "OK" "Set bitmap Y2"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_3 bitop_x_d1_2 bitop_y1_d1_1 bitop_y2_d1_1" "4" "DIFF1 (Y1 OR Y2) - X"
+  rcall_assert "R64.GETINTARRAY diff1_res_3" "$(echo -e "1\n4\n7\n8")" "Result should be {1, 4, 7, 8}"
+
+  # Test 4: DIFF1 with three Y keys - (Y1 OR Y2 OR Y3) - X
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_3 1 2 5 6 9 10" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y1_d1_2 1 2 3" "OK" "Set bitmap Y1"
+  rcall_assert "R64.SETINTARRAY bitop_y2_d1_2 4 5 6" "OK" "Set bitmap Y2"
+  rcall_assert "R64.SETINTARRAY bitop_y3_d1_1 7 8 9" "OK" "Set bitmap Y3"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_4 bitop_x_d1_3 bitop_y1_d1_2 bitop_y2_d1_2 bitop_y3_d1_1" "4" "DIFF1 (Y1 OR Y2 OR Y3) - X"
+  rcall_assert "R64.GETINTARRAY diff1_res_4" "$(echo -e "3\n4\n7\n8")" "Result should be {3, 4, 7, 8}"
+
+  # Test 5: DIFF1 where Y is completely contained in X (empty result)
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_4 1 2 3 4 5" "OK" "Set bitmap X with superset"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_2 2 3 4" "OK" "Set bitmap Y (subset)"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_5 bitop_x_d1_4 bitop_y_d1_2" "0" "DIFF1 where Y subset of X"
+  rcall_assert "R64.GETINTARRAY diff1_res_5" "" "Result should be empty"
+
+  # Test 6: DIFF1 where X and Y are disjoint (result equals Y)
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_5 1 2 3" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_3 7 8 9" "OK" "Set bitmap Y (disjoint)"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_6 bitop_x_d1_5 bitop_y_d1_3" "3" "DIFF1 with disjoint sets"
+  rcall_assert "R64.GETINTARRAY diff1_res_6" "$(echo -e "7\n8\n9")" "Result should equal Y"
+
+  # Test 7: DIFF1 with empty X bitmap (result equals Y)
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_4 5 6 7 8" "OK" "Set bitmap Y"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_7 bitop_x_d1_6 bitop_y_d1_4" "4" "DIFF1 with empty X"
+  rcall_assert "R64.GETINTARRAY diff1_res_7" "$(echo -e "5\n6\n7\n8")" "Result should equal Y"
+
+  # Test 8: DIFF1 with empty Y bitmap (empty result)
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_7 1 2 3 4" "OK" "Set bitmap X"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_8 bitop_x_d1_7 bitop_y_d1_5" "0" "DIFF1 with empty Y"
+  rcall_assert "R64.GETINTARRAY diff1_res_8" "" "Result should be empty"
+
+  # Test 9: DIFF1 with empty Y bitmaps (empty result)
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_8 10 20 30" "OK" "Set bitmap X"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_9 bitop_x_d1_8 bitop_y_d1_6 bitop_y_d1_7" "0" "DIFF1 with all Y empty"
+  rcall_assert "R64.GETINTARRAY diff1_res_9" "" "Result should be empty"
+
+  # Test 10: DIFF1 with overlapping Y keys
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_9 3 4 5" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y1_d1_3 1 2 3 4" "OK" "Set bitmap Y1"
+  rcall_assert "R64.SETINTARRAY bitop_y2_d1_3 4 5 6 7" "OK" "Set bitmap Y2 (overlaps Y1)"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_10 bitop_x_d1_9 bitop_y1_d1_3 bitop_y2_d1_3" "4" "DIFF1 with overlapping Y keys"
+  rcall_assert "R64.GETINTARRAY diff1_res_10" "$(echo -e "1\n2\n6\n7")" "Result should be {1, 2, 6, 7}"
+
+  # Test 11: Overwrite existing destination key
+  rcall_assert "R64.SETINTARRAY diff1_res_11 99 100" "OK" "Pre-populate destination key"
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_10 5 6" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_8 5 6 7 8" "OK" "Set bitmap Y"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_11 bitop_x_d1_10 bitop_y_d1_8" "2" "DIFF1 overwrites existing key"
+  rcall_assert "R64.GETINTARRAY diff1_res_11" "$(echo -e "7\n8")" "Destination should be overwritten, not {99, 100}"
+
+  # Test 12: DIFF1 with large values
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_11 2000 3000" "OK" "Set bitmap X with large values"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_9 1000 2000 3000 4000" "OK" "Set bitmap Y"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_12 bitop_x_d1_11 bitop_y_d1_9" "2" "DIFF1 with large values"
+  rcall_assert "R64.GETINTARRAY diff1_res_12" "$(echo -e "1000\n4000")" "Result should be {1000, 4000}"
+
+  # Test 13: DIFF1 result as input to another operation
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_12 3 4" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_10 1 2 3 4 5" "OK" "Set bitmap Y"
+  rcall_assert "R64.BITOP DIFF1 diff1_temp bitop_x_d1_12 bitop_y_d1_10" "3" "First DIFF1 operation"
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_13 1" "OK" "Set another bitmap"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_13 bitop_x_d1_13 diff1_temp" "2" "Chain DIFF1 operations"
+  rcall_assert "R64.GETINTARRAY diff1_res_13" "$(echo -e "2\n5")" "Chained result should be {2, 5}"
+
+  # Test 14: Verify X and Y keys are not modified
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_14 20" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_11 10 20 30" "OK" "Set bitmap Y"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_14 bitop_x_d1_14 bitop_y_d1_11" "2" "Perform DIFF1"
+  rcall_assert "R64.GETINTARRAY bitop_x_d1_14" "20" "X should remain unchanged"
+  rcall_assert "R64.GETINTARRAY bitop_y_d1_11" "$(echo -e "10\n20\n30")" "Y should remain unchanged"
+
+  # Test 15: DIFF1 with destination key as X source (in-place operation)
+  rcall_assert "R64.SETINTARRAY bitop_dest_src_d1_1 3 4 5" "OK" "Set bitmap that will be both dest and X"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_12 1 2 3 4 5 6" "OK" "Set bitmap Y"
+  rcall_assert "R64.BITOP DIFF1 bitop_dest_src_d1_1 bitop_dest_src_d1_1 bitop_y_d1_12" "3" "DIFF1 with dest as X (in-place)"
+  rcall_assert "R64.GETINTARRAY bitop_dest_src_d1_1" "$(echo -e "1\n2\n6")" "Dest should be modified in-place to {1, 2, 6}"
+
+  # Test 16: DIFF1 with destination key as first Y source
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_15 2 3 4" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_dest_src_d1_2 1 2 3 4 5 6" "OK" "Set bitmap that will be dest and first Y"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_13 6 7 8" "OK" "Set bitmap Y2"
+  rcall_assert "R64.BITOP DIFF1 bitop_dest_src_d1_2 bitop_x_d1_15 bitop_dest_src_d1_2 bitop_y_d1_13" "5" "DIFF1: (dest OR Y2) - X"
+  rcall_assert "R64.GETINTARRAY bitop_dest_src_d1_2" "$(echo -e "1\n5\n6\n7\n8")" "Result should be {1, 5, 6, 7, 8}"
+
+  # Test 17: DIFF1 with destination key as middle Y source
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_16 5 10 15" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_14 1 5 10" "OK" "Set bitmap Y1"
+  rcall_assert "R64.SETINTARRAY bitop_dest_src_d1_3 10 15 20" "OK" "Set bitmap that will be dest and middle Y"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_15 15 20 25" "OK" "Set bitmap Y3"
+  rcall_assert "R64.BITOP DIFF1 bitop_dest_src_d1_3 bitop_x_d1_16 bitop_y_d1_14 bitop_dest_src_d1_3 bitop_y_d1_15" "3" "DIFF1: (Y1 OR dest OR Y3) - X"
+  rcall_assert "R64.GETINTARRAY bitop_dest_src_d1_3" "$(echo -e "1\n20\n25")" "Result should be {1, 20, 25}"
+
+  # Test 18: DIFF1 with destination key as last Y source
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_17 20 30" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_16 10 20 30" "OK" "Set bitmap Y1"
+  rcall_assert "R64.SETINTARRAY bitop_dest_src_d1_4 30 40 50" "OK" "Set bitmap that will be dest and last Y"
+  rcall_assert "R64.BITOP DIFF1 bitop_dest_src_d1_4 bitop_x_d1_17 bitop_y_d1_16 bitop_dest_src_d1_4" "3" "DIFF1: (Y1 OR dest) - X"
+  rcall_assert "R64.GETINTARRAY bitop_dest_src_d1_4" "$(echo -e "10\n40\n50")" "Result should be {10, 40, 50}"
+
+  # Test 19: DIFF1 with destination key appearing multiple times in Y sources
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_18 10 20" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_dest_src_d1_5 5 10 15 20 25" "OK" "Set bitmap for dest/multi-Y test"
+  rcall_assert "R64.BITOP DIFF1 bitop_dest_src_d1_5 bitop_x_d1_18 bitop_dest_src_d1_5 bitop_dest_src_d1_5" "3" "DIFF1: (dest OR dest) - X"
+  rcall_assert "R64.GETINTARRAY bitop_dest_src_d1_5" "$(echo -e "5\n15\n25")" "Result should be {5, 15, 25}"
+
+  # Test 20: DIFF1 with dest as Y and empty result
+  rcall_assert "R64.SETINTARRAY bitop_dest_src_d1_6 7 8 9" "OK" "Set bitmap for dest/Y"
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_19 7 8 9 10 11" "OK" "Set bitmap X (superset)"
+  rcall_assert "R64.BITOP DIFF1 bitop_dest_src_d1_6 bitop_x_d1_19 bitop_dest_src_d1_6" "0" "DIFF1 with dest as Y, empty result"
+  rcall_assert "R64.GETINTARRAY bitop_dest_src_d1_6" "" "Dest should be empty after operation"
+
+  # Test 21: DIFF1 with single Y where Y equals X (empty result)
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_20 100 200 300" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y_d1_17 100 200 300" "OK" "Set bitmap Y identical to X"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_21 bitop_x_d1_20 bitop_y_d1_17" "0" "DIFF1 where Y equals X"
+  rcall_assert "R64.GETINTARRAY diff1_res_21" "" "Result should be empty"
+
+  # Test 22: DIFF1 with multiple Y keys where union equals X
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_21 1 2 3 4 5 6" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y1_d1_4 1 2 3" "OK" "Set bitmap Y1"
+  rcall_assert "R64.SETINTARRAY bitop_y2_d1_4 4 5 6" "OK" "Set bitmap Y2"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_22 bitop_x_d1_21 bitop_y1_d1_4 bitop_y2_d1_4" "0" "DIFF1 where Y1 OR Y2 equals X"
+  rcall_assert "R64.GETINTARRAY diff1_res_22" "" "Result should be empty"
+
+  # Test 23: DIFF1 with four Y keys
+  rcall_assert "R64.SETINTARRAY bitop_x_d1_22 5 10 15 20 25 30" "OK" "Set bitmap X"
+  rcall_assert "R64.SETINTARRAY bitop_y1_d1_5 1 5" "OK" "Set bitmap Y1"
+  rcall_assert "R64.SETINTARRAY bitop_y2_d1_5 10 11" "OK" "Set bitmap Y2"
+  rcall_assert "R64.SETINTARRAY bitop_y3_d1_2 15 16" "OK" "Set bitmap Y3"
+  rcall_assert "R64.SETINTARRAY bitop_y4_d1_1 20 21" "OK" "Set bitmap Y4"
+  rcall_assert "R64.BITOP DIFF1 diff1_res_23 bitop_x_d1_22 bitop_y1_d1_5 bitop_y2_d1_5 bitop_y3_d1_2 bitop_y4_d1_1" "4" "DIFF1 with four Y keys"
+  rcall_assert "R64.GETINTARRAY diff1_res_23" "$(echo -e "1\n11\n16\n21")" "Result should be {1, 11, 16, 21}"
+}
+
 function test_bitop_one() {
   print_test_header "test_bitop_one (64)"
 
   # Test 1: Empty bitmap array
-  rcall_assert "R.BITOP ONE test_bitop_one64_result_empty" "ERR wrong number of arguments for 'R.BITOP' command" "BITOP ONE with no source bitmaps"
+  rcall_assert "R64.BITOP ONE test_bitop_one64_result_empty" "ERR wrong number of arguments for 'R64.BITOP' command" "BITOP ONE with no source bitmaps"
 
   # Test 2: Single bitmap
-  rcall_assert "R.BITOP ONE test_bitop_one64_result_single test_bitop_one64_key1" "ERR wrong number of arguments for 'R.BITOP' command" "BITOP ONE with single bitmap"
+  rcall_assert "R64.BITOP ONE test_bitop_one64_result_single test_bitop_one64_key1" "ERR wrong number of arguments for 'R64.BITOP' command" "BITOP ONE with single bitmap"
 
   # Test 3: Two non-overlapping bitmaps
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key1 1 3 5" "OK" "Set bits in test_bitop_one64_key1"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key2 2 4 6" "OK" "Set bits in test_bitop_one64_key2"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key1 1 3 5" "OK" "Set bits in test_bitop_one64_key1"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key2 2 4 6" "OK" "Set bits in test_bitop_one64_key2"
 
-  rcall_assert "R.BITOP ONE test_bitop_one64_result_non_overlap test_bitop_one64_key1 test_bitop_one64_key2" "6" "BITOP ONE with non-overlapping bitmaps"
-  rcall_assert "R.GETINTARRAY test_bitop_one64_result_non_overlap" "1\n2\n3\n4\n5\n6" "Result should contain all bits from both keys"
+  rcall_assert "R64.BITOP ONE test_bitop_one64_result_non_overlap test_bitop_one64_key1 test_bitop_one64_key2" "6" "BITOP ONE with non-overlapping bitmaps"
+  rcall_assert "R64.GETINTARRAY test_bitop_one64_result_non_overlap" "1\n2\n3\n4\n5\n6" "Result should contain all bits from both keys"
 
   # Test 4: Two overlapping bitmaps
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key3 1 2 3" "OK" "Set bits in test_bitop_one64_key3"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key4 3 4 5" "OK" "Set bits in test_bitop_one64_key4"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key3 1 2 3" "OK" "Set bits in test_bitop_one64_key3"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key4 3 4 5" "OK" "Set bits in test_bitop_one64_key4"
 
-  rcall_assert "R.BITOP ONE test_bitop_one64_result_overlap test_bitop_one64_key3 test_bitop_one64_key4" "4" "BITOP ONE with overlapping bitmaps"
-  rcall_assert "R.GETINTARRAY test_bitop_one64_result_overlap" "1\n2\n4\n5" "Result should contain only non-overlapping bits"
+  rcall_assert "R64.BITOP ONE test_bitop_one64_result_overlap test_bitop_one64_key3 test_bitop_one64_key4" "4" "BITOP ONE with overlapping bitmaps"
+  rcall_assert "R64.GETINTARRAY test_bitop_one64_result_overlap" "1\n2\n4\n5" "Result should contain only non-overlapping bits"
 
   # Test 5: Three bitmaps - Redis example
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_a 0 4 5 6" "OK" "Set bits in test_bitop_one64_key_a"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_b 1 5 6" "OK" "Set bits in test_bitop_one64_key_b"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_c 2 3 5 6 7" "OK" "Set bits in test_bitop_one64_key_c"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_a 0 4 5 6" "OK" "Set bits in test_bitop_one64_key_a"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_b 1 5 6" "OK" "Set bits in test_bitop_one64_key_b"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_c 2 3 5 6 7" "OK" "Set bits in test_bitop_one64_key_c"
 
-  rcall_assert "R.BITOP ONE test_bitop_one64_result_three test_bitop_one64_key_a test_bitop_one64_key_b test_bitop_one64_key_c" "6" "BITOP ONE with three bitmaps"
-  rcall_assert "R.GETINTARRAY test_bitop_one64_result_three" "0\n1\n2\n3\n4\n7" "Result should contain bits appearing exactly once"
+  rcall_assert "R64.BITOP ONE test_bitop_one64_result_three test_bitop_one64_key_a test_bitop_one64_key_b test_bitop_one64_key_c" "6" "BITOP ONE with three bitmaps"
+  rcall_assert "R64.GETINTARRAY test_bitop_one64_result_three" "0\n1\n2\n3\n4\n7" "Result should contain bits appearing exactly once"
 
   # Test 6: All bitmaps have same bits
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_same1 10 20 30" "OK" "Set bits in test_bitop_one64_key_same1"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_same2 10 20 30" "OK" "Set bits in test_bitop_one64_key_same2"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_same3 10 20 30" "OK" "Set bits in test_bitop_one64_key_same3"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_same1 10 20 30" "OK" "Set bits in test_bitop_one64_key_same1"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_same2 10 20 30" "OK" "Set bits in test_bitop_one64_key_same2"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_same3 10 20 30" "OK" "Set bits in test_bitop_one64_key_same3"
 
-  rcall_assert "R.BITOP ONE test_bitop_one64_result_same test_bitop_one64_key_same1 test_bitop_one64_key_same2 test_bitop_one64_key_same3" "0" "BITOP ONE with identical bitmaps"
-  rcall_assert "R.GETINTARRAY test_bitop_one64_result_same" "" "Result should be empty array"
+  rcall_assert "R64.BITOP ONE test_bitop_one64_result_same test_bitop_one64_key_same1 test_bitop_one64_key_same2 test_bitop_one64_key_same3" "0" "BITOP ONE with identical bitmaps"
+  rcall_assert "R64.GETINTARRAY test_bitop_one64_result_same" "" "Result should be empty array"
 
   # Test 7: One empty bitmap among others
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_with_bits1 1 2 3" "OK" "Set bits in test_bitop_one64_key_with_bits1"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_with_bits2 3 4 5" "OK" "Set bits in test_bitop_one64_key_with_bits2"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_with_bits1 1 2 3" "OK" "Set bits in test_bitop_one64_key_with_bits1"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_with_bits2 3 4 5" "OK" "Set bits in test_bitop_one64_key_with_bits2"
 
   rcall "DEL test_bitop_one64_key_empty"
-  rcall_assert "R.BITOP ONE test_bitop_one64_result_mixed test_bitop_one64_key_with_bits1 test_bitop_one64_key_empty test_bitop_one64_key_with_bits2" "4" "BITOP ONE with one empty bitmap"
-  rcall_assert "R.GETINTARRAY test_bitop_one64_result_mixed" "1\n2\n4\n5" "Result should contain non-overlapping bits"
+  rcall_assert "R64.BITOP ONE test_bitop_one64_result_mixed test_bitop_one64_key_with_bits1 test_bitop_one64_key_empty test_bitop_one64_key_with_bits2" "4" "BITOP ONE with one empty bitmap"
+  rcall_assert "R64.GETINTARRAY test_bitop_one64_result_mixed" "1\n2\n4\n5" "Result should contain non-overlapping bits"
 
   # Test 8: Complex overlaps with four bitmaps
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_complex1 1 2 3 4 5" "OK" "Set bits in test_bitop_one64_key_complex1"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_complex2 2 3 4 6 7" "OK" "Set bits in test_bitop_one64_key_complex2"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_complex3 3 4 5 7 8" "OK" "Set bits in test_bitop_one64_key_complex3"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_complex4 4 5 6 8 9" "OK" "Set bits in test_bitop_one64_key_complex4"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_complex1 1 2 3 4 5" "OK" "Set bits in test_bitop_one64_key_complex1"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_complex2 2 3 4 6 7" "OK" "Set bits in test_bitop_one64_key_complex2"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_complex3 3 4 5 7 8" "OK" "Set bits in test_bitop_one64_key_complex3"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_complex4 4 5 6 8 9" "OK" "Set bits in test_bitop_one64_key_complex4"
 
-  rcall_assert "R.BITOP ONE test_bitop_one64_result_complex test_bitop_one64_key_complex1 test_bitop_one64_key_complex2 test_bitop_one64_key_complex3 test_bitop_one64_key_complex4" "2" "BITOP ONE with complex overlaps"
-  rcall_assert "R.GETINTARRAY test_bitop_one64_result_complex" "1\n9" "Result should contain only bits appearing exactly once"
+  rcall_assert "R64.BITOP ONE test_bitop_one64_result_complex test_bitop_one64_key_complex1 test_bitop_one64_key_complex2 test_bitop_one64_key_complex3 test_bitop_one64_key_complex4" "2" "BITOP ONE with complex overlaps"
+  rcall_assert "R64.GETINTARRAY test_bitop_one64_result_complex" "1\n9" "Result should contain only bits appearing exactly once"
 
   # Test 9: Large bit values
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_large1 1000000 2000000" "OK" "Set large bits in key_large1"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_large2 2000000 3000000" "OK" "Set large bits in key_large2"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_large1 1000000 2000000" "OK" "Set large bits in key_large1"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_large2 2000000 3000000" "OK" "Set large bits in key_large2"
 
-  rcall_assert "R.BITOP ONE test_bitop_one64_result_large test_bitop_one64_key_large1 test_bitop_one64_key_large2" "2" "BITOP ONE with large bit values"
-  rcall_assert "R.GETINTARRAY test_bitop_one64_result_large" "1000000\n3000000" "Result should contain non-overlapping large bits"
+  rcall_assert "R64.BITOP ONE test_bitop_one64_result_large test_bitop_one64_key_large1 test_bitop_one64_key_large2" "2" "BITOP ONE with large bit values"
+  rcall_assert "R64.GETINTARRAY test_bitop_one64_result_large" "1000000\n3000000" "Result should contain non-overlapping large bits"
 
   # Test 10: Destination already has content
-  rcall_assert "R.SETINTARRAY test_bitop_one64_result_preexist 100 200 300" "OK" "Set bits in test_bitop_one64_result_preexist"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_overwrite1 1 2" "OK" "Set bits in test_bitop_one64_key_overwrite1"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_overwrite2 2 3" "OK" "Set bits in test_bitop_one64_key_overwrite2"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_result_preexist 100 200 300" "OK" "Set bits in test_bitop_one64_result_preexist"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_overwrite1 1 2" "OK" "Set bits in test_bitop_one64_key_overwrite1"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_overwrite2 2 3" "OK" "Set bits in test_bitop_one64_key_overwrite2"
 
-  rcall_assert "R.BITOP ONE test_bitop_one64_result_preexist test_bitop_one64_key_overwrite1 test_bitop_one64_key_overwrite2" "2" "BITOP ONE should overwrite destination"
-  rcall_assert "R.GETINTARRAY test_bitop_one64_result_preexist" "1\n3" "Result should only contain new operation result"
+  rcall_assert "R64.BITOP ONE test_bitop_one64_result_preexist test_bitop_one64_key_overwrite1 test_bitop_one64_key_overwrite2" "2" "BITOP ONE should overwrite destination"
+  rcall_assert "R64.GETINTARRAY test_bitop_one64_result_preexist" "1\n3" "Result should only contain new operation result"
 
   # Test 11: Input bitmaps should remain unchanged
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_immutable1 10 20 30" "OK" "Set bits in test_bitop_one64_key_immutable1"
-  rcall_assert "R.SETINTARRAY test_bitop_one64_key_immutable2 20 30 40" "OK" "Set bits in test_bitop_one64_key_immutable2"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_immutable1 10 20 30" "OK" "Set bits in test_bitop_one64_key_immutable1"
+  rcall_assert "R64.SETINTARRAY test_bitop_one64_key_immutable2 20 30 40" "OK" "Set bits in test_bitop_one64_key_immutable2"
 
-  rcall_assert "R.BITOP ONE test_bitop_one64_result_immutable test_bitop_one64_key_immutable1 test_bitop_one64_key_immutable2" "2" "BITOP ONE operation"
-  rcall_assert "R.GETINTARRAY test_bitop_one64_key_immutable1" "10\n20\n30" "key_immutable1 should remain unchanged"
-  rcall_assert "R.GETINTARRAY test_bitop_one64_key_immutable2" "20\n30\n40" "key_immutable2 should remain unchanged"
-  rcall_assert "R.GETINTARRAY test_bitop_one64_result_immutable" "10\n40" "Result should contain bits appearing exactly once"
+  rcall_assert "R64.BITOP ONE test_bitop_one64_result_immutable test_bitop_one64_key_immutable1 test_bitop_one64_key_immutable2" "2" "BITOP ONE operation"
+  rcall_assert "R64.GETINTARRAY test_bitop_one64_key_immutable1" "10\n20\n30" "key_immutable1 should remain unchanged"
+  rcall_assert "R64.GETINTARRAY test_bitop_one64_key_immutable2" "20\n30\n40" "key_immutable2 should remain unchanged"
+  rcall_assert "R64.GETINTARRAY test_bitop_one64_result_immutable" "10\n40" "Result should contain bits appearing exactly once"
 }
 
 function test_diff() {
@@ -571,6 +723,7 @@ test_setrage
 test_clear
 test_min_max
 test_bitop_diff
+test_bitop_diff1
 test_bitop_one
 test_diff
 test_optimize_nokey

@@ -42,6 +42,10 @@ The valid forms to call the command are:
 
   A bit in destkey is set if it is set in **X**, but **not** in any of Y1, Y2, ... ( X - (Y1 ∪ Y2 ∪ ...)).
 
+- `R.BITOP DIFF1 destkey X [Y1 Y2 ...]`
+
+  A bit in destkey is set if it is set in **one or more** of Y1, Y2, ..., but **not** in X ... ((Y1 ∪ Y2 ∪ ...) - X).
+
 - `R.BITOP ANDOR destkey X [Y1 Y2 ...]`
 
   A bit in destkey is set if it is set in **X** and **also** in one or more of Y1, Y2, ... (X ∩ (Y1 ∪ Y2 ∪ ...)).
