@@ -359,10 +359,10 @@ int RSetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
   }
 
   bitmap = bitmap_from_int_array(length, values);
+  rm_free(values);
 
   if (RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap) != REDISMODULE_OK) {
     RedisModule_CloseKey(key);
-    rm_free(values);
     INNER_ERROR(ERRORMSG_SET_VALUE);
   }
 

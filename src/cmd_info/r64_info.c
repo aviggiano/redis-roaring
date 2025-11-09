@@ -346,6 +346,7 @@ static const RedisModuleCommandKeySpec R_OPTIMIZE_KEYSPECS[] = {
 
 static const RedisModuleCommandArg R_OPTIMIZE_ARGS[] = {
   {.name = "key", .type = REDISMODULE_ARG_TYPE_KEY, .key_spec_index = 0},
+  {.name = "mem", .type = REDISMODULE_ARG_TYPE_PURE_TOKEN, .flags = REDISMODULE_CMD_ARG_OPTIONAL, .token = "MEM"},
   {0} };
 
 static const RedisModuleCommandInfo R_OPTIMIZE_INFO = {
@@ -353,7 +354,7 @@ static const RedisModuleCommandInfo R_OPTIMIZE_INFO = {
   .summary = "Optimizes the storage of a Roaring key",
   .complexity = "O(M)",
   .since = "1.0.0",
-  .arity = 2,
+  .arity = -2,
   .key_specs = (RedisModuleCommandKeySpec*) R_OPTIMIZE_KEYSPECS,
   .args = (RedisModuleCommandArg*) R_OPTIMIZE_ARGS,
 };

@@ -565,7 +565,7 @@ function test_clear() {
 
 function test_optimize_nokey() {
   print_test_header "test_optimize nokey"
-  rcall_assert "R.OPTIMIZE no-key" "Roaring: key does not exist" "Optimize non-existent key"
+  rcall_assert "R.OPTIMIZE no-key" "${ERRORMSG_KEY_MISSED}" "Optimize non-existent key"
 }
 
 function test_setfull() {
