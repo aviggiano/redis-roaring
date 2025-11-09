@@ -3,7 +3,9 @@
 #include "hiredis/sds.h"
 #include "rmalloc.h"
 #include "roaring.h"
+#include "common.h"
 #include "version.h"
+#include "cmd_info/command_info.h"
 
 static RedisModuleType* BitmapType;
 static RedisModuleType* Bitmap64Type;
@@ -2375,148 +2377,75 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx) {
     return REDISMODULE_ERR;
   }
 
-  // register our commands
-  if (RedisModule_CreateCommand(ctx, "R.SETBIT", RSetBitCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
+  // Register R.* commands
+#define RegisterCommand(ctx, name, cmd, mode, acl)                                                 \
+  RegisterCommandWithModesAndAcls(ctx, name, cmd, mode, acl " roaring");
+
+  RegisterAclCategory(ctx, "roaring");
+
+  RegisterCommand(ctx, "R.SETBIT", RSetBitCommand, "write", "write");
+  RegisterCommand(ctx, "R.GETBIT", RGetBitCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.GETBITS", RGetBitManyCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.CLEARBITS", RClearBitsCommand, "write", "write");
+  RegisterCommand(ctx, "R.SETINTARRAY", RSetIntArrayCommand, "write", "write");
+  RegisterCommand(ctx, "R.GETINTARRAY", RGetIntArrayCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.RANGEINTARRAY", RRangeIntArrayCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.APPENDINTARRAY", RAppendIntArrayCommand, "write", "write");
+  RegisterCommand(ctx, "R.DELETEINTARRAY", RDeleteIntArrayCommand, "write", "write");
+  RegisterCommand(ctx, "R.DIFF", RDiffCommand, "write", "write");
+  RegisterCommand(ctx, "R.SETFULL", RSetFullCommand, "write", "write");
+  RegisterCommand(ctx, "R.SETRANGE", RSetRangeCommand, "write", "write");
+  RegisterCommand(ctx, "R.OPTIMIZE", ROptimizeBitCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.STAT", RStatBitCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.SETBITARRAY", RSetBitArrayCommand, "write", "write");
+  RegisterCommand(ctx, "R.GETBITARRAY", RGetBitArrayCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.BITOP", RBitOpCommand, "write getkeys-api", "write");
+  RegisterCommand(ctx, "R.BITCOUNT", RBitCountCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.BITPOS", RBitPosCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.MIN", RMinCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.MAX", RMaxCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.CLEAR", RClearCommand, "write", "write");
+  RegisterCommand(ctx, "R.CONTAINS", RContainsCommand, "readonly", "read");
+  RegisterCommand(ctx, "R.JACCARD", RJaccardCommand, "readonly", "read");
+
+  if (RegisterRCommandInfos(ctx) != REDISMODULE_OK) {
     return REDISMODULE_ERR;
   }
-  if (RedisModule_CreateCommand(ctx, "R.GETBIT", RGetBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+#undef RegisterCommand
+
+  // Register R64.* commands
+#define RegisterCommand(ctx, name, cmd, mode, acl)                                                 \
+  RegisterCommandWithModesAndAcls(ctx, name, cmd, mode, acl " roaring64");
+
+  RegisterAclCategory(ctx, "roaring64");
+  RegisterCommand(ctx, "R64.SETBIT", R64SetBitCommand, "write", "write");
+  RegisterCommand(ctx, "R64.GETBIT", R64GetBitCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.GETBITS", R64GetBitManyCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.SETINTARRAY", R64SetIntArrayCommand, "write", "write");
+  RegisterCommand(ctx, "R64.GETINTARRAY", R64GetIntArrayCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.RANGEINTARRAY", R64RangeIntArrayCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.APPENDINTARRAY", R64AppendIntArrayCommand, "write", "write");
+  RegisterCommand(ctx, "R64.DELETEINTARRAY", R64DeleteIntArrayCommand, "write", "write");
+  RegisterCommand(ctx, "R64.DIFF", R64DiffCommand, "write", "write");
+  RegisterCommand(ctx, "R64.SETFULL", R64SetFullCommand, "write", "write");
+  RegisterCommand(ctx, "R64.SETRANGE", R64SetRangeCommand, "write", "write");
+  RegisterCommand(ctx, "R64.OPTIMIZE", R64OptimizeBitCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.SETBITARRAY", R64SetBitArrayCommand, "write", "write");
+  RegisterCommand(ctx, "R64.GETBITARRAY", R64GetBitArrayCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.BITOP", R64BitOpCommand, "write getkeys-api", "write");
+  RegisterCommand(ctx, "R64.BITCOUNT", R64BitCountCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.BITPOS", R64BitPosCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.MIN", R64MinCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.MAX", R64MaxCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.CLEAR", R64ClearCommand, "write", "write");
+  RegisterCommand(ctx, "R64.CONTAINS", R64ContainsCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.JACCARD", R64JaccardCommand, "readonly", "read");
+  RegisterCommand(ctx, "R64.CLEARBITS", R64ClearBitsCommand, "write", "write");
+
+  if (RegisterR64CommandInfos(ctx) != REDISMODULE_OK) {
     return REDISMODULE_ERR;
   }
-  if (RedisModule_CreateCommand(ctx, "R.GETBITS", RGetBitManyCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.CLEARBITS", RClearBitsCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.SETINTARRAY", RSetIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.GETINTARRAY", RGetIntArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.RANGEINTARRAY", RRangeIntArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.APPENDINTARRAY", RAppendIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.DELETEINTARRAY", RDeleteIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.DIFF", RDiffCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.SETFULL", RSetFullCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.SETRANGE", RSetRangeCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.OPTIMIZE", ROptimizeBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.STAT", RStatBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.SETBITARRAY", RSetBitArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.GETBITARRAY", RGetBitArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.BITOP", RBitOpCommand, "write getkeys-api", 0, 0, 0) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.BITCOUNT", RBitCountCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.BITPOS", RBitPosCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.MIN", RMinCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.MAX", RMaxCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.CLEAR", RClearCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.CONTAINS", RContainsCommand, "readonly", 1, 2, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R.JACCARD", RJaccardCommand, "readonly", 1, 2, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.SETBIT", R64SetBitCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.GETBIT", R64GetBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.GETBITS", R64GetBitManyCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.SETINTARRAY", R64SetIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.GETINTARRAY", R64GetIntArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.RANGEINTARRAY", R64RangeIntArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.APPENDINTARRAY", R64AppendIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.DELETEINTARRAY", R64DeleteIntArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.DIFF", R64DiffCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.SETFULL", R64SetFullCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.SETRANGE", R64SetRangeCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.OPTIMIZE", R64OptimizeBitCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.SETBITARRAY", R64SetBitArrayCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.GETBITARRAY", R64GetBitArrayCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.BITOP", R64BitOpCommand, "write getkeys-api", 0, 0, 0) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.BITCOUNT", R64BitCountCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.BITPOS", R64BitPosCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.MIN", R64MinCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.MAX", R64MaxCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.CLEAR", R64ClearCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.CONTAINS", R64ContainsCommand, "readonly", 1, 2, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.JACCARD", R64JaccardCommand, "readonly", 1, 2, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
-  if (RedisModule_CreateCommand(ctx, "R64.CLEARBITS", R64ClearBitsCommand, "write", 1, 1, 1) == REDISMODULE_ERR) {
-    return REDISMODULE_ERR;
-  }
+#undef RegisterCommand
 
   return REDISMODULE_OK;
 }
