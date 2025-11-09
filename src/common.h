@@ -17,8 +17,12 @@
 #define SetCommandInfo(ctx, name, info)                                              \
     do {                                                                             \
         RedisModuleCommand *cmd = RedisModule_GetCommand(ctx, name);                \
-        if (!cmd) return REDISMODULE_ERR;                                           \
+        if (!cmd) { \
+          RedisModule_Log(ctx, "warning", "Failed to set %s command info (not exists)", name); \
+          return REDISMODULE_ERR; \
+        }                                           \
         if (RedisModule_SetCommandInfo(cmd, info) == REDISMODULE_ERR) {            \
+            RedisModule_Log(ctx, "warning", "Failed to set %s command info", name); \
             return REDISMODULE_ERR;                                                  \
         }                                                                            \
     } while(0)
