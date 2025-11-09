@@ -45,6 +45,7 @@ add_test(NAME performance_tests COMMAND performance)
 set(REDIS_ROARING_SOURCE_FILES
   ${SRC_PATH}/redis-roaring.c
   ${SRC_PATH}/data-structure.c
+  ${SRC_PATH}/parse.c
   ${SRC_PATH}/cmd_info/r_info.c
   ${SRC_PATH}/cmd_info/r64_info.c
 )

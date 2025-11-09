@@ -4,6 +4,7 @@
 #include "rmalloc.h"
 #include "roaring.h"
 #include "common.h"
+#include "parse.h"
 #include "version.h"
 #include "cmd_info/command_info.h"
 
@@ -11,53 +12,9 @@ static RedisModuleType* BitmapType;
 static RedisModuleType* Bitmap64Type;
 static Bitmap64* BITMAP64_NILL;
 static Bitmap* BITMAP_NILL;
-static char REPLY_UINT64_BUFFER[21];
 
 #define BITMAP_ENCODING_VERSION 1
 #define BITMAP_MAX_RANGE_SIZE 100000000
-
-#define ERRORMSG_WRONGARG(arg_name, description) "ERR invalid " arg_name ": " description
-#define ERRORMSG_WRONGARG_UINT32(arg_name) ERRORMSG_WRONGARG(arg_name, "must be an unsigned 32 bit integer")
-#define ERRORMSG_WRONGARG_UINT64(arg_name) ERRORMSG_WRONGARG(arg_name, "must be an unsigned 64 bit integer")
-#define ERRORMSG_WRONGARG_BIT(arg_name) ERRORMSG_WRONGARG(arg_name, "must be either 0 or 1")
-
-void ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value) {
-  size_t len = uint64_to_string(value, REPLY_UINT64_BUFFER);
-  RedisModule_ReplyWithBigNumber(ctx, REPLY_UINT64_BUFFER, len);
-}
-
-bool StrToUInt32(const RedisModuleString* str, uint32_t* ull) {
-  long long value;
-
-  if ((RedisModule_StringToLongLong(str, &value) != REDISMODULE_OK) || value < 0 || value > UINT32_MAX) {
-    return false;
-  }
-
-  *ull = (uint32_t) value;
-  return true;
-}
-
-bool StrToUInt64(const RedisModuleString* str, uint64_t* ull) {
-  unsigned long long value;
-
-  if ((RedisModule_StringToULongLong(str, &value) != REDISMODULE_OK) || value > UINT64_MAX) {
-    return false;
-  }
-
-  *ull = (uint64_t) value;
-  return true;
-}
-
-bool StrToBool(const RedisModuleString* str, bool* ull) {
-  long long value;
-
-  if ((RedisModule_StringToLongLong(str, &value) != REDISMODULE_OK) || value < 0 || value > 1) {
-    return false;
-  }
-
-  *ull = (char) value;
-  return true;
-}
 
 void BitmapRdbSave(RedisModuleIO* rdb, void* value);
 void* BitmapRdbLoad(RedisModuleIO* rdb, int encver);
@@ -192,13 +149,10 @@ int R64SetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   uint64_t offset;
-  if (!StrToUInt64(argv[2], &offset)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("offset"));
-  }
+  ParseUint64OrReturn(ctx, argv[2], "offset", offset);
+
   bool value;
-  if (!StrToBool(argv[3], &value)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_BIT("value"));
-  }
+  ParseBoolOrReturn(ctx, argv[3], "value", value);
 
   /* Create an empty value object if the key is currently empty. */
   Bitmap64* bitmap;
@@ -234,9 +188,7 @@ int R64GetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   uint64_t offset;
-  if (!StrToUInt64(argv[2], &offset)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("offset"));
-  }
+  ParseUint64OrReturn(ctx, argv[2], "offset", offset);
 
   char value;
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
@@ -435,14 +387,10 @@ int R64RangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int a
   }
 
   uint64_t start;
-  if (!StrToUInt64(argv[2], &start)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("start"));
-  }
+  ParseUint64OrReturn(ctx, argv[2], "start", start);
 
   uint64_t end;
-  if (!StrToUInt64(argv[3], &end)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("end"));
-  }
+  ParseUint64OrReturn(ctx, argv[3], "end", end);
 
   if (start > end) {
     return RedisModule_ReplyWithEmptyArray(ctx);
@@ -645,13 +593,11 @@ int R64SetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
   uint64_t start_num;
-  if (!StrToUInt64(argv[2], &start_num)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("start"));
-  }
+  ParseUint64OrReturn(ctx, argv[2], "start", start_num);
+
   uint64_t end_num;
-  if (!StrToUInt64(argv[3], &end_num)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("end"));
-  }
+  ParseUint64OrReturn(ctx, argv[3], "end", end_num);
+
   if (end_num < start_num) {
     return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG("end", "must >= start"));
   }
@@ -774,9 +720,7 @@ int R64BitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   uint64_t last = 0;
 
   if (argc == 5) {
-    if (!StrToUInt64(argv[4], &last)) {
-      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("last"));
-    }
+    ParseUint64OrReturn(ctx, argv[4], "last", last);
   } else if (argc > 5) {
     return RedisModule_WrongArity(ctx);
   }
@@ -1028,9 +972,7 @@ int R64BitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   bool bit;
-  if (!StrToBool(argv[2], &bit)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_BIT("bit"));
-  }
+  ParseBoolOrReturn(ctx, argv[2], "bit", bit);
 
   bool found = false;
   uint64_t pos;
@@ -1268,13 +1210,11 @@ int RSetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
   }
   uint32_t start_num;
-  if (!StrToUInt32(argv[2], &start_num)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("start"));
-  }
+  ParseUint32OrReturn(ctx, argv[2], "start", start_num);
+
   uint32_t end_num;
-  if (!StrToUInt32(argv[3], &end_num)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("end"));
-  }
+  ParseUint32OrReturn(ctx, argv[3], "end", end_num);
+
   if (end_num < start_num) {
     return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG("end", "must be >= start"));
   }
@@ -1309,13 +1249,10 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   uint32_t offset;
-  if (!StrToUInt32(argv[2], &offset)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("offset"));
-  }
+  ParseUint32OrReturn(ctx, argv[2], "offset", offset);
+
   bool value;
-  if (!StrToBool(argv[3], &value)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_BIT("value"));
-  }
+  ParseBoolOrReturn(ctx, argv[3], "value", value);
 
   /* Create an empty value object if the key is currently empty. */
   Bitmap* bitmap;
@@ -1351,9 +1288,7 @@ int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   uint32_t offset;
-  if (!StrToUInt32(argv[2], &offset)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("offset"));
-  }
+  ParseUint32OrReturn(ctx, argv[2], "offset", offset);
 
   char value;
   if (type == REDISMODULE_KEYTYPE_EMPTY) {
@@ -1740,14 +1675,10 @@ int RRangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
   }
 
   uint32_t start;
-  if (!StrToUInt32(argv[2], &start)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("start"));
-  }
+  ParseUint32OrReturn(ctx, argv[2], "start", start);
 
   uint32_t end;
-  if (!StrToUInt32(argv[3], &end)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("end"));
-  }
+  ParseUint32OrReturn(ctx, argv[3], "end", end);
 
   if (start > end) {
     return RedisModule_ReplyWithEmptyArray(ctx);
@@ -1976,9 +1907,7 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   long long last = -1;
   if (argc == 5) {
     uint32_t last_pared;
-    if (!StrToUInt32(argv[4], &last_pared)) {
-      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("last"));
-    }
+    ParseUint32OrReturn(ctx, argv[4], "last", last_pared);
     last = (long long) last_pared;
   } else if (argc > 5) {
     return RedisModule_WrongArity(ctx);
@@ -2124,9 +2053,7 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   bool bit;
-  if (!StrToBool(argv[2], &bit)) {
-    return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_BIT("bit"));
-  }
+  ParseBoolOrReturn(ctx, argv[2], "bit", bit);
 
   int64_t pos;
   if (type == REDISMODULE_KEYTYPE_EMPTY) {

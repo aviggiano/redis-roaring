@@ -143,6 +143,4 @@ bool bitmap64_optimize(Bitmap64* bitmap, int shrink_to_fit);
 void bitmap_statistics(const Bitmap* bitmap, Bitmap_statistics* stat);
 void bitmap64_statistics(const Bitmap64* bitmap, Bitmap64_statistics* stat);
 
-size_t uint64_to_string(uint64_t value, char* buffer);
-
 #endif
