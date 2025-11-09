@@ -346,7 +346,7 @@ int R64RangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int a
   uint64_t* array = bitmap64_range_int_array(bitmap, start, end, &count);
 
   if (array == NULL) {
-    return RedisModule_ReplyWithError(ctx, "ERR out of memory");
+    INNER_ERROR("ERR out of memory");
   }
 
   if (count == 0) {
@@ -381,7 +381,7 @@ int R64AppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int 
   for (int i = 0; i < length; i++) {
     if (!StrToUInt64(argv[2 + i], &values[i])) {
       rm_free(values);
-      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT64("value"));
+      INNER_ERROR(ERRORMSG_WRONGARG_UINT64("value"));
     }
   }
 

@@ -424,7 +424,7 @@ int RAppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int ar
   for (int i = 0; i < length; i++) {
     if (!StrToUInt32(argv[2 + i], &values[i])) {
       rm_free(values);
-      return RedisModule_ReplyWithError(ctx, ERRORMSG_WRONGARG_UINT32("value"));
+      INNER_ERROR(ERRORMSG_WRONGARG_UINT32("value"));
     }
   }
 
