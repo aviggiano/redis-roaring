@@ -26,7 +26,7 @@
 
 static char REPLY_UINT64_BUFFER[21];
 
-void ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value);
+int ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value);
 bool StrToUInt32(const RedisModuleString* str, uint32_t* ull);
 bool StrToUInt64(const RedisModuleString* str, uint64_t* ull);
 bool StrToBool(const RedisModuleString* str, bool* ull);

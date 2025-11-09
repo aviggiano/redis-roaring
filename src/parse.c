@@ -30,9 +30,9 @@ static inline size_t uint64_to_string(uint64_t value, char* buffer) {
   return len;
 }
 
-void ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value) {
+int ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value) {
   size_t len = uint64_to_string(value, REPLY_UINT64_BUFFER);
-  RedisModule_ReplyWithBigNumber(ctx, REPLY_UINT64_BUFFER, len);
+  return RedisModule_ReplyWithBigNumber(ctx, REPLY_UINT64_BUFFER, len);
 }
 
 bool StrToUInt32(const RedisModuleString* str, uint32_t* ull) {
