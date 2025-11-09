@@ -1,5 +1,4 @@
 #include "r_64.h"
-#include "hiredis/sds.h"
 #include "rmalloc.h"
 #include "roaring.h"
 #include "common.h"
