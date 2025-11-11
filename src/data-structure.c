@@ -844,18 +844,20 @@ uint64_t bitmap64_max(const Bitmap64* bitmap) {
   return roaring64_bitmap_maximum(bitmap);
 }
 
-void bitmap_optimize(Bitmap* bitmap, int shrink_to_fit) {
-  roaring_bitmap_run_optimize(bitmap);
-  if (shrink_to_fit) {
+bool bitmap_optimize(Bitmap* bitmap, int shrink_to_fit) {
+  bool was_modified = roaring_bitmap_run_optimize(bitmap);
+  if (shrink_to_fit && was_modified) {
     roaring_bitmap_shrink_to_fit(bitmap);
   }
+  return was_modified;
 }
 
-void bitmap64_optimize(Bitmap64* bitmap, int shrink_to_fit) {
-  roaring64_bitmap_run_optimize(bitmap);
-  if (shrink_to_fit) {
+bool bitmap64_optimize(Bitmap64* bitmap, int shrink_to_fit) {
+  bool was_modified = roaring64_bitmap_run_optimize(bitmap);
+  if (shrink_to_fit && was_modified) {
     roaring64_bitmap_shrink_to_fit(bitmap);
   }
+  return was_modified;
 }
 
 void bitmap_statistics(const Bitmap* bitmap, Bitmap_statistics* stat) {
@@ -865,37 +867,6 @@ void bitmap_statistics(const Bitmap* bitmap, Bitmap_statistics* stat) {
 void bitmap64_statistics(const Bitmap64* bitmap, Bitmap64_statistics* stat) {
   roaring64_bitmap_statistics(bitmap, stat);
 }
-
-size_t uint64_to_string(uint64_t value, char* buffer) {
-  if (value == 0) {
-    buffer[0] = '0';
-    buffer[1] = '\0';
-    return 1;
-  }
-
-  char* ptr = buffer;
-  char* start = buffer;
-
-  // Extract digits in reverse order
-  while (value > 0) {
-    *ptr++ = '0' + (value % 10);
-    value /= 10;
-  }
-
-  size_t len = ptr - buffer;
-  *ptr = '\0';
-
-  // Reverse the string in-place
-  ptr--;
-  while (start < ptr) {
-    char temp = *start;
-    *start++ = *ptr;
-    *ptr-- = temp;
-  }
-
-  return len;
-}
-
 
 static inline int bitmap_stat_json(const Bitmap* bitmap, char** result) {
   roaring_statistics_t stats;
