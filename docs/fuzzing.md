@@ -223,11 +223,11 @@ Runs on every push to `master`:
 ```
 
 **What it does:**
-- ✅ Builds all 4 fuzzers with Clang + sanitizers
-- ✅ Runs each fuzzer for 10 minutes
-- ✅ Uploads crash files as artifacts (90 days retention)
-- ✅ Uploads evolved corpus (30 days retention)
-- ✅ Fails the build if crashes are found
+- - Builds all 4 fuzzers with Clang + sanitizers
+- - Runs each fuzzer for 10 minutes
+- - Uploads crash files as artifacts (90 days retention)
+- - Uploads evolved corpus (30 days retention)
+- - Fails the build if crashes are found
 
 **Why master only?**
 - Provides thorough testing without slowing down PRs

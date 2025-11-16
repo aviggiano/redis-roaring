@@ -52,25 +52,25 @@ jobs:
     - name: Build Fuzzers
       run: ./scripts/build_fuzzers.sh
 
-    - name: Run Fuzzing - bitmap_api (10 minutes)
+    - name: Run Fuzzing - bitmap_api
       continue-on-error: true
       run: |
         cd build-fuzz
         timeout 600 ./tests/fuzz/fuzz_bitmap_api || exit 0
 
-    - name: Run Fuzzing - bitmap64_api (10 minutes)
+    - name: Run Fuzzing - bitmap64_api
       continue-on-error: true
       run: |
         cd build-fuzz
         timeout 600 ./tests/fuzz/fuzz_bitmap64_api || exit 0
 
-    - name: Run Fuzzing - bitmap_operations (10 minutes)
+    - name: Run Fuzzing - bitmap_operations
       continue-on-error: true
       run: |
         cd build-fuzz
         timeout 600 ./tests/fuzz/fuzz_bitmap_operations || exit 0
 
-    - name: Run Fuzzing - bitmap_serialization (10 minutes)
+    - name: Run Fuzzing - bitmap_serialization
       continue-on-error: true
       run: |
         cd build-fuzz
