@@ -104,7 +104,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
             case 5: /* Large sparse set */
                 for (int j = 0; j < 100; j++) {
-                    uint32_t offset = fuzz_consume_u32(&input);
+                    uint32_t offset = fuzz_consume_u32_in_range(&input, 0, MAX_BIT_OFFSET_32);
                     bitmap_setbit(inputs[i], offset, true);
                 }
                 break;

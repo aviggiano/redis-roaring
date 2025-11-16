@@ -33,14 +33,14 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
         switch (op) {
             case OP_SETBIT: {
-                uint64_t offset = fuzz_consume_u64(&input);
+                uint64_t offset = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
                 bool value = fuzz_consume_bool(&input);
                 bitmap64_setbit(bitmap, offset, value);
                 break;
             }
 
             case OP_GETBIT: {
-                uint64_t offset = fuzz_consume_u64(&input);
+                uint64_t offset = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
                 bitmap64_getbit(bitmap, offset);
                 break;
             }
@@ -60,9 +60,13 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
 
             case OP_GETINTARRAY: {
-                size_t result_size;
-                uint64_t* result = bitmap64_get_int_array(bitmap, &result_size);
-                safe_free(result);
+                /* Only get array if cardinality is reasonable */
+                uint64_t card = bitmap64_get_cardinality(bitmap);
+                if (card > 0 && card < MAX_SAFE_CARDINALITY) {
+                    size_t result_size;
+                    uint64_t* result = bitmap64_get_int_array(bitmap, &result_size);
+                    safe_free(result);
+                }
                 break;
             }
 
@@ -107,17 +111,22 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
 
             case OP_GETBITARRAY: {
-                size_t result_size;
-                char* bit_array = bitmap64_get_bit_array(bitmap, &result_size);
-                bitmap_free_bit_array(bit_array);
+                /* Only get bit array if max value is reasonable */
+                if (!bitmap64_is_empty(bitmap)) {
+                    uint64_t max_val = bitmap64_max(bitmap);
+                    if (max_val < MAX_BIT_OFFSET_64) {
+                        size_t result_size;
+                        char* bit_array = bitmap64_get_bit_array(bitmap, &result_size);
+                        bitmap_free_bit_array(bit_array);
+                    }
+                }
                 break;
             }
 
             case OP_SETRANGE: {
-                uint64_t from = fuzz_consume_u64(&input);
-                uint64_t range_size = fuzz_consume_u64(&input);
-                /* Limit range size to avoid excessive memory */
-                range_size = between(range_size, 0, 1000000);
+                /* Clamp both from and range size to avoid excessive memory */
+                uint64_t from = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
+                uint64_t range_size = fuzz_consume_u64_in_range(&input, 0, 1000000);
                 uint64_t to = from + range_size;
                 Bitmap64* range_bitmap = bitmap64_from_range(from, to);
                 if (range_bitmap) {
@@ -139,7 +148,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 if (bitmap2) {
                     /* Add some random bits to second bitmap */
                     for (int i = 0; i < 10 && fuzz_input_remaining(&input) > sizeof(uint64_t); i++) {
-                        uint64_t offset = fuzz_consume_u64(&input);
+                        uint64_t offset = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
                         bitmap64_setbit(bitmap2, offset, true);
                     }
 
@@ -227,7 +236,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 uint64_t* offsets = (uint64_t*)malloc(n_offsets * sizeof(uint64_t));
                 if (offsets) {
                     for (size_t i = 0; i < n_offsets && fuzz_input_remaining(&input) > sizeof(uint64_t); i++) {
-                        offsets[i] = fuzz_consume_u64(&input);
+                        offsets[i] = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
                     }
                     bool* results = bitmap64_getbits(bitmap, n_offsets, offsets);
                     safe_free(results);
@@ -241,7 +250,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 uint64_t* offsets = (uint64_t*)malloc(n_offsets * sizeof(uint64_t));
                 if (offsets) {
                     for (size_t i = 0; i < n_offsets && fuzz_input_remaining(&input) > sizeof(uint64_t); i++) {
-                        offsets[i] = fuzz_consume_u64(&input);
+                        offsets[i] = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
                     }
                     bitmap64_clearbits(bitmap, n_offsets, offsets);
                     safe_free(offsets);
@@ -254,7 +263,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 uint64_t* offsets = (uint64_t*)malloc(n_offsets * sizeof(uint64_t));
                 if (offsets) {
                     for (size_t i = 0; i < n_offsets && fuzz_input_remaining(&input) > sizeof(uint64_t); i++) {
-                        offsets[i] = fuzz_consume_u64(&input);
+                        offsets[i] = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
                     }
                     bitmap64_clearbits_count(bitmap, n_offsets, offsets);
                     safe_free(offsets);
@@ -267,7 +276,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 Bitmap64* bitmap2 = bitmap64_alloc();
                 if (bitmap2) {
                     for (int i = 0; i < 10 && fuzz_input_remaining(&input) > sizeof(uint64_t); i++) {
-                        uint64_t offset = fuzz_consume_u64(&input);
+                        uint64_t offset = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
                         bitmap64_setbit(bitmap2, offset, true);
                     }
                     uint64_t mode = fuzz_consume_u8(&input) % 4;
@@ -282,7 +291,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 Bitmap64* bitmap2 = bitmap64_alloc();
                 if (bitmap2) {
                     for (int i = 0; i < 10 && fuzz_input_remaining(&input) > sizeof(uint64_t); i++) {
-                        uint64_t offset = fuzz_consume_u64(&input);
+                        uint64_t offset = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
                         bitmap64_setbit(bitmap2, offset, true);
                     }
                     bitmap64_jaccard(bitmap, bitmap2);

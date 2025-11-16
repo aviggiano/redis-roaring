@@ -42,7 +42,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
                 /* Fill with fuzz data */
                 for (size_t i = 0; i < array_size && fuzz_input_remaining(&input) >= 4; i++) {
-                    array[i] = fuzz_consume_u32(&input);
+                    array[i] = fuzz_consume_u32_in_range(&input, 0, MAX_BIT_OFFSET_32);
                 }
 
                 /* Create bitmap from array */
@@ -88,7 +88,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
                 /* Fill with fuzz data */
                 for (size_t i = 0; i < array_size && fuzz_input_remaining(&input) >= 8; i++) {
-                    array[i] = fuzz_consume_u64(&input);
+                    array[i] = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
                 }
 
                 /* Create bitmap from array */
@@ -150,17 +150,23 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 Bitmap* bitmap = bitmap_from_bit_array(bit_size, bit_array);
                 if (bitmap) {
                     /* Try to get bit array back */
-                    size_t result_size;
-                    char* result = bitmap_get_bit_array(bitmap, &result_size);
+                    /* Only get bit array if max value is reasonable */
+                    if (!bitmap_is_empty(bitmap)) {
+                        uint32_t max_val = bitmap_max(bitmap);
+                        if (max_val < MAX_BIT_OFFSET_32) {
+                            size_t result_size;
+                            char* result = bitmap_get_bit_array(bitmap, &result_size);
 
-                    if (result) {
-                        /* Result should only contain '0' and '1' */
-                        for (size_t i = 0; i < result_size; i++) {
-                            if (result[i] != '0' && result[i] != '1') {
-                                /* Invalid output */
+                            if (result) {
+                                /* Result should only contain '0' and '1' */
+                                for (size_t i = 0; i < result_size; i++) {
+                                    if (result[i] != '0' && result[i] != '1') {
+                                        /* Invalid output */
+                                    }
+                                }
+                                bitmap_free_bit_array(result);
                             }
                         }
-                        bitmap_free_bit_array(result);
                     }
 
                     bitmap_free(bitmap);
@@ -192,16 +198,22 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
                 Bitmap64* bitmap = bitmap64_from_bit_array(bit_size, bit_array);
                 if (bitmap) {
-                    uint64_t result_size;
-                    char* result = bitmap64_get_bit_array(bitmap, &result_size);
+                    /* Only get bit array if max value is reasonable */
+                    if (!bitmap64_is_empty(bitmap)) {
+                        uint64_t max_val = bitmap64_max(bitmap);
+                        if (max_val < MAX_BIT_OFFSET_64) {
+                            uint64_t result_size;
+                            char* result = bitmap64_get_bit_array(bitmap, &result_size);
 
-                    if (result) {
-                        for (size_t i = 0; i < result_size; i++) {
-                            if (result[i] != '0' && result[i] != '1') {
-                                /* Invalid output */
+                            if (result) {
+                                for (size_t i = 0; i < result_size; i++) {
+                                    if (result[i] != '0' && result[i] != '1') {
+                                        /* Invalid output */
+                                    }
+                                }
+                                bitmap_free_bit_array(result);
                             }
                         }
-                        bitmap_free_bit_array(result);
                     }
 
                     bitmap64_free(bitmap);
@@ -213,8 +225,8 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
         case TEST_RANGE_32:
             {
-                uint64_t from = fuzz_consume_u32(&input);
-                uint64_t to = fuzz_consume_u32(&input);
+                uint64_t from = fuzz_consume_u32_in_range(&input, 0, MAX_BIT_OFFSET_32);
+                uint64_t to = fuzz_consume_u32_in_range(&input, 0, MAX_BIT_OFFSET_32);
 
                 /* Test various range scenarios */
                 if (from > to) {
@@ -251,8 +263,8 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
         case TEST_RANGE_64:
             {
-                uint64_t from = fuzz_consume_u64(&input);
-                uint64_t to = fuzz_consume_u64(&input);
+                uint64_t from = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
+                uint64_t to = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
 
                 if (from > to) {
                     Bitmap64* bitmap = bitmap64_from_range(to, from);

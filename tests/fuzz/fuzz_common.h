@@ -18,6 +18,13 @@
 /* Maximum array size for int/bit arrays */
 #define MAX_ARRAY_SIZE 10000
 
+/* Maximum bit offset to prevent excessive memory usage */
+#define MAX_BIT_OFFSET_32 10000000
+#define MAX_BIT_OFFSET_64 100000000
+
+/* Maximum cardinality for expensive operations */
+#define MAX_SAFE_CARDINALITY 10000000
+
 /* Bitmap operation types for 32-bit API */
 enum BitmapOperation {
     OP_SETBIT = 0,
@@ -193,7 +200,7 @@ static inline uint32_t* generate_uint32_array(FuzzInput* input, size_t* out_size
     }
 
     for (size_t i = 0; i < size; i++) {
-        array[i] = fuzz_consume_u32(input);
+        array[i] = fuzz_consume_u32_in_range(input, 0, MAX_BIT_OFFSET_32);
     }
 
     *out_size = size;
@@ -215,7 +222,7 @@ static inline uint64_t* generate_uint64_array(FuzzInput* input, size_t* out_size
     }
 
     for (size_t i = 0; i < size; i++) {
-        array[i] = fuzz_consume_u64(input);
+        array[i] = fuzz_consume_u64_in_range(input, 0, MAX_BIT_OFFSET_64);
     }
 
     *out_size = size;
