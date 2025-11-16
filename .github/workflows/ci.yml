@@ -34,10 +34,53 @@ jobs:
     - name: Test
       run: ./test.sh
 
+  coverage:
+    name: Generate and upload coverage
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lcov
+
+    - name: Initialize submodules
+      run: |
+        git submodule init
+        git submodule update
+
+    - name: Configure with coverage flags
+      run: |
+        mkdir -p build-coverage
+        cd build-coverage
+        cmake -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_C_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
+              -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+              ..
+        make
+
+    - name: Run unit tests
+      run: ./build-coverage/unit
+
+    - name: Generate coverage report
+      run: |
+        lcov --capture --directory build-coverage --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' '*/deps/*' '*/tests/*' --output-file coverage.info
+        lcov --list coverage.info
+
+    - name: Upload coverage to Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./coverage.info
+
   fuzz:
     name: Fuzz Testing - ${{ matrix.fuzzer }}
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
     strategy:
       fail-fast: true
       matrix:
@@ -80,7 +123,7 @@ jobs:
         fi
 
     - name: Upload crash artifacts
-      if: failure() && steps.check_crashes.outputs.crashes_found == 'true'
+      if: failure() && steps.check_crashes.outputs.crashes_found == 'true' && github.ref == 'refs/heads/master'
       uses: actions/upload-artifact@v3
       with:
         name: fuzzing-crashes-${{ matrix.fuzzer }}-${{ github.sha }}
@@ -88,7 +131,7 @@ jobs:
         retention-days: 90
 
     - name: Upload corpus
-      if: always()
+      if: always() && github.ref == 'refs/heads/master'
       uses: actions/upload-artifact@v3
       with:
         name: fuzzing-corpus-${{ matrix.fuzzer }}
