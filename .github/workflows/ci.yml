@@ -117,6 +117,9 @@ jobs:
         cd src
         ../deps/CRoaring/amalgamation.sh
 
+    - name: Generate fuzzing seeds
+      run: ./scripts/generate_seeds.sh
+
     - name: Build fuzzer with coverage
       run: |
         mkdir -p build-fuzz-cov
@@ -198,12 +201,16 @@ jobs:
         cd src
         ../deps/CRoaring/amalgamation.sh
 
+    - name: Generate fuzzing seeds
+      run: ./scripts/generate_seeds.sh
+
     - name: Build Fuzzers
       run: ./scripts/build_fuzzers.sh
 
     - name: Run Fuzzing - ${{ matrix.fuzzer }}
       run: |
         cd build-fuzz
+        export ASAN_OPTIONS=allocator_may_return_null=1
         timeout 600 ./tests/fuzz/${{ matrix.fuzzer }}
 
     - name: Check for crashes
