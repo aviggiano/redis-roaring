@@ -10,6 +10,17 @@
 
 #include "fuzz_common.h"
 
+/* Test types for serialization fuzzer */
+enum SerializationTestType {
+    TEST_INTARRAY_32 = 0,
+    TEST_INTARRAY_64,
+    TEST_BITARRAY_32,
+    TEST_BITARRAY_64,
+    TEST_RANGE_32,
+    TEST_RANGE_64,
+    NUM_SERIALIZATION_TESTS
+};
+
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     if (size < 2) {
         return 0;
@@ -18,10 +29,10 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     FuzzInput input;
     fuzz_input_init(&input, data, size);
 
-    uint8_t test_type = fuzz_consume_u8(&input) % 6;
+    uint8_t test_type = fuzz_consume_u8(&input) % NUM_SERIALIZATION_TESTS;
 
     switch (test_type) {
-        case 0: /* Test int array round-trip (32-bit) */
+        case TEST_INTARRAY_32:
             {
                 size_t array_size = fuzz_consume_size_in_range(&input, 0, MAX_ARRAY_SIZE);
                 if (array_size == 0) break;
@@ -67,7 +78,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
             break;
 
-        case 1: /* Test int array round-trip (64-bit) */
+        case TEST_INTARRAY_64:
             {
                 size_t array_size = fuzz_consume_size_in_range(&input, 0, MAX_ARRAY_SIZE);
                 if (array_size == 0) break;
@@ -113,7 +124,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
             break;
 
-        case 2: /* Test bit array with potentially malformed input (32-bit) */
+        case TEST_BITARRAY_32:
             {
                 size_t bit_size = fuzz_consume_size_in_range(&input, 0, MAX_ARRAY_SIZE);
                 if (bit_size == 0) break;
@@ -159,7 +170,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
             break;
 
-        case 3: /* Test bit array with potentially malformed input (64-bit) */
+        case TEST_BITARRAY_64:
             {
                 size_t bit_size = fuzz_consume_size_in_range(&input, 0, MAX_ARRAY_SIZE);
                 if (bit_size == 0) break;
@@ -200,7 +211,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
             break;
 
-        case 4: /* Test range operations with edge cases (32-bit) */
+        case TEST_RANGE_32:
             {
                 uint64_t from = fuzz_consume_u32(&input);
                 uint64_t to = fuzz_consume_u32(&input);
@@ -238,7 +249,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
             break;
 
-        case 5: /* Test range operations with edge cases (64-bit) */
+        case TEST_RANGE_64:
             {
                 uint64_t from = fuzz_consume_u64(&input);
                 uint64_t to = fuzz_consume_u64(&input);

@@ -11,6 +11,19 @@
 
 #define MAX_OPERATION_INPUTS 10
 
+/* Operation types for operations fuzzer */
+enum OperationFuzzType {
+    OP_FUZZ_AND = 0,
+    OP_FUZZ_OR,
+    OP_FUZZ_XOR,
+    OP_FUZZ_ANDOR,
+    OP_FUZZ_ANDNOT,
+    OP_FUZZ_ORNOT,
+    OP_FUZZ_ONE,
+    OP_FUZZ_NOT,
+    NUM_OP_FUZZ_TYPES
+};
+
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     if (size < 8) {
         return 0;
@@ -114,10 +127,10 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     }
 
     /* Test various operations */
-    uint8_t operation = fuzz_consume_u8(&input) % 8;
+    uint8_t operation = fuzz_consume_u8(&input) % NUM_OP_FUZZ_TYPES;
 
     switch (operation) {
-        case 0: /* AND */
+        case OP_FUZZ_AND:
             bitmap_and(result, num_inputs, const_inputs);
 
             /* Verify result is subset of all inputs */
@@ -139,7 +152,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
             break;
 
-        case 1: /* OR */
+        case OP_FUZZ_OR:
             bitmap_or(result, num_inputs, const_inputs);
 
             /* Verify result is superset of all inputs */
@@ -154,34 +167,34 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
             break;
 
-        case 2: /* XOR */
+        case OP_FUZZ_XOR:
             bitmap_xor(result, num_inputs, const_inputs);
 
             /* Just ensure it doesn't crash */
             bitmap_get_cardinality(result);
             break;
 
-        case 3: /* ANDOR */
+        case OP_FUZZ_ANDOR:
             bitmap_andor(result, num_inputs, const_inputs);
             bitmap_get_cardinality(result);
             break;
 
-        case 4: /* ANDNOT */
+        case OP_FUZZ_ANDNOT:
             bitmap_andnot(result, num_inputs, const_inputs);
             bitmap_get_cardinality(result);
             break;
 
-        case 5: /* ORNOT */
+        case OP_FUZZ_ORNOT:
             bitmap_ornot(result, num_inputs, const_inputs);
             bitmap_get_cardinality(result);
             break;
 
-        case 6: /* ONE (symmetric difference) */
+        case OP_FUZZ_ONE:
             bitmap_one(result, num_inputs, const_inputs);
             bitmap_get_cardinality(result);
             break;
 
-        case 7: /* NOT (on first input only) */
+        case OP_FUZZ_NOT:
             {
                 Bitmap* not_result = bitmap_not(inputs[0]);
                 if (not_result) {
