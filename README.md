@@ -1,4 +1,4 @@
-redis-roaring ![CI/CD](https://github.com/aviggiano/redis-roaring/actions/workflows/ci.yml/badge.svg) [![Static Badge](https://img.shields.io/badge/documentation-passing-blue)](https://redisroaring.com)
+redis-roaring [![Coverage Status](https://coveralls.io/repos/github/aviggiano/redis-roaring/badge.svg?branch=master)](https://coveralls.io/github/aviggiano/redis-roaring?branch=master) [![CI/CD](https://github.com/aviggiano/redis-roaring/actions/workflows/ci.yml/badge.svg)](https://github.com/aviggiano/redis-roaring/actions/workflows/ci.yml) [![Static Badge](https://img.shields.io/badge/documentation-passing-blue)](https://redisroaring.com)
 ===========
 Roaring Bitmaps for Redis
 
