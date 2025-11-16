@@ -38,17 +38,31 @@ jobs:
     needs: [configure, test]
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - name: Checkout
       uses: actions/checkout@v2
       with:
         submodules: recursive
+        token: ${{ secrets.GITHUB_TOKEN }}
     - name: Configure
       run: ./configure.sh
     - name: Install valgrind
       run: sudo apt-get install valgrind
     - name: Test
       run: ./performance.sh
+    - name: Commit performance results
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add README.md
+        git diff --staged --quiet || git commit -m "Update performance benchmarks [skip ci]"
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
   docker:
     name: Build and push to Dockerhub
     needs: [configure, test, performance]

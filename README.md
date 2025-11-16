@@ -106,8 +106,9 @@ $ redis-cli
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset on the travis build [552223545](https://travis-ci.org/aviggiano/redis-roaring/builds/552223545):
+Tested using CRoaring's `census1881` dataset. Performance tests are run automatically on every push to master branch.
 
+<!-- BEGIN_PERFORMANCE -->
 |               OP |     TIME/OP (us) |     ST.DEV. (us) |
 | ---------------- | ---------------- | ---------------- |
 |         R.SETBIT |            19.44 |             4.00 |
@@ -146,3 +147,4 @@ Tested using CRoaring's `census1881` dataset on the travis build [552223545](htt
 |            R.MAX |            19.85 |             0.04 |
 |          R64.MAX |            19.49 |             0.03 |
 |              MAX |            19.94 |             0.06 |
+<!-- END_PERFORMANCE -->
