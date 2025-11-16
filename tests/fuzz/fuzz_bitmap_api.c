@@ -122,8 +122,8 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                     /* Append by creating new bitmap and OR-ing */
                     Bitmap* new_values = bitmap_from_int_array(array_size, array);
                     if (new_values) {
-                        const Bitmap* inputs[2] = {bitmap, new_values};
-                        bitmap_or(bitmap, 2, inputs);
+                        /* Use _inplace to OR new_values into bitmap */
+                        roaring_bitmap_or_inplace(bitmap, new_values);
                         bitmap_free(new_values);
                     }
                     safe_free(array);
