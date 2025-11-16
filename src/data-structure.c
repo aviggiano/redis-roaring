@@ -302,7 +302,9 @@ void bitmap_or(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   roaring_bitmap_overwrite(r, bitmaps[0]);
 
   for (size_t i = 1; i < n; i++) {
-    roaring_bitmap_lazy_or_inplace(r, bitmaps[i], false);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring_bitmap_lazy_or_inplace(r, bitmaps[i], false);
+    }
   }
 
   roaring_bitmap_repair_after_lazy(r);
@@ -320,7 +322,9 @@ void bitmap64_or(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   _roaring64_bitmap_overwrite(r, bitmaps[0]);
 
   for (uint32_t i = 1; i < n; i++) {
-    roaring64_bitmap_or_inplace(r, bitmaps[i]);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring64_bitmap_or_inplace(r, bitmaps[i]);
+    }
   }
 }
 
@@ -336,7 +340,9 @@ void bitmap_and(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   roaring_bitmap_overwrite(r, bitmaps[0]);
 
   for (uint32_t i = 1; i < n; i++) {
-    roaring_bitmap_and_inplace(r, bitmaps[i]);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring_bitmap_and_inplace(r, bitmaps[i]);
+    }
   }
 }
 
@@ -352,7 +358,9 @@ void bitmap64_and(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   _roaring64_bitmap_overwrite(r, bitmaps[0]);
 
   for (uint32_t i = 1; i < n; i++) {
-    roaring64_bitmap_and_inplace(r, bitmaps[i]);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring64_bitmap_and_inplace(r, bitmaps[i]);
+    }
   }
 }
 
@@ -368,7 +376,9 @@ void bitmap_xor(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   roaring_bitmap_overwrite(r, bitmaps[0]);
 
   for (uint32_t i = 1; i < n; i++) {
-    roaring_bitmap_lazy_xor_inplace(r, bitmaps[i]);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring_bitmap_lazy_xor_inplace(r, bitmaps[i]);
+    }
   }
 
   roaring_bitmap_repair_after_lazy(r);
@@ -386,7 +396,9 @@ void bitmap64_xor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   _roaring64_bitmap_overwrite(r, bitmaps[0]);
 
   for (uint32_t i = 1; i < n; i++) {
-    roaring64_bitmap_xor_inplace(r, bitmaps[i]);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring64_bitmap_xor_inplace(r, bitmaps[i]);
+    }
   }
 }
 
@@ -407,12 +419,16 @@ void bitmap_andor(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   roaring_bitmap_overwrite(r, bitmaps[1]);
 
   for (size_t i = 2; i < n; i++) {
-    roaring_bitmap_lazy_or_inplace(r, bitmaps[i], false);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring_bitmap_lazy_or_inplace(r, bitmaps[i], false);
+    }
   }
 
   roaring_bitmap_repair_after_lazy(r);
 
-  roaring_bitmap_and_inplace(r, x);
+  if (x != r) {  // Skip if same pointer to avoid memcpy overlap
+    roaring_bitmap_and_inplace(r, x);
+  }
 }
 
 void bitmap_andnot(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
@@ -425,7 +441,9 @@ void bitmap_andnot(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   }
   if (n == 2) {
     roaring_bitmap_overwrite(r, bitmaps[0]);
-    roaring_bitmap_andnot_inplace(r, bitmaps[1]);
+    if (bitmaps[1] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring_bitmap_andnot_inplace(r, bitmaps[1]);
+    }
     return;
   }
 
@@ -434,7 +452,9 @@ void bitmap_andnot(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   roaring_bitmap_overwrite(r, x);
 
   for (uint32_t i = 1; i < n; i++) {
-    roaring_bitmap_andnot_inplace(r, bitmaps[i]);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring_bitmap_andnot_inplace(r, bitmaps[i]);
+    }
   }
 }
 
@@ -448,7 +468,9 @@ void bitmap64_andnot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   }
   if (n == 2) {
     _roaring64_bitmap_overwrite(r, bitmaps[0]);
-    roaring64_bitmap_andnot_inplace(r, bitmaps[1]);
+    if (bitmaps[1] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring64_bitmap_andnot_inplace(r, bitmaps[1]);
+    }
     return;
   }
 
@@ -457,7 +479,9 @@ void bitmap64_andnot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   _roaring64_bitmap_overwrite(r, x);
 
   for (uint32_t i = 1; i < n; i++) {
-    roaring64_bitmap_andnot_inplace(r, bitmaps[i]);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring64_bitmap_andnot_inplace(r, bitmaps[i]);
+    }
   }
 }
 
@@ -470,7 +494,9 @@ void bitmap_ornot(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   }
   if (n == 2) {
     roaring_bitmap_overwrite(r, bitmaps[1]);
-    roaring_bitmap_andnot_inplace(r, bitmaps[0]);
+    if (bitmaps[0] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring_bitmap_andnot_inplace(r, bitmaps[0]);
+    }
     return;
   }
 
@@ -479,10 +505,14 @@ void bitmap_ornot(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   roaring_bitmap_overwrite(r, bitmaps[1]);
 
   for (uint32_t i = 2; i < n; i++) {
-    roaring_bitmap_or_inplace(r, bitmaps[i]);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring_bitmap_or_inplace(r, bitmaps[i]);
+    }
   }
 
-  roaring_bitmap_andnot_inplace(r, x);
+  if (x != r) {  // Skip if same pointer to avoid memcpy overlap
+    roaring_bitmap_andnot_inplace(r, x);
+  }
 }
 
 void bitmap64_ornot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
@@ -494,7 +524,9 @@ void bitmap64_ornot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   }
   if (n == 2) {
     _roaring64_bitmap_overwrite(r, bitmaps[1]);
-    roaring64_bitmap_andnot_inplace(r, bitmaps[0]);
+    if (bitmaps[0] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring64_bitmap_andnot_inplace(r, bitmaps[0]);
+    }
     return;
   }
 
@@ -503,10 +535,14 @@ void bitmap64_ornot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   _roaring64_bitmap_overwrite(r, bitmaps[1]);
 
   for (uint32_t i = 2; i < n; i++) {
-    roaring64_bitmap_or_inplace(r, bitmaps[i]);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring64_bitmap_or_inplace(r, bitmaps[i]);
+    }
   }
 
-  roaring64_bitmap_andnot_inplace(r, x);
+  if (x != r) {  // Skip if same pointer to avoid memcpy overlap
+    roaring64_bitmap_andnot_inplace(r, x);
+  }
 }
 
 void bitmap64_andor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
@@ -526,10 +562,14 @@ void bitmap64_andor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   _roaring64_bitmap_overwrite(r, bitmaps[1]);
 
   for (size_t i = 2; i < n; i++) {
-    roaring64_bitmap_or_inplace(r, bitmaps[i]);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      roaring64_bitmap_or_inplace(r, bitmaps[i]);
+    }
   }
 
-  roaring64_bitmap_and_inplace(r, x);
+  if (x != r) {  // Skip if same pointer to avoid memcpy overlap
+    roaring64_bitmap_and_inplace(r, x);
+  }
 }
 
 void bitmap_one(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
@@ -552,17 +592,19 @@ void bitmap_one(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   roaring_bitmap_overwrite(r, bitmaps[0]);
 
   for (uint32_t i = 1; i < n; i++) {
-    // Track bits that appear in both current result and new bitmap
-    // These are bits that now appear in more than one key
-    Bitmap* intersection = roaring_bitmap_and(r, bitmaps[i]);
-    roaring_bitmap_or_inplace(helper, intersection);
-    roaring_bitmap_free(intersection);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      // Track bits that appear in both current result and new bitmap
+      // These are bits that now appear in more than one key
+      Bitmap* intersection = roaring_bitmap_and(r, bitmaps[i]);
+      roaring_bitmap_or_inplace(helper, intersection);
+      roaring_bitmap_free(intersection);
 
-    // XOR the new bitmap with current result
-    roaring_bitmap_xor_inplace(r, bitmaps[i]);
+      // XOR the new bitmap with current result
+      roaring_bitmap_xor_inplace(r, bitmaps[i]);
 
-    // Remove bits that have been seen in more than one key
-    roaring_bitmap_andnot_inplace(r, helper);
+      // Remove bits that have been seen in more than one key
+      roaring_bitmap_andnot_inplace(r, helper);
+    }
   }
 
   roaring_bitmap_free(helper);
@@ -587,17 +629,19 @@ void bitmap64_one(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   _roaring64_bitmap_overwrite(r, bitmaps[0]);
 
   for (uint32_t i = 1; i < n; i++) {
-    // Track bits that appear in both current result and new bitmap
-    // These are bits that now appear in more than one key
-    Bitmap64* intersection = roaring64_bitmap_and(r, bitmaps[i]);
-    roaring64_bitmap_or_inplace(helper, intersection);
-    roaring64_bitmap_free(intersection);
+    if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
+      // Track bits that appear in both current result and new bitmap
+      // These are bits that now appear in more than one key
+      Bitmap64* intersection = roaring64_bitmap_and(r, bitmaps[i]);
+      roaring64_bitmap_or_inplace(helper, intersection);
+      roaring64_bitmap_free(intersection);
 
-    // XOR the new bitmap with current result
-    roaring64_bitmap_xor_inplace(r, bitmaps[i]);
+      // XOR the new bitmap with current result
+      roaring64_bitmap_xor_inplace(r, bitmaps[i]);
 
-    // Remove bits that have been seen in more than one key
-    roaring64_bitmap_andnot_inplace(r, helper);
+      // Remove bits that have been seen in more than one key
+      roaring64_bitmap_andnot_inplace(r, helper);
+    }
   }
 
   roaring64_bitmap_free(helper);
