@@ -82,6 +82,82 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: ./coverage.info
+        flag-name: unit-tests
+        parallel: true
+
+  fuzz_coverage:
+    name: Fuzzing Coverage - ${{ matrix.fuzzer }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fuzzer:
+          - fuzz_bitmap_api
+          - fuzz_bitmap64_api
+          - fuzz_bitmap_operations
+          - fuzz_bitmap_serialization
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang lcov
+
+    - name: Initialize submodules
+      run: |
+        git submodule init
+        git submodule update
+
+    - name: Amalgamate CRoaring
+      run: |
+        cd src
+        ../deps/CRoaring/amalgamation.sh
+
+    - name: Build fuzzer with coverage
+      run: |
+        mkdir -p build-fuzz-cov
+        cd build-fuzz-cov
+        CC=clang CXX=clang++ cmake \
+          -DENABLE_FUZZING=ON \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_C_FLAGS="-fsanitize=fuzzer-no-link,address,undefined --coverage -fprofile-arcs -ftest-coverage" \
+          -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+          ..
+        make
+
+    - name: Run fuzzer to generate coverage
+      run: |
+        cd build-fuzz-cov
+        timeout 300 ./tests/fuzz/${{ matrix.fuzzer }} -max_total_time=300 || true
+
+    - name: Generate coverage report
+      run: |
+        lcov --capture --directory build-fuzz-cov --output-file fuzz-coverage-${{ matrix.fuzzer }}.info
+        lcov --remove fuzz-coverage-${{ matrix.fuzzer }}.info '/usr/*' '*/deps/*' '*/tests/*' --output-file fuzz-coverage-${{ matrix.fuzzer }}.info
+        lcov --list fuzz-coverage-${{ matrix.fuzzer }}.info
+
+    - name: Upload fuzzing coverage to Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./fuzz-coverage-${{ matrix.fuzzer }}.info
+        flag-name: fuzz-${{ matrix.fuzzer }}
+        parallel: true
+
+  coverage_finish:
+    name: Finish Coveralls parallel build
+    needs: [coverage, fuzz_coverage]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Finish Coveralls parallel build
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        parallel-finished: true
 
   fuzz:
     name: Fuzz Testing - ${{ matrix.fuzzer }}
