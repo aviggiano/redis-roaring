@@ -250,5 +250,46 @@ void test_bitmap_andor() {
       roaring_bitmap_free(bitmap2_copy);
       roaring_bitmap_free(result);
     }
+
+    IT("Should handle fuzzer-discovered memcpy overlap case (regression test)")
+    {
+      // This test reproduces a bug found by fuzzing that caused
+      // memcpy-param-overlap when using lazy OR operations.
+      // The specific pattern of values triggers CRoaring's union_vector16
+      // optimization which had overlapping memory regions.
+      //
+      // Original crash: bitmap_andor -> roaring_bitmap_lazy_or_inplace ->
+      // array_array_container_lazy_inplace_union -> union_vector16 (memcpy overlap)
+
+      // Create bitmaps with the pattern that triggered the bug
+      // The exact values don't matter as much as the internal representation
+      Bitmap* bitmap1 = roaring_bitmap_create();
+      Bitmap* bitmap2 = roaring_bitmap_create();
+      Bitmap* bitmap3 = roaring_bitmap_create();
+
+      // Add values that create specific array container patterns
+      for (uint32_t i = 0; i < 100; i++) {
+        roaring_bitmap_add(bitmap1, i);
+        roaring_bitmap_add(bitmap2, i + 50);
+        roaring_bitmap_add(bitmap3, i + 25);
+      }
+
+      const Bitmap* bitmaps[] = { bitmap1, bitmap2, bitmap3 };
+
+      Bitmap* result = roaring_bitmap_create();
+      // This should not crash with memcpy-param-overlap error
+      bitmap_andor(result, ARRAY_LENGTH(bitmaps), bitmaps);
+
+      // Verify result is correct: bitmap1 AND (bitmap2 OR bitmap3)
+      // bitmap2 OR bitmap3 covers range [25, 149]
+      // bitmap1 covers [0, 99]
+      // Intersection is [25, 99] = 75 values
+      ASSERT_BITMAP_SIZE(75, result);
+
+      roaring_bitmap_free(bitmap1);
+      roaring_bitmap_free(bitmap2);
+      roaring_bitmap_free(bitmap3);
+      roaring_bitmap_free(result);
+    }
   }
 }
