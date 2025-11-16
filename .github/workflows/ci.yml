@@ -33,6 +33,47 @@ jobs:
       run: sudo apt-get install valgrind
     - name: Test
       run: ./test.sh
+
+  test-asan:
+    name: Test with AddressSanitizer
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install Clang
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang
+
+    - name: Initialize submodules
+      run: |
+        git submodule init
+        git submodule update
+
+    - name: Amalgamate CRoaring
+      run: |
+        cd src
+        ../deps/CRoaring/amalgamation.sh
+
+    - name: Build with AddressSanitizer
+      run: |
+        mkdir -p build-asan
+        cd build-asan
+        cmake -DCMAKE_C_COMPILER=clang \
+              -DCMAKE_C_FLAGS="-fsanitize=address,undefined -g -O1" \
+              -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+              ..
+        make unit
+
+    - name: Run tests with ASan
+      run: |
+        cd build-asan
+        # Run with ASan - this should expose the memcpy-param-overlap bug
+        ./unit
+
   performance:
     name: Performance tests
     needs: [configure, test]
