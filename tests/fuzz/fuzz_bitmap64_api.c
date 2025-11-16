@@ -120,8 +120,8 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 if (array && array_size > 0) {
                     Bitmap64* new_values = bitmap64_from_int_array(array_size, array);
                     if (new_values) {
-                        const Bitmap64* inputs[2] = {bitmap, new_values};
-                        bitmap64_or(bitmap, 2, inputs);
+                        /* Use _inplace to OR new_values into bitmap */
+                        roaring64_bitmap_or_inplace(bitmap, new_values);
                         bitmap64_free(new_values);
                     }
                     safe_free(array);
