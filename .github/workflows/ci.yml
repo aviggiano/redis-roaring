@@ -136,7 +136,7 @@ jobs:
       run: |
         cd build-fuzz-cov
         export LLVM_PROFILE_FILE="fuzz-${{ matrix.fuzzer }}-%p.profraw"
-        timeout 300 ./tests/fuzz/${{ matrix.fuzzer }} -max_total_time=300 || true
+        timeout 300 ./tests/fuzz/${{ matrix.fuzzer }} -max_total_time=300 -rss_limit_mb=2048 -max_len=1024 || true
 
     - name: Generate coverage report
       run: |
@@ -210,8 +210,8 @@ jobs:
     - name: Run Fuzzing - ${{ matrix.fuzzer }}
       run: |
         cd build-fuzz
-        export ASAN_OPTIONS=allocator_may_return_null=1
-        timeout 600 ./tests/fuzz/${{ matrix.fuzzer }}
+        export ASAN_OPTIONS=allocator_may_return_null=1:malloc_limit_mb=2048
+        timeout 600 ./tests/fuzz/${{ matrix.fuzzer }} -rss_limit_mb=2048 -max_len=1024
 
     - name: Check for crashes
       id: check_crashes
