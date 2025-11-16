@@ -767,6 +767,13 @@ Bitmap64* bitmap64_from_bit_array(size_t size, const char* array) {
 }
 
 char* bitmap_get_bit_array(const Bitmap* bitmap, size_t* size) {
+  if (roaring_bitmap_is_empty(bitmap)) {
+    *size = 0;
+    char* ans = rm_malloc(1);
+    ans[0] = '\0';
+    return ans;
+  }
+
   *size = roaring_bitmap_maximum(bitmap) + 1;
   char* ans = rm_malloc(*size + 1);
   memset(ans, '0', *size);
@@ -783,6 +790,13 @@ char* bitmap_get_bit_array(const Bitmap* bitmap, size_t* size) {
 }
 
 char* bitmap64_get_bit_array(const Bitmap64* bitmap, uint64_t* size) {
+  if (roaring64_bitmap_is_empty(bitmap)) {
+    *size = 0;
+    char* ans = rm_malloc(1);
+    ans[0] = '\0';
+    return ans;
+  }
+
   *size = roaring64_bitmap_maximum(bitmap) + 1;
   char* ans = rm_malloc(*size + 1);
   memset(ans, '0', *size);
