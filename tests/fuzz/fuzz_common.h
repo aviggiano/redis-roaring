@@ -252,4 +252,11 @@ static inline int select_bitmap_index(FuzzInput* input, int num_bitmaps) {
     return (int)fuzz_consume_u32_in_range(input, 0, num_bitmaps - 1);
 }
 
+/* Map a value uniformly between min and max using modulo */
+static inline uint64_t between(uint64_t value, uint64_t min, uint64_t max) {
+    if (min >= max) return min;
+    uint64_t range = max - min + 1;
+    return min + (value % range);
+}
+
 #endif /* FUZZ_COMMON_H */

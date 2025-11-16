@@ -69,5 +69,57 @@ endif()
 # Fuzzing targets (optional, requires Clang)
 if(ENABLE_FUZZING)
   message(STATUS "Fuzzing is enabled")
-  add_subdirectory(${TEST_PATH}/fuzz)
+
+  # Fuzzing is only supported with Clang
+  if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+    message(WARNING "Fuzzing requires Clang compiler. Skipping fuzz targets.")
+  else()
+    # Common fuzzing flags
+    set(FUZZ_FLAGS
+      -fsanitize=fuzzer,address,undefined
+      -fno-sanitize-recover=all
+      -g
+      -O1
+    )
+
+    # List of fuzzer targets
+    set(FUZZERS
+      fuzz_bitmap_api
+      fuzz_bitmap64_api
+      fuzz_bitmap_operations
+      fuzz_bitmap_serialization
+    )
+
+    # Create each fuzzer
+    foreach(FUZZER ${FUZZERS})
+      add_executable(${FUZZER}
+        ${TEST_PATH}/fuzz/${FUZZER}.c
+        ${SRC_PATH}/data-structure.c
+      )
+
+      target_include_directories(${FUZZER} PRIVATE
+        ${TEST_PATH}/fuzz
+        ${SRC_PATH}
+        ${DEPS_PATH}
+      )
+
+      target_compile_options(${FUZZER} PRIVATE ${FUZZ_FLAGS})
+      target_link_options(${FUZZER} PRIVATE ${FUZZ_FLAGS})
+
+      target_link_libraries(${FUZZER} PRIVATE roaring::roaring)
+
+      # Set output directory
+      set_target_properties(${FUZZER} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests/fuzz
+      )
+    endforeach()
+
+    # Copy corpus directories to build directory
+    file(COPY ${TEST_PATH}/fuzz/corpus
+         DESTINATION ${CMAKE_BINARY_DIR}/tests/fuzz)
+
+    message(STATUS "Fuzzing targets configured. Build and run with:")
+    message(STATUS "  make")
+    message(STATUS "  ./tests/fuzz/fuzz_bitmap_api -max_total_time=60")
+  endif()
 endif()

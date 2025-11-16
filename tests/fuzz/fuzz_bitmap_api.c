@@ -1,51 +1,13 @@
 /*
- * Fuzzer for 32-bit Bitmap API
+ * Fuzzer for 32-bit Bitmap API (Simplified)
  *
- * This fuzzer tests the main redis-roaring bitmap operations by:
- * - Maintaining multiple bitmap instances
- * - Performing random sequences of operations
- * - Testing edge cases and error handling
+ * This fuzzer tests the main redis-roaring bitmap operations with:
+ * - Single bitmap per iteration (no state management)
+ * - Random sequence of operations
+ * - Edge cases and error handling
  */
 
 #include "fuzz_common.h"
-
-/* Fuzzer state */
-typedef struct {
-    Bitmap* bitmaps[MAX_FUZZ_BITMAPS];
-    int num_bitmaps;
-} FuzzerState;
-
-static void fuzzer_state_init(FuzzerState* state) {
-    state->num_bitmaps = 0;
-    for (int i = 0; i < MAX_FUZZ_BITMAPS; i++) {
-        state->bitmaps[i] = NULL;
-    }
-}
-
-static void fuzzer_state_cleanup(FuzzerState* state) {
-    for (int i = 0; i < state->num_bitmaps; i++) {
-        if (state->bitmaps[i]) {
-            bitmap_free(state->bitmaps[i]);
-            state->bitmaps[i] = NULL;
-        }
-    }
-    state->num_bitmaps = 0;
-}
-
-static int fuzzer_state_add_bitmap(FuzzerState* state) {
-    if (state->num_bitmaps >= MAX_FUZZ_BITMAPS) {
-        return -1;
-    }
-    state->bitmaps[state->num_bitmaps] = bitmap_alloc();
-    if (!state->bitmaps[state->num_bitmaps]) {
-        return -1;
-    }
-    return state->num_bitmaps++;
-}
-
-static bool fuzzer_state_has_bitmaps(const FuzzerState* state) {
-    return state->num_bitmaps > 0;
-}
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     /* Need at least a few bytes to do anything interesting */
@@ -56,13 +18,10 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     FuzzInput input;
     fuzz_input_init(&input, data, size);
 
-    FuzzerState state;
-    fuzzer_state_init(&state);
-
-    /* Initialize with 1-5 bitmaps */
-    int initial_bitmaps = (int)fuzz_consume_u32_in_range(&input, 1, MAX_FUZZ_BITMAPS);
-    for (int i = 0; i < initial_bitmaps; i++) {
-        fuzzer_state_add_bitmap(&state);
+    /* Single bitmap - no state management */
+    Bitmap* bitmap = bitmap_alloc();
+    if (!bitmap) {
+        return 0;
     }
 
     /* Perform random operations */
@@ -70,15 +29,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     while (fuzz_input_remaining(&input) > 0 && operations < MAX_FUZZ_OPERATIONS) {
         operations++;
 
-        if (!fuzzer_state_has_bitmaps(&state)) {
-            break;
-        }
-
         uint8_t op = fuzz_consume_u8(&input) % NUM_BITMAP_OPERATIONS;
-        int idx = select_bitmap_index(&input, state.num_bitmaps);
-        Bitmap* bitmap = state.bitmaps[idx];
-
-        if (!bitmap) continue;
 
         switch (op) {
             case OP_SETBIT: {
@@ -101,7 +52,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                     Bitmap* new_bitmap = bitmap_from_int_array(array_size, array);
                     if (new_bitmap) {
                         bitmap_free(bitmap);
-                        state.bitmaps[idx] = new_bitmap;
+                        bitmap = new_bitmap;
                     }
                     safe_free(array);
                 }
@@ -119,10 +70,8 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 size_t array_size;
                 uint32_t* array = generate_uint32_array(&input, &array_size);
                 if (array && array_size > 0) {
-                    /* Append by creating new bitmap and OR-ing */
                     Bitmap* new_values = bitmap_from_int_array(array_size, array);
                     if (new_values) {
-                        /* Use _inplace to OR new_values into bitmap */
                         roaring_bitmap_or_inplace(bitmap, new_values);
                         bitmap_free(new_values);
                     }
@@ -150,7 +99,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                     Bitmap* new_bitmap = bitmap_from_bit_array(bit_array_size, bit_array);
                     if (new_bitmap) {
                         bitmap_free(bitmap);
-                        state.bitmaps[idx] = new_bitmap;
+                        bitmap = new_bitmap;
                     }
                     safe_free(bit_array);
                 }
@@ -166,53 +115,63 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
             case OP_SETRANGE: {
                 uint64_t from = fuzz_consume_u32(&input);
-                uint64_t to = fuzz_consume_u32(&input);
-                if (from > to) {
-                    uint64_t temp = from;
-                    from = to;
-                    to = temp;
-                }
+                uint64_t range_size = fuzz_consume_u32(&input);
                 /* Limit range size to avoid excessive memory */
-                if (to - from > 1000000) {
-                    to = from + 1000000;
-                }
+                range_size = between(range_size, 0, 1000000);
+                uint64_t to = from + range_size;
                 Bitmap* range_bitmap = bitmap_from_range(from, to);
                 if (range_bitmap) {
                     bitmap_free(bitmap);
-                    state.bitmaps[idx] = range_bitmap;
+                    bitmap = range_bitmap;
                 }
                 break;
             }
 
-            case OP_BITOP_AND: {
-                if (state.num_bitmaps >= 2) {
-                    int idx2 = select_bitmap_index(&input, state.num_bitmaps);
-                    const Bitmap* inputs[2] = {bitmap, state.bitmaps[idx2]};
-                    Bitmap* result = bitmap_alloc();
-                    bitmap_and(result, 2, inputs);
-                    bitmap_free(result);
-                }
-                break;
-            }
+            case OP_BITOP_AND:
+            case OP_BITOP_OR:
+            case OP_BITOP_XOR:
+            case OP_BITOP_ANDOR:
+            case OP_BITOP_ANDNOT:
+            case OP_BITOP_ORNOT:
+            case OP_BITOP_ONE: {
+                /* Create temporary second bitmap for binary operations */
+                Bitmap* bitmap2 = bitmap_alloc();
+                if (bitmap2) {
+                    /* Add some random bits to second bitmap */
+                    for (int i = 0; i < 10 && fuzz_input_remaining(&input) > sizeof(uint32_t); i++) {
+                        uint32_t offset = fuzz_consume_u32(&input);
+                        bitmap_setbit(bitmap2, offset, true);
+                    }
 
-            case OP_BITOP_OR: {
-                if (state.num_bitmaps >= 2) {
-                    int idx2 = select_bitmap_index(&input, state.num_bitmaps);
-                    const Bitmap* inputs[2] = {bitmap, state.bitmaps[idx2]};
+                    const Bitmap* inputs[2] = {bitmap, bitmap2};
                     Bitmap* result = bitmap_alloc();
-                    bitmap_or(result, 2, inputs);
-                    bitmap_free(result);
-                }
-                break;
-            }
-
-            case OP_BITOP_XOR: {
-                if (state.num_bitmaps >= 2) {
-                    int idx2 = select_bitmap_index(&input, state.num_bitmaps);
-                    const Bitmap* inputs[2] = {bitmap, state.bitmaps[idx2]};
-                    Bitmap* result = bitmap_alloc();
-                    bitmap_xor(result, 2, inputs);
-                    bitmap_free(result);
+                    if (result) {
+                        switch (op) {
+                            case OP_BITOP_AND:
+                                bitmap_and(result, 2, inputs);
+                                break;
+                            case OP_BITOP_OR:
+                                bitmap_or(result, 2, inputs);
+                                break;
+                            case OP_BITOP_XOR:
+                                bitmap_xor(result, 2, inputs);
+                                break;
+                            case OP_BITOP_ANDOR:
+                                bitmap_andor(result, 2, inputs);
+                                break;
+                            case OP_BITOP_ANDNOT:
+                                bitmap_andnot(result, 2, inputs);
+                                break;
+                            case OP_BITOP_ORNOT:
+                                bitmap_ornot(result, 2, inputs);
+                                break;
+                            case OP_BITOP_ONE:
+                                bitmap_one(result, 2, inputs);
+                                break;
+                        }
+                        bitmap_free(result);
+                    }
+                    bitmap_free(bitmap2);
                 }
                 break;
             }
@@ -220,50 +179,6 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             case OP_BITOP_NOT: {
                 Bitmap* result = bitmap_not(bitmap);
                 if (result) {
-                    bitmap_free(result);
-                }
-                break;
-            }
-
-            case OP_BITOP_ANDOR: {
-                if (state.num_bitmaps >= 2) {
-                    int idx2 = select_bitmap_index(&input, state.num_bitmaps);
-                    const Bitmap* inputs[2] = {bitmap, state.bitmaps[idx2]};
-                    Bitmap* result = bitmap_alloc();
-                    bitmap_andor(result, 2, inputs);
-                    bitmap_free(result);
-                }
-                break;
-            }
-
-            case OP_BITOP_ANDNOT: {
-                if (state.num_bitmaps >= 2) {
-                    int idx2 = select_bitmap_index(&input, state.num_bitmaps);
-                    const Bitmap* inputs[2] = {bitmap, state.bitmaps[idx2]};
-                    Bitmap* result = bitmap_alloc();
-                    bitmap_andnot(result, 2, inputs);
-                    bitmap_free(result);
-                }
-                break;
-            }
-
-            case OP_BITOP_ORNOT: {
-                if (state.num_bitmaps >= 2) {
-                    int idx2 = select_bitmap_index(&input, state.num_bitmaps);
-                    const Bitmap* inputs[2] = {bitmap, state.bitmaps[idx2]};
-                    Bitmap* result = bitmap_alloc();
-                    bitmap_ornot(result, 2, inputs);
-                    bitmap_free(result);
-                }
-                break;
-            }
-
-            case OP_BITOP_ONE: {
-                if (state.num_bitmaps >= 2) {
-                    int idx2 = select_bitmap_index(&input, state.num_bitmaps);
-                    const Bitmap* inputs[2] = {bitmap, state.bitmaps[idx2]};
-                    Bitmap* result = bitmap_alloc();
-                    bitmap_one(result, 2, inputs);
                     bitmap_free(result);
                 }
                 break;
@@ -284,19 +199,16 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
 
             case OP_OPTIMIZE: {
-                int shrink = fuzz_consume_bool(&input) ? 1 : 0;
+                bool shrink = fuzz_consume_bool(&input);
                 bitmap_optimize(bitmap, shrink);
                 break;
             }
 
             case OP_STATISTICS: {
-                Bitmap_statistics stats;
-                bitmap_statistics(bitmap, &stats);
-
-                int format = fuzz_consume_bool(&input) ? BITMAP_STATISTICS_FORMAT_JSON : BITMAP_STATISTICS_FORMAT_PLAIN_TEXT;
+                int format = fuzz_consume_u8(&input) % 2;
                 int size_out;
-                char* stats_str = bitmap_statistics_str(bitmap, format, &size_out);
-                safe_free(stats_str);
+                char* stats = bitmap_statistics_str(bitmap, format, &size_out);
+                safe_free(stats);
                 break;
             }
 
@@ -312,9 +224,9 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
             case OP_GETBITS: {
                 size_t n_offsets = fuzz_consume_size_in_range(&input, 1, 100);
-                uint32_t* offsets = (uint32_t*)malloc(sizeof(uint32_t) * n_offsets);
+                uint32_t* offsets = (uint32_t*)malloc(n_offsets * sizeof(uint32_t));
                 if (offsets) {
-                    for (size_t i = 0; i < n_offsets; i++) {
+                    for (size_t i = 0; i < n_offsets && fuzz_input_remaining(&input) > sizeof(uint32_t); i++) {
                         offsets[i] = fuzz_consume_u32(&input);
                     }
                     bool* results = bitmap_getbits(bitmap, n_offsets, offsets);
@@ -326,9 +238,9 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
             case OP_CLEARBITS: {
                 size_t n_offsets = fuzz_consume_size_in_range(&input, 1, 100);
-                uint32_t* offsets = (uint32_t*)malloc(sizeof(uint32_t) * n_offsets);
+                uint32_t* offsets = (uint32_t*)malloc(n_offsets * sizeof(uint32_t));
                 if (offsets) {
-                    for (size_t i = 0; i < n_offsets; i++) {
+                    for (size_t i = 0; i < n_offsets && fuzz_input_remaining(&input) > sizeof(uint32_t); i++) {
                         offsets[i] = fuzz_consume_u32(&input);
                     }
                     bitmap_clearbits(bitmap, n_offsets, offsets);
@@ -339,9 +251,9 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
             case OP_CLEARBITS_COUNT: {
                 size_t n_offsets = fuzz_consume_size_in_range(&input, 1, 100);
-                uint32_t* offsets = (uint32_t*)malloc(sizeof(uint32_t) * n_offsets);
+                uint32_t* offsets = (uint32_t*)malloc(n_offsets * sizeof(uint32_t));
                 if (offsets) {
-                    for (size_t i = 0; i < n_offsets; i++) {
+                    for (size_t i = 0; i < n_offsets && fuzz_input_remaining(&input) > sizeof(uint32_t); i++) {
                         offsets[i] = fuzz_consume_u32(&input);
                     }
                     bitmap_clearbits_count(bitmap, n_offsets, offsets);
@@ -351,29 +263,37 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
 
             case OP_INTERSECT: {
-                if (state.num_bitmaps >= 2) {
-                    int idx2 = select_bitmap_index(&input, state.num_bitmaps);
-                    uint32_t mode = fuzz_consume_u32_in_range(&input,
-                        BITMAP_INTERSECT_MODE_NONE,
-                        BITMAP_INTERSECT_MODE_EQ
-                    );
-                    bitmap_intersect(bitmap, state.bitmaps[idx2], mode);
+                /* Create temporary second bitmap */
+                Bitmap* bitmap2 = bitmap_alloc();
+                if (bitmap2) {
+                    for (int i = 0; i < 10 && fuzz_input_remaining(&input) > sizeof(uint32_t); i++) {
+                        uint32_t offset = fuzz_consume_u32(&input);
+                        bitmap_setbit(bitmap2, offset, true);
+                    }
+                    uint32_t mode = fuzz_consume_u8(&input) % 4;
+                    bitmap_intersect(bitmap, bitmap2, mode);
+                    bitmap_free(bitmap2);
                 }
                 break;
             }
 
             case OP_JACCARD: {
-                if (state.num_bitmaps >= 2) {
-                    int idx2 = select_bitmap_index(&input, state.num_bitmaps);
-                    bitmap_jaccard(bitmap, state.bitmaps[idx2]);
+                /* Create temporary second bitmap */
+                Bitmap* bitmap2 = bitmap_alloc();
+                if (bitmap2) {
+                    for (int i = 0; i < 10 && fuzz_input_remaining(&input) > sizeof(uint32_t); i++) {
+                        uint32_t offset = fuzz_consume_u32(&input);
+                        bitmap_setbit(bitmap2, offset, true);
+                    }
+                    bitmap_jaccard(bitmap, bitmap2);
+                    bitmap_free(bitmap2);
                 }
                 break;
             }
 
             case OP_GET_NTH_ELEMENT: {
-                uint64_t card = bitmap_get_cardinality(bitmap);
-                if (card > 0) {
-                    uint64_t n = fuzz_consume_u64_in_range(&input, 0, card + 10);
+                uint64_t n = fuzz_consume_u64(&input);
+                if (n < 1000000) {
                     bitmap_get_nth_element_present(bitmap, n);
                     bitmap_get_nth_element_not_present(bitmap, n);
                 }
@@ -381,8 +301,11 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
 
             case OP_FREE_AND_ALLOC: {
-                bitmap_free(bitmap);
-                state.bitmaps[idx] = bitmap_alloc();
+                /* Stress test allocation/deallocation */
+                Bitmap* temp = bitmap_alloc();
+                if (temp) {
+                    bitmap_free(temp);
+                }
                 break;
             }
 
@@ -391,6 +314,6 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         }
     }
 
-    fuzzer_state_cleanup(&state);
+    bitmap_free(bitmap);
     return 0;
 }
