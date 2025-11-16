@@ -228,7 +228,7 @@ jobs:
         fi
 
     - name: Upload crash artifacts
-      if: failure() && steps.check_crashes.outputs.crashes_found == 'true' && github.ref == 'refs/heads/master'
+      if: failure()
       uses: actions/upload-artifact@v4
       with:
         name: fuzzing-crashes-${{ matrix.fuzzer }}-${{ github.sha }}
@@ -236,7 +236,7 @@ jobs:
         retention-days: 90
 
     - name: Upload corpus
-      if: always() && github.ref == 'refs/heads/master'
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: fuzzing-corpus-${{ matrix.fuzzer }}

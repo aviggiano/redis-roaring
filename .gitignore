@@ -2,10 +2,7 @@
 *.so
 *.aof
 *.rdb
-build/
-build-fuzz/
-build-fuzz-cov/
-build-coverage/
+build*
 .idea/
 Makefile
 core
