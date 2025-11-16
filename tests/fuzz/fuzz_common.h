@@ -7,23 +7,18 @@
 #include <string.h>
 #include <stdlib.h>
 
-// FuzzedDataProvider for C++ fuzz targets
-#include <fuzzer/FuzzedDataProvider.h>
-
-// Include the data structure header
-// Note: roaring.h needs to be included outside extern "C" since it may include C++ headers
 #include "../../src/data-structure.h"
 
-// Maximum number of bitmaps to maintain in fuzzer state
+/* Maximum number of bitmaps to maintain in fuzzer state */
 #define MAX_FUZZ_BITMAPS 5
 
-// Maximum operations per fuzzing iteration
+/* Maximum operations per fuzzing iteration */
 #define MAX_FUZZ_OPERATIONS 1000
 
-// Maximum array size for int/bit arrays
+/* Maximum array size for int/bit arrays */
 #define MAX_ARRAY_SIZE 10000
 
-// Bitmap operation types for 32-bit API
+/* Bitmap operation types for 32-bit API */
 enum BitmapOperation {
     OP_SETBIT = 0,
     OP_GETBIT,
@@ -58,7 +53,7 @@ enum BitmapOperation {
     NUM_BITMAP_OPERATIONS
 };
 
-// Bitmap operation types for 64-bit API
+/* Bitmap operation types for 64-bit API */
 enum Bitmap64Operation {
     OP64_SETBIT = 0,
     OP64_GETBIT,
@@ -93,74 +88,157 @@ enum Bitmap64Operation {
     NUM_BITMAP64_OPERATIONS
 };
 
-// Helper function to safely free bitmap arrays
+/* Simple input parser for fuzzing */
+typedef struct {
+    const uint8_t* data;
+    size_t size;
+    size_t offset;
+} FuzzInput;
+
+/* Initialize fuzzer input */
+static inline void fuzz_input_init(FuzzInput* input, const uint8_t* data, size_t size) {
+    input->data = data;
+    input->size = size;
+    input->offset = 0;
+}
+
+/* Get remaining bytes */
+static inline size_t fuzz_input_remaining(const FuzzInput* input) {
+    return input->size - input->offset;
+}
+
+/* Consume a single byte */
+static inline uint8_t fuzz_consume_u8(FuzzInput* input) {
+    if (input->offset >= input->size) {
+        return 0;
+    }
+    return input->data[input->offset++];
+}
+
+/* Consume a uint16_t */
+static inline uint16_t fuzz_consume_u16(FuzzInput* input) {
+    uint16_t result = 0;
+    for (int i = 0; i < 2 && input->offset < input->size; i++) {
+        result |= ((uint16_t)input->data[input->offset++]) << (i * 8);
+    }
+    return result;
+}
+
+/* Consume a uint32_t */
+static inline uint32_t fuzz_consume_u32(FuzzInput* input) {
+    uint32_t result = 0;
+    for (int i = 0; i < 4 && input->offset < input->size; i++) {
+        result |= ((uint32_t)input->data[input->offset++]) << (i * 8);
+    }
+    return result;
+}
+
+/* Consume a uint64_t */
+static inline uint64_t fuzz_consume_u64(FuzzInput* input) {
+    uint64_t result = 0;
+    for (int i = 0; i < 8 && input->offset < input->size; i++) {
+        result |= ((uint64_t)input->data[input->offset++]) << (i * 8);
+    }
+    return result;
+}
+
+/* Consume a bool */
+static inline bool fuzz_consume_bool(FuzzInput* input) {
+    return (fuzz_consume_u8(input) & 1) != 0;
+}
+
+/* Consume an integer in range [min, max] */
+static inline uint32_t fuzz_consume_u32_in_range(FuzzInput* input, uint32_t min, uint32_t max) {
+    if (min >= max) return min;
+    uint32_t range = max - min + 1;
+    uint32_t value = fuzz_consume_u32(input);
+    return min + (value % range);
+}
+
+/* Consume an integer in range [min, max] for uint64_t */
+static inline uint64_t fuzz_consume_u64_in_range(FuzzInput* input, uint64_t min, uint64_t max) {
+    if (min >= max) return min;
+    uint64_t range = max - min + 1;
+    uint64_t value = fuzz_consume_u64(input);
+    return min + (value % range);
+}
+
+/* Consume a size_t in range [min, max] */
+static inline size_t fuzz_consume_size_in_range(FuzzInput* input, size_t min, size_t max) {
+    if (min >= max) return min;
+    size_t range = max - min + 1;
+    size_t value = (size_t)fuzz_consume_u32(input);
+    return min + (value % range);
+}
+
+/* Helper function to safely free bitmap arrays */
 static inline void safe_free(void* ptr) {
     if (ptr) {
         free(ptr);
     }
 }
 
-// Helper to generate a random uint32 array
-static inline uint32_t* generate_uint32_array(FuzzedDataProvider& fdp, size_t* out_size) {
-    size_t size = fdp.ConsumeIntegralInRange<size_t>(0, MAX_ARRAY_SIZE);
+/* Helper to generate a random uint32 array */
+static inline uint32_t* generate_uint32_array(FuzzInput* input, size_t* out_size) {
+    size_t size = fuzz_consume_size_in_range(input, 0, MAX_ARRAY_SIZE);
     if (size == 0) {
         *out_size = 0;
-        return nullptr;
+        return NULL;
     }
 
     uint32_t* array = (uint32_t*)malloc(sizeof(uint32_t) * size);
     if (!array) {
         *out_size = 0;
-        return nullptr;
+        return NULL;
     }
 
     for (size_t i = 0; i < size; i++) {
-        array[i] = fdp.ConsumeIntegral<uint32_t>();
+        array[i] = fuzz_consume_u32(input);
     }
 
     *out_size = size;
     return array;
 }
 
-// Helper to generate a random uint64 array
-static inline uint64_t* generate_uint64_array(FuzzedDataProvider& fdp, size_t* out_size) {
-    size_t size = fdp.ConsumeIntegralInRange<size_t>(0, MAX_ARRAY_SIZE);
+/* Helper to generate a random uint64 array */
+static inline uint64_t* generate_uint64_array(FuzzInput* input, size_t* out_size) {
+    size_t size = fuzz_consume_size_in_range(input, 0, MAX_ARRAY_SIZE);
     if (size == 0) {
         *out_size = 0;
-        return nullptr;
+        return NULL;
     }
 
     uint64_t* array = (uint64_t*)malloc(sizeof(uint64_t) * size);
     if (!array) {
         *out_size = 0;
-        return nullptr;
+        return NULL;
     }
 
     for (size_t i = 0; i < size; i++) {
-        array[i] = fdp.ConsumeIntegral<uint64_t>();
+        array[i] = fuzz_consume_u64(input);
     }
 
     *out_size = size;
     return array;
 }
 
-// Helper to generate a random bit array string
-static inline char* generate_bit_array_string(FuzzedDataProvider& fdp, size_t* out_size) {
-    size_t size = fdp.ConsumeIntegralInRange<size_t>(0, MAX_ARRAY_SIZE);
+/* Helper to generate a random bit array string */
+static inline char* generate_bit_array_string(FuzzInput* input, size_t* out_size) {
+    size_t size = fuzz_consume_size_in_range(input, 0, MAX_ARRAY_SIZE);
     if (size == 0) {
         *out_size = 0;
-        return nullptr;
+        return NULL;
     }
 
     char* array = (char*)malloc(size + 1);
     if (!array) {
         *out_size = 0;
-        return nullptr;
+        return NULL;
     }
 
     for (size_t i = 0; i < size; i++) {
-        // Generate '0' or '1' characters
-        array[i] = fdp.ConsumeBool() ? '1' : '0';
+        /* Generate '0' or '1' characters */
+        array[i] = fuzz_consume_bool(input) ? '1' : '0';
     }
     array[size] = '\0';
 
@@ -168,10 +246,10 @@ static inline char* generate_bit_array_string(FuzzedDataProvider& fdp, size_t* o
     return array;
 }
 
-// Helper to select a random valid bitmap index
-static inline int select_bitmap_index(FuzzedDataProvider& fdp, int num_bitmaps) {
+/* Helper to select a random valid bitmap index */
+static inline int select_bitmap_index(FuzzInput* input, int num_bitmaps) {
     if (num_bitmaps <= 0) return 0;
-    return fdp.ConsumeIntegralInRange<int>(0, num_bitmaps - 1);
+    return (int)fuzz_consume_u32_in_range(input, 0, num_bitmaps - 1);
 }
 
-#endif // FUZZ_COMMON_H
+#endif /* FUZZ_COMMON_H */

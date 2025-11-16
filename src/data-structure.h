@@ -3,10 +3,6 @@
 
 #include "roaring.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define BITMAP_STATISTICS_FORMAT_PLAIN_TEXT 0
 #define BITMAP_STATISTICS_FORMAT_JSON 1
 
@@ -146,9 +142,5 @@ bool bitmap_optimize(Bitmap* bitmap, int shrink_to_fit);
 bool bitmap64_optimize(Bitmap64* bitmap, int shrink_to_fit);
 void bitmap_statistics(const Bitmap* bitmap, Bitmap_statistics* stat);
 void bitmap64_statistics(const Bitmap64* bitmap, Bitmap64_statistics* stat);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

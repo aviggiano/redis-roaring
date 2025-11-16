@@ -2,7 +2,7 @@
 #
 # Build with:
 #   mkdir build-fuzz && cd build-fuzz
-#   CC=clang CXX=clang++ cmake -DENABLE_FUZZING=ON ..
+#   CC=clang cmake -DENABLE_FUZZING=ON ..
 #   make
 #
 # Run a fuzzer:
@@ -11,14 +11,10 @@
 cmake_minimum_required(VERSION 3.5)
 
 # Fuzzing is only supported with Clang
-if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
     message(WARNING "Fuzzing requires Clang compiler. Skipping fuzz targets.")
     return()
 endif()
-
-# Set C++ standard for fuzz targets
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Common fuzzing flags
 set(FUZZ_FLAGS
@@ -58,10 +54,10 @@ function(add_fuzz_target target_name source_file)
 endfunction()
 
 # Create fuzz targets
-add_fuzz_target(fuzz_bitmap_api fuzz_bitmap_api.cpp)
-add_fuzz_target(fuzz_bitmap64_api fuzz_bitmap64_api.cpp)
-add_fuzz_target(fuzz_bitmap_operations fuzz_bitmap_operations.cpp)
-add_fuzz_target(fuzz_bitmap_serialization fuzz_bitmap_serialization.cpp)
+add_fuzz_target(fuzz_bitmap_api fuzz_bitmap_api.c)
+add_fuzz_target(fuzz_bitmap64_api fuzz_bitmap64_api.c)
+add_fuzz_target(fuzz_bitmap_operations fuzz_bitmap_operations.c)
+add_fuzz_target(fuzz_bitmap_serialization fuzz_bitmap_serialization.c)
 
 # Copy corpus directories to build directory for easy access
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/corpus
