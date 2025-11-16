@@ -72,7 +72,8 @@ jobs:
       run: |
         cd build-asan
         # Run with ASan - this should expose the memcpy-param-overlap bug
-        ./unit
+        # halt_on_error=0 allows ASan to report all errors, not just the first one
+        ASAN_OPTIONS=halt_on_error=0 ./unit
 
   performance:
     name: Performance tests
