@@ -53,6 +53,11 @@ jobs:
         git submodule init
         git submodule update
 
+    - name: Amalgamate CRoaring
+      run: |
+        cd src
+        ../deps/CRoaring/amalgamation.sh
+
     - name: Configure with coverage flags
       run: |
         mkdir -p build-coverage
@@ -124,7 +129,7 @@ jobs:
 
     - name: Upload crash artifacts
       if: failure() && steps.check_crashes.outputs.crashes_found == 'true' && github.ref == 'refs/heads/master'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: fuzzing-crashes-${{ matrix.fuzzer }}-${{ github.sha }}
         path: build-fuzz/crash-*
@@ -132,7 +137,7 @@ jobs:
 
     - name: Upload corpus
       if: always() && github.ref == 'refs/heads/master'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: fuzzing-corpus-${{ matrix.fuzzer }}
         path: build-fuzz/tests/fuzz/corpus/
