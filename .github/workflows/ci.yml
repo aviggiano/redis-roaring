@@ -105,7 +105,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang lcov
+        sudo apt-get install -y clang lcov llvm
 
     - name: Initialize submodules
       run: |
@@ -124,20 +124,27 @@ jobs:
         CC=clang CXX=clang++ cmake \
           -DENABLE_FUZZING=ON \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_C_FLAGS="-fsanitize=fuzzer-no-link,address,undefined --coverage -fprofile-arcs -ftest-coverage" \
-          -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+          -DCMAKE_C_FLAGS="-fprofile-instr-generate -fcoverage-mapping" \
+          -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate" \
           ..
         make
 
     - name: Run fuzzer to generate coverage
       run: |
         cd build-fuzz-cov
+        export LLVM_PROFILE_FILE="fuzz-${{ matrix.fuzzer }}-%p.profraw"
         timeout 300 ./tests/fuzz/${{ matrix.fuzzer }} -max_total_time=300 || true
 
     - name: Generate coverage report
       run: |
-        lcov --capture --directory build-fuzz-cov --output-file fuzz-coverage-${{ matrix.fuzzer }}.info
-        lcov --remove fuzz-coverage-${{ matrix.fuzzer }}.info '/usr/*' '*/deps/*' '*/tests/*' --output-file fuzz-coverage-${{ matrix.fuzzer }}.info
+        cd build-fuzz-cov
+        llvm-profdata merge -sparse fuzz-${{ matrix.fuzzer }}-*.profraw -o fuzz-${{ matrix.fuzzer }}.profdata
+        llvm-cov export ./tests/fuzz/${{ matrix.fuzzer }} \
+          -instr-profile=fuzz-${{ matrix.fuzzer }}.profdata \
+          -format=lcov \
+          -ignore-filename-regex='/usr/.*|.*/deps/.*|.*/tests/.*' \
+          > ../fuzz-coverage-${{ matrix.fuzzer }}.info
+        cd ..
         lcov --list fuzz-coverage-${{ matrix.fuzzer }}.info
 
     - name: Upload fuzzing coverage to Coveralls
@@ -180,6 +187,16 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y clang cmake
+
+    - name: Initialize submodules
+      run: |
+        git submodule init
+        git submodule update
+
+    - name: Amalgamate CRoaring
+      run: |
+        cd src
+        ../deps/CRoaring/amalgamation.sh
 
     - name: Build Fuzzers
       run: ./scripts/build_fuzzers.sh
