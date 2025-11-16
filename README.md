@@ -41,6 +41,49 @@ docker run -p 6379:6379 aviggiano/redis-roaring:latest
 Run the `test.sh` script for unit tests, integration tests and performance tests.
 The performance tests can take a while, since they run on a real dataset of integer values.
 
+## Fuzzing
+
+redis-roaring includes comprehensive fuzz testing using libFuzzer with AddressSanitizer and UndefinedBehaviorSanitizer to detect memory safety issues and edge cases.
+
+### CI Integration
+
+Fuzzing runs automatically on every push to `master`:
+- **Duration**: 10 minutes per fuzzer (40 minutes total)
+- **Coverage**: All 4 fuzz targets with sanitizers enabled
+- **Artifacts**: Crashes (90 days) and corpus (30 days) uploaded
+- **Failure Handling**: Build fails if crashes are detected
+
+### Quick Start
+
+```bash
+# Build fuzzers (requires Clang)
+./scripts/build_fuzzers.sh
+
+# Run a specific fuzzer for 60 seconds
+./scripts/run_fuzzer.sh bitmap_api 60
+
+# Run all fuzzers
+./scripts/run_all_fuzzers.sh
+```
+
+### Available Fuzzers
+
+- `fuzz_bitmap_api` - Tests all 32-bit bitmap operations
+- `fuzz_bitmap64_api` - Tests 64-bit bitmap operations
+- `fuzz_bitmap_operations` - Focused testing of complex bitwise operations
+- `fuzz_bitmap_serialization` - Tests data parsing and conversion
+
+### Features
+
+- ✅ 4 specialized fuzz targets covering all APIs
+- ✅ AddressSanitizer for memory safety
+- ✅ UndefinedBehaviorSanitizer for undefined behavior
+- ✅ Automatic crash detection and reporting
+- ✅ Corpus management and evolution
+- ✅ CI/CD integration with artifact uploads
+
+For detailed documentation, see [docs/fuzzing.md](docs/fuzzing.md)
+
 ## API
 
 **📖 Complete Documentation**: For detailed command documentation including syntax, parameters, examples, and usage notes, see [docs/commands/index.md](docs/commands/index.md)

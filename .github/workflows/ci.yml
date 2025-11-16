@@ -33,6 +33,78 @@ jobs:
       run: sudo apt-get install valgrind
     - name: Test
       run: ./test.sh
+
+  fuzz:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install Clang and CMake
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang cmake
+
+    - name: Build Fuzzers
+      run: ./scripts/build_fuzzers.sh
+
+    - name: Run Fuzzing - bitmap_api (10 minutes)
+      continue-on-error: true
+      run: |
+        cd build-fuzz
+        timeout 600 ./tests/fuzz/fuzz_bitmap_api || exit 0
+
+    - name: Run Fuzzing - bitmap64_api (10 minutes)
+      continue-on-error: true
+      run: |
+        cd build-fuzz
+        timeout 600 ./tests/fuzz/fuzz_bitmap64_api || exit 0
+
+    - name: Run Fuzzing - bitmap_operations (10 minutes)
+      continue-on-error: true
+      run: |
+        cd build-fuzz
+        timeout 600 ./tests/fuzz/fuzz_bitmap_operations || exit 0
+
+    - name: Run Fuzzing - bitmap_serialization (10 minutes)
+      continue-on-error: true
+      run: |
+        cd build-fuzz
+        timeout 600 ./tests/fuzz/fuzz_bitmap_serialization || exit 0
+
+    - name: Check for crashes
+      id: check_crashes
+      run: |
+        if ls build-fuzz/crash-* 1> /dev/null 2>&1; then
+          echo "crashes_found=true" >> $GITHUB_OUTPUT
+          echo "⚠️ Fuzzing found crashes!"
+          ls -lh build-fuzz/crash-*
+          exit 1
+        else
+          echo "crashes_found=false" >> $GITHUB_OUTPUT
+          echo "✅ No crashes found"
+          exit 0
+        fi
+
+    - name: Upload crash artifacts
+      if: failure() && steps.check_crashes.outputs.crashes_found == 'true'
+      uses: actions/upload-artifact@v3
+      with:
+        name: fuzzing-crashes-${{ github.sha }}
+        path: build-fuzz/crash-*
+        retention-days: 90
+
+    - name: Upload corpus
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: fuzzing-corpus
+        path: build-fuzz/tests/fuzz/corpus/
+        retention-days: 30
   performance:
     name: Performance tests
     needs: [configure, test]

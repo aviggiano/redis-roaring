@@ -7,15 +7,22 @@ set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(DEPS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/deps)
 set(TEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
-# CRoaring configuration
-set(ENABLE_ROARING_TESTS OFF)
-set(CROARING_PATH ${DEPS_PATH}/CRoaring)
-
 # Command line options with default values
 option(USE_REDIS_ALLOCATOR "Use redis allocator" ON)
 option(DISABLE_TESTS "disables tests in hiredis" ON)
 option(BUILD_SHARED_LIBS "use shared libraries" OFF)
+option(ENABLE_FUZZING "Enable fuzzing targets (requires Clang)" OFF)
 set(HIREDIS_PATH ${DEPS_PATH}/hiredis)
+
+# CRoaring configuration
+set(ENABLE_ROARING_TESTS OFF)
+set(CROARING_PATH ${DEPS_PATH}/CRoaring)
+
+# Disable LTO when fuzzing (fuzzer instrumentation is incompatible with LTO bitcode)
+if(ENABLE_FUZZING)
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "Disable LTO for fuzzing" FORCE)
+  set(ROARING_BUILD_LTO OFF CACHE BOOL "Disable LTO for fuzzing" FORCE)
+endif()
 
 # Include directories
 include_directories(
@@ -57,4 +64,10 @@ target_link_libraries(redis-roaring roaring::roaring hiredis::hiredis)
 
 if(USE_REDIS_ALLOCATOR)
   target_compile_definitions(redis-roaring PRIVATE REDIS_MODULE_TARGET)
+endif()
+
+# Fuzzing targets (optional, requires Clang)
+if(ENABLE_FUZZING)
+  message(STATUS "Fuzzing is enabled")
+  add_subdirectory(${TEST_PATH}/fuzz)
 endif()
