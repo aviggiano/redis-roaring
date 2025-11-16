@@ -35,9 +35,17 @@ jobs:
       run: ./test.sh
 
   fuzz:
-    name: Fuzz Testing
+    name: Fuzz Testing - ${{ matrix.fuzzer }}
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
+    strategy:
+      fail-fast: true
+      matrix:
+        fuzzer:
+          - fuzz_bitmap_api
+          - fuzz_bitmap64_api
+          - fuzz_bitmap_operations
+          - fuzz_bitmap_serialization
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -52,29 +60,10 @@ jobs:
     - name: Build Fuzzers
       run: ./scripts/build_fuzzers.sh
 
-    - name: Run Fuzzing - bitmap_api
-      continue-on-error: true
+    - name: Run Fuzzing - ${{ matrix.fuzzer }}
       run: |
         cd build-fuzz
-        timeout 600 ./tests/fuzz/fuzz_bitmap_api || exit 0
-
-    - name: Run Fuzzing - bitmap64_api
-      continue-on-error: true
-      run: |
-        cd build-fuzz
-        timeout 600 ./tests/fuzz/fuzz_bitmap64_api || exit 0
-
-    - name: Run Fuzzing - bitmap_operations
-      continue-on-error: true
-      run: |
-        cd build-fuzz
-        timeout 600 ./tests/fuzz/fuzz_bitmap_operations || exit 0
-
-    - name: Run Fuzzing - bitmap_serialization
-      continue-on-error: true
-      run: |
-        cd build-fuzz
-        timeout 600 ./tests/fuzz/fuzz_bitmap_serialization || exit 0
+        timeout 600 ./tests/fuzz/${{ matrix.fuzzer }}
 
     - name: Check for crashes
       id: check_crashes
@@ -94,7 +83,7 @@ jobs:
       if: failure() && steps.check_crashes.outputs.crashes_found == 'true'
       uses: actions/upload-artifact@v3
       with:
-        name: fuzzing-crashes-${{ github.sha }}
+        name: fuzzing-crashes-${{ matrix.fuzzer }}-${{ github.sha }}
         path: build-fuzz/crash-*
         retention-days: 90
 
@@ -102,7 +91,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v3
       with:
-        name: fuzzing-corpus
+        name: fuzzing-corpus-${{ matrix.fuzzer }}
         path: build-fuzz/tests/fuzz/corpus/
         retention-days: 30
   performance:
