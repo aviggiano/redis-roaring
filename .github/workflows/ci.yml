@@ -84,8 +84,6 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: ./coverage.info
-        flag-name: unit-tests
-        parallel: true
 
   fuzz_coverage:
     name: Fuzzing Coverage - ${{ matrix.fuzzer }}
@@ -152,28 +150,30 @@ jobs:
         cd ..
         lcov --list fuzz-coverage-${{ matrix.fuzzer }}.info
 
-    - name: Upload fuzzing coverage to Coveralls
-      uses: coverallsapp/github-action@v2
-      env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: ./fuzz-coverage-${{ matrix.fuzzer }}.info
-        flag-name: fuzz-${{ matrix.fuzzer }}
-        parallel: true
+    # Temporarily disabled - parallel builds not working with Coveralls
+    # - name: Upload fuzzing coverage to Coveralls
+    #   uses: coverallsapp/github-action@v2
+    #   env:
+    #     COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+    #   with:
+    #     github-token: ${{ secrets.GITHUB_TOKEN }}
+    #     path-to-lcov: ./fuzz-coverage-${{ matrix.fuzzer }}.info
+    #     flag-name: fuzz-${{ matrix.fuzzer }}
+    #     parallel: true
 
-  coverage_finish:
-    name: Finish Coveralls parallel build
-    needs: [coverage, fuzz_coverage]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Finish Coveralls parallel build
-      uses: coverallsapp/github-action@v2
-      env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        parallel-finished: true
+  # Temporarily disabled - parallel builds not working with Coveralls
+  # coverage_finish:
+  #   name: Finish Coveralls parallel build
+  #   needs: [coverage, fuzz_coverage]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Finish Coveralls parallel build
+  #     uses: coverallsapp/github-action@v2
+  #     env:
+  #       COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+  #     with:
+  #       github-token: ${{ secrets.GITHUB_TOKEN }}
+  #       parallel-finished: true
 
   fuzz:
     name: Fuzz Testing - ${{ matrix.fuzzer }}
