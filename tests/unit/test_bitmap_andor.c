@@ -250,5 +250,41 @@ void test_bitmap_andor() {
       roaring_bitmap_free(bitmap2_copy);
       roaring_bitmap_free(result);
     }
+
+    IT("Should handle result bitmap appearing in input array (regression test for memcpy-param-overlap)")
+    {
+      // This is a regression test for the memcpy-param-overlap bug found by fuzzing
+      // The bug occurred when the result bitmap pointer appeared in the input array,
+      // causing inplace operations to trigger memcpy overlap with shared containers
+      // This was the specific operation that triggered the fuzzer crash
+
+      uint32_t values1[] = { 1, 2, 3, 10, 20 };
+      Bitmap* bitmap1 = roaring_bitmap_of_ptr(ARRAY_LENGTH(values1), values1);
+
+      uint32_t values2[] = { 2, 3, 4, 10, 30 };
+      Bitmap* bitmap2 = roaring_bitmap_of_ptr(ARRAY_LENGTH(values2), values2);
+
+      uint32_t values3[] = { 3, 4, 5, 10, 40 };
+      Bitmap* bitmap3 = roaring_bitmap_of_ptr(ARRAY_LENGTH(values3), values3);
+
+      // Use bitmap1 as both the result and one of the inputs
+      const Bitmap* bitmaps[] = { bitmap1, bitmap2, bitmap3 };
+      bitmap_andor(bitmap1, 3, bitmaps);
+
+      // Expected: bitmap1 AND (bitmap2 OR bitmap3)
+      // bitmap2 OR bitmap3 = {2, 3, 4, 5, 10, 30, 40}
+      // bitmap1 AND {2, 3, 4, 5, 10, 30, 40} = {2, 3, 10}
+      ASSERT(bitmap_getbit(bitmap1, 1) == 0, "bitmap1 should not contain bit 1");
+      ASSERT(bitmap_getbit(bitmap1, 2) == 1, "bitmap1 should contain bit 2");
+      ASSERT(bitmap_getbit(bitmap1, 3) == 1, "bitmap1 should contain bit 3");
+      ASSERT(bitmap_getbit(bitmap1, 4) == 0, "bitmap1 should not contain bit 4");
+      ASSERT(bitmap_getbit(bitmap1, 10) == 1, "bitmap1 should contain bit 10");
+      ASSERT(bitmap_getbit(bitmap1, 20) == 0, "bitmap1 should not contain bit 20");
+      ASSERT_BITMAP_SIZE(3, bitmap1);
+
+      roaring_bitmap_free(bitmap1);
+      roaring_bitmap_free(bitmap2);
+      roaring_bitmap_free(bitmap3);
+    }
   }
 }
