@@ -326,7 +326,10 @@ void bitmap64_or(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
 
   for (uint32_t i = 1; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring64_bitmap_or_inplace(r, bitmaps[i]);
+      // Use non-inplace operation to avoid memcpy overlap in shared containers
+      Bitmap64* temp = roaring64_bitmap_or(r, bitmaps[i]);
+      _roaring64_bitmap_overwrite(r, temp);
+      roaring64_bitmap_free(temp);
     }
   }
 }
@@ -365,7 +368,10 @@ void bitmap64_and(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
 
   for (uint32_t i = 1; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring64_bitmap_and_inplace(r, bitmaps[i]);
+      // Use non-inplace operation to avoid memcpy overlap in shared containers
+      Bitmap64* temp = roaring64_bitmap_and(r, bitmaps[i]);
+      _roaring64_bitmap_overwrite(r, temp);
+      roaring64_bitmap_free(temp);
     }
   }
 }
@@ -406,7 +412,10 @@ void bitmap64_xor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
 
   for (uint32_t i = 1; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring64_bitmap_xor_inplace(r, bitmaps[i]);
+      // Use non-inplace operation to avoid memcpy overlap in shared containers
+      Bitmap64* temp = roaring64_bitmap_xor(r, bitmaps[i]);
+      _roaring64_bitmap_overwrite(r, temp);
+      roaring64_bitmap_free(temp);
     }
   }
 }
@@ -456,7 +465,9 @@ void bitmap_andnot(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   if (n == 2) {
     roaring_bitmap_overwrite(r, bitmaps[0]);
     if (bitmaps[1] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring_bitmap_andnot_inplace(r, bitmaps[1]);
+      Bitmap* temp = roaring_bitmap_andnot(r, bitmaps[1]);
+      roaring_bitmap_overwrite(r, temp);
+      roaring_bitmap_free(temp);
     }
     return;
   }
@@ -486,7 +497,9 @@ void bitmap64_andnot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   if (n == 2) {
     _roaring64_bitmap_overwrite(r, bitmaps[0]);
     if (bitmaps[1] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring64_bitmap_andnot_inplace(r, bitmaps[1]);
+      Bitmap64* temp = roaring64_bitmap_andnot(r, bitmaps[1]);
+      _roaring64_bitmap_overwrite(r, temp);
+      roaring64_bitmap_free(temp);
     }
     return;
   }
@@ -497,7 +510,9 @@ void bitmap64_andnot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
 
   for (uint32_t i = 1; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring64_bitmap_andnot_inplace(r, bitmaps[i]);
+      Bitmap64* temp = roaring64_bitmap_andnot(r, bitmaps[i]);
+      _roaring64_bitmap_overwrite(r, temp);
+      roaring64_bitmap_free(temp);
     }
   }
 }
@@ -512,7 +527,9 @@ void bitmap_ornot(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
   if (n == 2) {
     roaring_bitmap_overwrite(r, bitmaps[1]);
     if (bitmaps[0] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring_bitmap_andnot_inplace(r, bitmaps[0]);
+      Bitmap* temp = roaring_bitmap_andnot(r, bitmaps[0]);
+      roaring_bitmap_overwrite(r, temp);
+      roaring_bitmap_free(temp);
     }
     return;
   }
@@ -547,7 +564,9 @@ void bitmap64_ornot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
   if (n == 2) {
     _roaring64_bitmap_overwrite(r, bitmaps[1]);
     if (bitmaps[0] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring64_bitmap_andnot_inplace(r, bitmaps[0]);
+      Bitmap64* temp = roaring64_bitmap_andnot(r, bitmaps[0]);
+      _roaring64_bitmap_overwrite(r, temp);
+      roaring64_bitmap_free(temp);
     }
     return;
   }
@@ -558,12 +577,16 @@ void bitmap64_ornot(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
 
   for (uint32_t i = 2; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring64_bitmap_or_inplace(r, bitmaps[i]);
+      Bitmap64* temp = roaring64_bitmap_or(r, bitmaps[i]);
+      _roaring64_bitmap_overwrite(r, temp);
+      roaring64_bitmap_free(temp);
     }
   }
 
   if (x != r) {  // Skip if same pointer to avoid memcpy overlap
-    roaring64_bitmap_andnot_inplace(r, x);
+    Bitmap64* temp = roaring64_bitmap_andnot(r, x);
+    _roaring64_bitmap_overwrite(r, temp);
+    roaring64_bitmap_free(temp);
   }
 }
 
@@ -585,12 +608,16 @@ void bitmap64_andor(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
 
   for (size_t i = 2; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring64_bitmap_or_inplace(r, bitmaps[i]);
+      Bitmap64* temp = roaring64_bitmap_or(r, bitmaps[i]);
+      _roaring64_bitmap_overwrite(r, temp);
+      roaring64_bitmap_free(temp);
     }
   }
 
   if (x != r) {  // Skip if same pointer to avoid memcpy overlap
-    roaring64_bitmap_and_inplace(r, x);
+    Bitmap64* temp = roaring64_bitmap_and(r, x);
+    _roaring64_bitmap_overwrite(r, temp);
+    roaring64_bitmap_free(temp);
   }
 }
 
@@ -661,14 +688,20 @@ void bitmap64_one(Bitmap64* r, uint32_t n, const Bitmap64** bitmaps) {
       // Track bits that appear in both current result and new bitmap
       // These are bits that now appear in more than one key
       Bitmap64* intersection = roaring64_bitmap_and(r, bitmaps[i]);
-      roaring64_bitmap_or_inplace(helper, intersection);
+      Bitmap64* helper_temp = roaring64_bitmap_or(helper, intersection);
+      _roaring64_bitmap_overwrite(helper, helper_temp);
+      roaring64_bitmap_free(helper_temp);
       roaring64_bitmap_free(intersection);
 
       // XOR the new bitmap with current result
-      roaring64_bitmap_xor_inplace(r, bitmaps[i]);
+      Bitmap64* xor_temp = roaring64_bitmap_xor(r, bitmaps[i]);
+      _roaring64_bitmap_overwrite(r, xor_temp);
+      roaring64_bitmap_free(xor_temp);
 
       // Remove bits that have been seen in more than one key
-      roaring64_bitmap_andnot_inplace(r, helper);
+      Bitmap64* andnot_temp = roaring64_bitmap_andnot(r, helper);
+      _roaring64_bitmap_overwrite(r, andnot_temp);
+      roaring64_bitmap_free(andnot_temp);
     }
   }
 
