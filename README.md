@@ -1,4 +1,4 @@
-redis-roaring ![CI/CD](https://github.com/aviggiano/redis-roaring/actions/workflows/ci.yml/badge.svg) [![Static Badge](https://img.shields.io/badge/documentation-passing-blue)](https://redisroaring.com)
+redis-roaring [![Coverage Status](https://coveralls.io/repos/github/aviggiano/redis-roaring/badge.svg?branch=master)](https://coveralls.io/github/aviggiano/redis-roaring?branch=master) [![CI/CD](https://github.com/aviggiano/redis-roaring/actions/workflows/ci.yml/badge.svg)](https://github.com/aviggiano/redis-roaring/actions/workflows/ci.yml) [![Static Badge](https://img.shields.io/badge/documentation-passing-blue)](https://redisroaring.com)
 ===========
 Roaring Bitmaps for Redis
 
@@ -40,6 +40,14 @@ docker run -p 6379:6379 aviggiano/redis-roaring:latest
 
 Run the `test.sh` script for unit tests, integration tests and performance tests.
 The performance tests can take a while, since they run on a real dataset of integer values.
+
+## Fuzzing
+
+redis-roaring includes fuzz testing using libFuzzer with AddressSanitizer and UndefinedBehaviorSanitizer. Four fuzz targets test 32-bit operations, 64-bit operations, complex bitwise operations, and data parsing. Fuzzing runs automatically on every push to master.
+
+Build and run fuzzers locally with `./scripts/build_fuzzers.sh` (requires Clang). Run individual fuzzers with `./scripts/run_fuzzer.sh <fuzzer_name> <duration>` or all fuzzers with `./scripts/run_all_fuzzers.sh`.
+
+See [docs/fuzzing.md](docs/fuzzing.md) for complete documentation.
 
 ## API
 

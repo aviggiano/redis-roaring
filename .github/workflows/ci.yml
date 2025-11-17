@@ -33,6 +33,215 @@ jobs:
       run: sudo apt-get install valgrind
     - name: Test
       run: ./test.sh
+
+  coverage:
+    name: Generate and upload coverage
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lcov
+
+    - name: Initialize submodules
+      run: |
+        git submodule init
+        git submodule update
+
+    - name: Amalgamate CRoaring
+      run: |
+        cd src
+        ../deps/CRoaring/amalgamation.sh
+
+    - name: Configure with coverage flags
+      run: |
+        mkdir -p build-coverage
+        cd build-coverage
+        cmake -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_C_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
+              -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+              ..
+        make
+
+    - name: Run unit tests
+      run: ./build-coverage/unit
+
+    - name: Generate coverage report
+      run: |
+        lcov --capture --directory build-coverage --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' '*/deps/*' '*/tests/*' --output-file coverage.info
+        lcov --list coverage.info
+
+    - name: Upload coverage to Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./coverage.info
+        flag-name: unit-tests
+        parallel: true
+
+  fuzz_coverage:
+    name: Fuzzing Coverage - ${{ matrix.fuzzer }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fuzzer:
+          - fuzz_bitmap_api
+          - fuzz_bitmap64_api
+          - fuzz_bitmap_operations
+          - fuzz_bitmap_serialization
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang lcov llvm
+
+    - name: Initialize submodules
+      run: |
+        git submodule init
+        git submodule update
+
+    - name: Amalgamate CRoaring
+      run: |
+        cd src
+        ../deps/CRoaring/amalgamation.sh
+
+    - name: Generate fuzzing seeds
+      run: ./scripts/generate_seeds.sh
+
+    - name: Build fuzzer with coverage
+      run: |
+        mkdir -p build-fuzz-cov
+        cd build-fuzz-cov
+        CC=clang CXX=clang++ cmake \
+          -DENABLE_FUZZING=ON \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_C_FLAGS="-fprofile-instr-generate -fcoverage-mapping" \
+          -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate" \
+          ..
+        make
+
+    - name: Run fuzzer to generate coverage
+      run: |
+        cd build-fuzz-cov
+        export LLVM_PROFILE_FILE="fuzz-${{ matrix.fuzzer }}-%p.profraw"
+        timeout 300 ./tests/fuzz/${{ matrix.fuzzer }} -max_total_time=300 -rss_limit_mb=2048 -max_len=1024 || true
+
+    - name: Generate coverage report
+      run: |
+        cd build-fuzz-cov
+        llvm-profdata merge -sparse fuzz-${{ matrix.fuzzer }}-*.profraw -o fuzz-${{ matrix.fuzzer }}.profdata
+        llvm-cov export ./tests/fuzz/${{ matrix.fuzzer }} \
+          -instr-profile=fuzz-${{ matrix.fuzzer }}.profdata \
+          -format=lcov \
+          -ignore-filename-regex='/usr/.*|.*/deps/.*|.*/tests/.*' \
+          > ../fuzz-coverage-${{ matrix.fuzzer }}.info
+        cd ..
+        lcov --list fuzz-coverage-${{ matrix.fuzzer }}.info
+
+    - name: Upload fuzzing coverage to Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./fuzz-coverage-${{ matrix.fuzzer }}.info
+        flag-name: fuzz-${{ matrix.fuzzer }}
+        parallel: true
+
+  coverage_finish:
+    name: Finish Coveralls parallel build
+    needs: [coverage, fuzz_coverage]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Finish Coveralls parallel build
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        parallel-finished: true
+
+  fuzz:
+    name: Fuzz Testing - ${{ matrix.fuzzer }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fuzzer:
+          - fuzz_bitmap_api
+          - fuzz_bitmap64_api
+          - fuzz_bitmap_operations
+          - fuzz_bitmap_serialization
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install Clang and CMake
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang cmake
+
+    - name: Initialize submodules
+      run: |
+        git submodule init
+        git submodule update
+
+    - name: Amalgamate CRoaring
+      run: |
+        cd src
+        ../deps/CRoaring/amalgamation.sh
+
+    - name: Generate fuzzing seeds
+      run: ./scripts/generate_seeds.sh
+
+    - name: Build Fuzzers
+      run: ./scripts/build_fuzzers.sh
+
+    - name: Run Fuzzing - ${{ matrix.fuzzer }}
+      run: |
+        cd build-fuzz
+        export ASAN_OPTIONS=allocator_may_return_null=1:malloc_limit_mb=2048
+        ./tests/fuzz/${{ matrix.fuzzer }} -max_total_time=60 -rss_limit_mb=2048 -max_len=1024 || true
+
+    - name: Check for crashes
+      id: check_crashes
+      run: |
+        if ls build-fuzz/crash-* 1> /dev/null 2>&1; then
+          echo "crashes_found=true" >> $GITHUB_OUTPUT
+          echo "⚠️ Fuzzing found crashes!"
+          ls -lh build-fuzz/crash-*
+          exit 1
+        else
+          echo "crashes_found=false" >> $GITHUB_OUTPUT
+          echo "✅ No crashes found"
+          exit 0
+        fi
+
+    - name: Upload crash artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: fuzzing-crashes-${{ matrix.fuzzer }}-${{ github.sha }}
+        path: build-fuzz/crash-*
+        retention-days: 90
+
+    - name: Upload corpus
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: fuzzing-corpus-${{ matrix.fuzzer }}
+        path: build-fuzz/tests/fuzz/corpus/
+        retention-days: 30
   performance:
     name: Performance tests
     needs: [configure, test]

@@ -2,7 +2,7 @@
 *.so
 *.aof
 *.rdb
-build/
+build*
 .idea/
 Makefile
 core
@@ -19,3 +19,11 @@ src/roaring.hh
 appendonlydir
 node_modules
 **/.vitepress/cache/
+
+# Fuzzing artifacts
+tests/fuzz/corpus/
+crash-*
+leak-*
+timeout-*
+slow-unit-*
+oom-*
