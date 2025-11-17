@@ -344,7 +344,10 @@ void bitmap_and(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
 
   for (uint32_t i = 1; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring_bitmap_and_inplace(r, bitmaps[i]);
+      // Use non-inplace operation to avoid memcpy overlap in shared containers
+      Bitmap* temp = roaring_bitmap_and(r, bitmaps[i]);
+      roaring_bitmap_overwrite(r, temp);
+      roaring_bitmap_free(temp);
     }
   }
 }
@@ -380,7 +383,10 @@ void bitmap_xor(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
 
   for (uint32_t i = 1; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring_bitmap_lazy_xor_inplace(r, bitmaps[i]);
+      // Use non-inplace operation to avoid memcpy overlap in shared containers
+      Bitmap* temp = roaring_bitmap_lazy_xor(r, bitmaps[i]);
+      roaring_bitmap_overwrite(r, temp);
+      roaring_bitmap_free(temp);
     }
   }
 
@@ -461,7 +467,10 @@ void bitmap_andnot(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
 
   for (uint32_t i = 1; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring_bitmap_andnot_inplace(r, bitmaps[i]);
+      // Use non-inplace operation to avoid memcpy overlap in shared containers
+      Bitmap* temp = roaring_bitmap_andnot(r, bitmaps[i]);
+      roaring_bitmap_overwrite(r, temp);
+      roaring_bitmap_free(temp);
     }
   }
 }
@@ -514,12 +523,17 @@ void bitmap_ornot(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
 
   for (uint32_t i = 2; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring_bitmap_or_inplace(r, bitmaps[i]);
+      // Use non-inplace operation to avoid memcpy overlap in shared containers
+      Bitmap* temp = roaring_bitmap_or(r, bitmaps[i]);
+      roaring_bitmap_overwrite(r, temp);
+      roaring_bitmap_free(temp);
     }
   }
 
   if (x != r) {  // Skip if same pointer to avoid memcpy overlap
-    roaring_bitmap_andnot_inplace(r, x);
+    Bitmap* temp = roaring_bitmap_andnot(r, x);
+    roaring_bitmap_overwrite(r, temp);
+    roaring_bitmap_free(temp);
   }
 }
 
@@ -604,14 +618,20 @@ void bitmap_one(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
       // Track bits that appear in both current result and new bitmap
       // These are bits that now appear in more than one key
       Bitmap* intersection = roaring_bitmap_and(r, bitmaps[i]);
-      roaring_bitmap_or_inplace(helper, intersection);
+      Bitmap* helper_temp = roaring_bitmap_or(helper, intersection);
+      roaring_bitmap_overwrite(helper, helper_temp);
+      roaring_bitmap_free(helper_temp);
       roaring_bitmap_free(intersection);
 
       // XOR the new bitmap with current result
-      roaring_bitmap_xor_inplace(r, bitmaps[i]);
+      Bitmap* xor_temp = roaring_bitmap_xor(r, bitmaps[i]);
+      roaring_bitmap_overwrite(r, xor_temp);
+      roaring_bitmap_free(xor_temp);
 
       // Remove bits that have been seen in more than one key
-      roaring_bitmap_andnot_inplace(r, helper);
+      Bitmap* andnot_temp = roaring_bitmap_andnot(r, helper);
+      roaring_bitmap_overwrite(r, andnot_temp);
+      roaring_bitmap_free(andnot_temp);
     }
   }
 
