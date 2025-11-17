@@ -303,7 +303,10 @@ void bitmap_or(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
 
   for (size_t i = 1; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring_bitmap_lazy_or_inplace(r, bitmaps[i], false);
+      // Use non-inplace operation to avoid memcpy overlap in shared containers
+      Bitmap* temp = roaring_bitmap_lazy_or(r, bitmaps[i]);
+      roaring_bitmap_overwrite(r, temp);
+      roaring_bitmap_free(temp);
     }
   }
 
@@ -420,14 +423,19 @@ void bitmap_andor(Bitmap* r, uint32_t n, const Bitmap** bitmaps) {
 
   for (size_t i = 2; i < n; i++) {
     if (bitmaps[i] != r) {  // Skip if same pointer to avoid memcpy overlap
-      roaring_bitmap_lazy_or_inplace(r, bitmaps[i], false);
+      // Use non-inplace operation to avoid memcpy overlap in shared containers
+      Bitmap* temp = roaring_bitmap_lazy_or(r, bitmaps[i]);
+      roaring_bitmap_overwrite(r, temp);
+      roaring_bitmap_free(temp);
     }
   }
 
   roaring_bitmap_repair_after_lazy(r);
 
   if (x != r) {  // Skip if same pointer to avoid memcpy overlap
-    roaring_bitmap_and_inplace(r, x);
+    Bitmap* temp = roaring_bitmap_and(r, x);
+    roaring_bitmap_overwrite(r, temp);
+    roaring_bitmap_free(temp);
   }
 }
 
