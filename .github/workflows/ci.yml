@@ -79,6 +79,8 @@ jobs:
 
     - name: Upload coverage to Coveralls
       uses: coverallsapp/github-action@v2
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: ./coverage.info
@@ -152,6 +154,8 @@ jobs:
 
     - name: Upload fuzzing coverage to Coveralls
       uses: coverallsapp/github-action@v2
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: ./fuzz-coverage-${{ matrix.fuzzer }}.info
@@ -165,6 +169,8 @@ jobs:
     steps:
     - name: Finish Coveralls parallel build
       uses: coverallsapp/github-action@v2
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         parallel-finished: true
