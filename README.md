@@ -17,6 +17,22 @@ Pull requests are welcome.
 - redis (server needed for integration tests)
 - hiredis (redis client library needed for performance tests)
 
+## Redis Version Compatibility
+
+This module is compatible with **Redis 6.0 and later**.
+
+- **Redis 7.4+**: Full feature support including custom ACL categories, command ACL categories, and command introspection
+- **Redis 7.2 - 7.3**: Command introspection and command ACL categories supported
+- **Redis 7.0 - 7.1**: Command introspection (COMMAND INFO, COMMAND DOCS) supported
+- **Redis 6.0 - 6.2**: Core roaring bitmap functionality supported
+
+The module automatically detects the Redis version at runtime and adjusts its behavior accordingly:
+- Command metadata (via `RedisModule_SetCommandInfo`) is only registered on Redis 7.0+
+- Command ACL categories (via `RedisModule_SetCommandACLCategories`) are only set on Redis 7.2+
+- Custom ACL categories (via `RedisModule_AddACLCategory`) are only registered on Redis 7.4+
+
+All core roaring bitmap commands work on Redis 6.0+.
+
 ## Getting started
 
 ```
