@@ -63,7 +63,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 /* Only get array if cardinality is reasonable */
                 uint64_t card = bitmap64_get_cardinality(bitmap);
                 if (card > 0 && card < MAX_SAFE_CARDINALITY) {
-                    size_t result_size;
+                    uint64_t result_size;
                     uint64_t* result = bitmap64_get_int_array(bitmap, &result_size);
                     safe_free(result);
                 }
@@ -87,10 +87,18 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             case OP_RANGEINTARRAY: {
                 uint64_t card = bitmap64_get_cardinality(bitmap);
                 if (card > 0) {
-                    size_t start = fuzz_consume_size_in_range(&input, 0, card);
-                    size_t end = fuzz_consume_size_in_range(&input, start, card + 100);
-                    size_t result_count;
+                    uint64_t start = 0;
+                    uint64_t end = 0;
+                    if ((card >= 3) && fuzz_consume_bool(&input)) {
+                        start = 0;
+                        end = 2;
+                    } else {
+                        start = fuzz_consume_u64_in_range(&input, 0, card);
+                        end = fuzz_consume_u64_in_range(&input, start, card + 100);
+                    }
+                    uint64_t result_count;
                     uint64_t* result = bitmap64_range_int_array(bitmap, start, end, &result_count);
+                    fuzz_check_range_int_array64(bitmap, start, end, result, result_count);
                     safe_free(result);
                 }
                 break;

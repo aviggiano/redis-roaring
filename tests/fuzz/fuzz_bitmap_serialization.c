@@ -61,10 +61,18 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
                         /* Try range operations */
                         if (result_size > 0) {
-                            size_t start = fuzz_consume_size_in_range(&input, 0, result_size);
-                            size_t end = fuzz_consume_size_in_range(&input, start, result_size + 10);
+                            size_t start = 0;
+                            size_t end = 0;
+                            if ((result_size >= 3) && fuzz_consume_bool(&input)) {
+                                start = 0;
+                                end = 2;
+                            } else {
+                                start = fuzz_consume_size_in_range(&input, 0, result_size);
+                                end = fuzz_consume_size_in_range(&input, start, result_size + 10);
+                            }
                             size_t range_count;
                             uint32_t* range_result = bitmap_range_int_array(bitmap, start, end, &range_count);
+                            fuzz_check_range_int_array32(bitmap, start, end, range_result, range_count);
                             safe_free(range_result);
                         }
 
@@ -107,10 +115,18 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
                         /* Try range operations */
                         if (result_size > 0) {
-                            uint64_t start = fuzz_consume_u64_in_range(&input, 0, result_size);
-                            uint64_t end = fuzz_consume_u64_in_range(&input, start, result_size + 10);
+                            uint64_t start = 0;
+                            uint64_t end = 0;
+                            if ((result_size >= 3) && fuzz_consume_bool(&input)) {
+                                start = 0;
+                                end = 2;
+                            } else {
+                                start = fuzz_consume_u64_in_range(&input, 0, result_size);
+                                end = fuzz_consume_u64_in_range(&input, start, result_size + 10);
+                            }
                             uint64_t range_count;
                             uint64_t* range_result = bitmap64_range_int_array(bitmap, start, end, &range_count);
+                            fuzz_check_range_int_array64(bitmap, start, end, range_result, range_count);
                             safe_free(range_result);
                         }
 

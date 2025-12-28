@@ -87,10 +87,18 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             case OP_RANGEINTARRAY: {
                 uint64_t card = bitmap_get_cardinality(bitmap);
                 if (card > 0) {
-                    size_t start = fuzz_consume_size_in_range(&input, 0, card);
-                    size_t end = fuzz_consume_size_in_range(&input, start, card + 100);
+                    size_t start = 0;
+                    size_t end = 0;
+                    if ((card >= 3) && fuzz_consume_bool(&input)) {
+                        start = 0;
+                        end = 2;
+                    } else {
+                        start = fuzz_consume_size_in_range(&input, 0, (size_t)card);
+                        end = fuzz_consume_size_in_range(&input, start, (size_t)card + 100);
+                    }
                     size_t result_count;
                     uint32_t* result = bitmap_range_int_array(bitmap, start, end, &result_count);
+                    fuzz_check_range_int_array32(bitmap, start, end, result, result_count);
                     safe_free(result);
                 }
                 break;

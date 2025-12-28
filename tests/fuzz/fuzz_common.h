@@ -185,6 +185,61 @@ static inline void safe_free(void* ptr) {
     }
 }
 
+static inline void fuzz_require(bool condition) {
+    if (!condition) {
+        abort();
+    }
+}
+
+static inline size_t fuzz_expected_range_count_u64(uint64_t card, size_t start, size_t end) {
+    if (end < start) return 0;
+    if (card <= start) return 0;
+
+    size_t requested = end - start + 1;
+    size_t available = (size_t)(card - start);
+    return (available < requested) ? available : requested;
+}
+
+static inline void fuzz_check_range_int_array32(const Bitmap* bitmap, size_t start, size_t end,
+                                                const uint32_t* result, size_t result_count) {
+    if (!result) return;
+
+    uint64_t card = bitmap_get_cardinality(bitmap);
+    size_t expected_count = fuzz_expected_range_count_u64(card, start, end);
+    fuzz_require(result_count == expected_count);
+
+    for (size_t i = 0; i < result_count; i++) {
+        int64_t expected = bitmap_get_nth_element_present(bitmap, start + i + 1);
+        fuzz_require(expected >= 0);
+        fuzz_require(result[i] == (uint32_t)expected);
+    }
+}
+
+static inline uint64_t fuzz_expected_range_count_u64u64(uint64_t card, uint64_t start, uint64_t end) {
+    if (end < start) return 0;
+    if (card <= start) return 0;
+
+    uint64_t requested = end - start + 1;
+    uint64_t available = card - start;
+    return (available < requested) ? available : requested;
+}
+
+static inline void fuzz_check_range_int_array64(const Bitmap64* bitmap, uint64_t start, uint64_t end,
+                                                const uint64_t* result, uint64_t result_count) {
+    if (!result) return;
+
+    uint64_t card = bitmap64_get_cardinality(bitmap);
+    uint64_t expected_count = fuzz_expected_range_count_u64u64(card, start, end);
+    fuzz_require(result_count == expected_count);
+
+    for (uint64_t i = 0; i < result_count; i++) {
+        bool found = false;
+        uint64_t expected = bitmap64_get_nth_element_present(bitmap, start + i + 1, &found);
+        fuzz_require(found);
+        fuzz_require(result[i] == expected);
+    }
+}
+
 /* Helper to generate a random uint32 array */
 static inline uint32_t* generate_uint32_array(FuzzInput* input, size_t* out_size) {
     size_t size = fuzz_consume_size_in_range(input, 0, MAX_ARRAY_SIZE);
