@@ -44,6 +44,26 @@ void test_bitmap_range_int_array() {
       roaring_bitmap_free(bitmap);
     }
 
+    IT("Range extraction from sparse bitmap starting at zero")
+    {
+      Bitmap* bitmap = roaring_bitmap_create();
+      uint32_t sparse_values[] = { 0, 8, 16 };
+      size_t sparse_values_len = ARRAY_LENGTH(sparse_values);
+
+      for (size_t i = 0; i < sparse_values_len; i++) {
+        roaring_bitmap_add(bitmap, sparse_values[i]);
+      }
+
+      size_t result_len;
+      uint32_t* result = bitmap_range_int_array(bitmap, 0, 2, &result_len);
+      ASSERT_NOT_NULL(result);
+      ASSERT_EQ(3, result_len);
+      ASSERT_ARRAY_EQ(sparse_values, result, 3, result_len);
+
+      SAFE_FREE(result);
+      roaring_bitmap_free(bitmap);
+    }
+
     IT("Large 32-bit value handling")
     {
       Bitmap* bitmap = roaring_bitmap_create();

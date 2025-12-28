@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <math.h>
 #include "data-structure.h"
 
@@ -807,48 +808,33 @@ uint64_t* bitmap64_get_int_array(const Bitmap64* bitmap, uint64_t* n) {
 uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t start_offset, size_t end_offset, size_t* result_count) {
   if (result_count) *result_count = 0;
 
-  // Validate input parameters
   if (bitmap == NULL) {
     return NULL;
   }
 
-  // Validate range parameters
   if (start_offset > end_offset) {
     return NULL;
   }
 
-  uint32_t range_size = (end_offset - start_offset) + 1;
-
-  // Check for overflow
-  if (range_size < (end_offset - start_offset)) {
+  size_t range_size = (end_offset - start_offset) + 1;
+  if (range_size == 0 || range_size > (SIZE_MAX / sizeof(uint32_t))) {
     return NULL;
   }
 
   uint32_t* ans = rm_calloc_try(range_size, sizeof(uint32_t));
+  if (ans == NULL) {
+    return NULL;
+  }
 
-  roaring_bitmap_range_uint32_array(bitmap, start_offset, range_size, ans);
-
-  // Determine actual count of set bits by finding the first zero entry
-  // Special case: when querying from offset 0, verify that bit 0 is actually set
-  // since zero values in the array are ambiguous (could be unset bit or actual zero offset)
-  if (start_offset == 0 && ans[0] == 0) {
-    if (!roaring_bitmap_contains(bitmap, 0)) {
-      return ans;
+  size_t i = 0;
+  while (i < range_size) {
+    if (!roaring_bitmap_select(bitmap, start_offset + i, &ans[i])) {
+      break;
     }
-  } else if (ans[0] == 0) {
-    // No set bits found in range (first element is zero and we're not starting from offset 0)
-    return ans;
+    i++;
   }
 
-  uint32_t actual_count = 1;
-
-  // Count consecutive non-zero entries to determine actual result size
-  while (actual_count < range_size) {
-    if (ans[actual_count] == 0) break;
-    actual_count++;
-  }
-
-  if (result_count) *result_count = actual_count;
+  if (result_count) *result_count = i;
 
   return ans;
 }
