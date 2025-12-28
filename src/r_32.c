@@ -500,6 +500,7 @@ int RRangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
   ParseUint32OrReturn(ctx, argv[3], "end", end);
 
   if (start > end) {
+    RedisModule_CloseKey(key);
     return RedisModule_ReplyWithEmptyArray(ctx);
   }
 
@@ -507,10 +508,12 @@ int RRangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
   uint32_t range_size = (end - start) + 1;
 
   if (range_size > BITMAP_MAX_RANGE_SIZE) {
+    RedisModule_CloseKey(key);
     return RedisModule_ReplyWithErrorFormat(ctx, ERRORMSG_RANGE_LIMIT, BITMAP_MAX_RANGE_SIZE);
   }
 
   if (bitmap == BITMAP_NILL) {
+    RedisModule_CloseKey(key);
     return RedisModule_ReplyWithEmptyArray(ctx);
   }
 
@@ -518,11 +521,13 @@ int RRangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
   uint32_t* array = bitmap_range_int_array(bitmap, start, end, &count);
 
   if (array == NULL) {
+    RedisModule_CloseKey(key);
     INNER_ERROR("ERR out of memory");
   }
 
   if (count == 0) {
     rm_free(array);
+    RedisModule_CloseKey(key);
     return RedisModule_ReplyWithEmptyArray(ctx);
   }
 
@@ -533,6 +538,7 @@ int RRangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
   }
 
   rm_free(array);
+  RedisModule_CloseKey(key);
   return REDISMODULE_OK;
 }
 

@@ -826,29 +826,23 @@ uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t start_offset, size
 
   uint32_t* ans = rm_calloc_try(range_size, sizeof(uint32_t));
 
-  roaring_bitmap_range_uint32_array(bitmap, start_offset, range_size, ans);
+  if (ans == NULL) {
+    return NULL;
+  }
 
-  // Determine actual count of set bits by finding the first zero entry
-  // Special case: when querying from offset 0, verify that bit 0 is actually set
-  // since zero values in the array are ambiguous (could be unset bit or actual zero offset)
-  if (start_offset == 0 && ans[0] == 0) {
-    if (!roaring_bitmap_contains(bitmap, 0)) {
-      return ans;
+  // Use roaring_bitmap_select in a loop (same approach as bitmap64_range_int_array)
+  // This avoids potential issues with roaring_bitmap_range_uint32_array
+  uint32_t i = 0;
+  while (i < range_size) {
+    uint32_t value;
+    if (!roaring_bitmap_select(bitmap, start_offset + i, &value)) {
+      break;
     }
-  } else if (ans[0] == 0) {
-    // No set bits found in range (first element is zero and we're not starting from offset 0)
-    return ans;
+    ans[i] = value;
+    i++;
   }
 
-  uint32_t actual_count = 1;
-
-  // Count consecutive non-zero entries to determine actual result size
-  while (actual_count < range_size) {
-    if (ans[actual_count] == 0) break;
-    actual_count++;
-  }
-
-  if (result_count) *result_count = actual_count;
+  if (result_count) *result_count = i;
 
   return ans;
 }
