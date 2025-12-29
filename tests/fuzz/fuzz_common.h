@@ -213,6 +213,10 @@ static inline void fuzz_check_range_int_array32(const Bitmap* bitmap, size_t sta
         return;
     }
     fuzz_require(result_count == expected_count);
+    if (result_count > 0) {
+        /* Ensure start + i + 1 and start + i cannot overflow size_t within the loops below */
+        fuzz_require(start <= SIZE_MAX - result_count);
+    }
 
     for (size_t i = 0; i < result_count; i++) {
         int64_t expected = bitmap_get_nth_element_present(bitmap, start + i + 1);
