@@ -276,7 +276,7 @@ static inline uint64_t fuzz_expected_range_count_u64u64(uint64_t card, uint64_t 
     if (end < start) return 0;
     if (card <= start) return 0;
 
-    uint64_t requested = end - start + 1;
+    uint64_t requested = (end == UINT64_MAX) ? (UINT64_MAX - start) : (end - start + 1);
     uint64_t available = card - start;
     return (available < requested) ? available : requested;
 }
