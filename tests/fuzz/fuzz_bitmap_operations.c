@@ -150,6 +150,18 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
                 bitmap_free(intersection);
             }
+            if (bitmap_get_cardinality(result) <= MAX_RANGE_VALIDATE_CARDINALITY) {
+                size_t result_len = 0;
+                uint32_t* result_array = bitmap_get_int_array(result, &result_len);
+                if (result_array) {
+                    for (size_t i = 0; i < result_len; i++) {
+                        for (int j = 0; j < num_inputs; j++) {
+                            fuzz_require(bitmap_getbit(inputs[j], result_array[i]));
+                        }
+                    }
+                    safe_free(result_array);
+                }
+            }
             break;
 
         case OP_FUZZ_OR:
@@ -163,6 +175,18 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 /* Result should have at least as many elements as any input */
                 if (result_card < input_card) {
                     /* Invariant violation (shouldn't happen) */
+                }
+            }
+            for (int i = 0; i < num_inputs; i++) {
+                if (bitmap_get_cardinality(inputs[i]) <= MAX_RANGE_VALIDATE_CARDINALITY) {
+                    size_t input_len = 0;
+                    uint32_t* input_array = bitmap_get_int_array(inputs[i], &input_len);
+                    if (input_array) {
+                        for (size_t j = 0; j < input_len; j++) {
+                            fuzz_require(bitmap_getbit(result, input_array[j]));
+                        }
+                        safe_free(input_array);
+                    }
                 }
             }
             break;

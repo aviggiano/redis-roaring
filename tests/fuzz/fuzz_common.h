@@ -24,6 +24,10 @@
 
 /* Maximum cardinality for expensive operations */
 #define MAX_SAFE_CARDINALITY 10000000
+/* Upper bound for full-array range validation */
+#define MAX_RANGE_VALIDATE_CARDINALITY 4096
+/* Upper bound for bit-array validation */
+#define MAX_BITARRAY_VALIDATE_SIZE 4096
 
 /* Bitmap operation types for 32-bit API */
 enum BitmapOperation {
@@ -182,6 +186,174 @@ static inline size_t fuzz_consume_size_in_range(FuzzInput* input, size_t min, si
 static inline void safe_free(void* ptr) {
     if (ptr) {
         free(ptr);
+    }
+}
+
+static inline void fuzz_require(bool condition) {
+    if (!condition) {
+        abort();
+    }
+}
+
+static inline size_t fuzz_expected_range_count_u64(uint64_t card, size_t start, size_t end) {
+    if (end < start) return 0;
+    if (card <= start) return 0;
+
+    size_t requested = end - start + 1;
+    size_t available = (size_t)(card - start);
+    return (available < requested) ? available : requested;
+}
+
+static inline void fuzz_check_range_int_array32(const Bitmap* bitmap, size_t start, size_t end,
+                                                const uint32_t* result, size_t result_count) {
+    uint64_t card = bitmap_get_cardinality(bitmap);
+    size_t expected_count = fuzz_expected_range_count_u64(card, start, end);
+    if (!result) {
+        fuzz_require(expected_count == 0);
+        return;
+    }
+    fuzz_require(result_count == expected_count);
+    if (result_count > 0) {
+        /* Ensure start + i + 1 and start + i cannot overflow size_t within the loops below */
+        fuzz_require(start <= SIZE_MAX - result_count);
+    }
+
+    for (size_t i = 0; i < result_count; i++) {
+        int64_t expected = bitmap_get_nth_element_present(bitmap, start + i + 1);
+        fuzz_require(expected >= 0);
+        fuzz_require(result[i] == (uint32_t)expected);
+    }
+
+    if (card <= MAX_RANGE_VALIDATE_CARDINALITY) {
+        size_t full_count = 0;
+        uint32_t* full = bitmap_get_int_array(bitmap, &full_count);
+        if (full) {
+            fuzz_require(full_count == (size_t)card);
+            for (size_t i = 0; i < result_count; i++) {
+                size_t idx = start + i;
+                fuzz_require(idx < full_count);
+                fuzz_require(result[i] == full[idx]);
+            }
+            safe_free(full);
+        }
+    }
+}
+
+static inline void fuzz_check_int_array32(const Bitmap* bitmap, const uint32_t* result, size_t result_count) {
+    if (!result) return;
+
+    uint64_t card = bitmap_get_cardinality(bitmap);
+    fuzz_require(result_count == (size_t)card);
+
+    for (size_t i = 0; i < result_count; i++) {
+        if (i > 0) {
+            fuzz_require(result[i] > result[i - 1]);
+        }
+        fuzz_require(bitmap_getbit(bitmap, result[i]));
+    }
+}
+
+static inline void fuzz_check_bit_array32(const Bitmap* bitmap, const char* result, size_t size) {
+    if (!result) return;
+
+    for (size_t i = 0; i < size; i++) {
+        bool expected = bitmap_getbit(bitmap, (uint32_t)i);
+        if (result[i] == '1') {
+            fuzz_require(expected);
+        } else {
+            fuzz_require(result[i] == '0');
+            fuzz_require(!expected);
+        }
+    }
+}
+
+static inline void fuzz_check_input_bit_array32(const Bitmap* bitmap, const char* input, size_t size) {
+    if (!input) return;
+
+    for (size_t i = 0; i < size; i++) {
+        bool expected = (input[i] == '1');
+        fuzz_require(bitmap_getbit(bitmap, (uint32_t)i) == expected);
+    }
+}
+
+static inline uint64_t fuzz_expected_range_count_u64u64(uint64_t card, uint64_t start, uint64_t end) {
+    if (end < start) return 0;
+    if (card <= start) return 0;
+
+    uint64_t requested = (end == UINT64_MAX) ? (UINT64_MAX - start) : (end - start + 1);
+    uint64_t available = card - start;
+    return (available < requested) ? available : requested;
+}
+
+static inline void fuzz_check_range_int_array64(const Bitmap64* bitmap, uint64_t start, uint64_t end,
+                                                const uint64_t* result, uint64_t result_count) {
+    uint64_t card = bitmap64_get_cardinality(bitmap);
+    uint64_t expected_count = fuzz_expected_range_count_u64u64(card, start, end);
+    if (!result) {
+        fuzz_require(expected_count == 0);
+        return;
+    }
+    fuzz_require(result_count == expected_count);
+
+    for (uint64_t i = 0; i < result_count; i++) {
+        bool found = false;
+        /* Protect against potential overflow in start + i + 1 */
+        fuzz_require(start <= UINT64_MAX - (i + 1));
+        uint64_t nth_index = start + i + 1;
+        uint64_t expected = bitmap64_get_nth_element_present(bitmap, nth_index, &found);
+        fuzz_require(found);
+        fuzz_require(result[i] == expected);
+    }
+
+    if (card <= MAX_RANGE_VALIDATE_CARDINALITY) {
+        uint64_t full_count = 0;
+        uint64_t* full = bitmap64_get_int_array(bitmap, &full_count);
+        if (full) {
+            fuzz_require(full_count == card);
+            for (uint64_t i = 0; i < result_count; i++) {
+                uint64_t idx = start + i;
+                fuzz_require(idx < full_count);
+                fuzz_require(result[i] == full[(size_t)idx]);
+            }
+            safe_free(full);
+        }
+    }
+}
+
+static inline void fuzz_check_int_array64(const Bitmap64* bitmap, const uint64_t* result, uint64_t result_count) {
+    if (!result) return;
+
+    uint64_t card = bitmap64_get_cardinality(bitmap);
+    fuzz_require(result_count == card);
+
+    for (uint64_t i = 0; i < result_count; i++) {
+        if (i > 0) {
+            fuzz_require(result[i] > result[i - 1]);
+        }
+        fuzz_require(bitmap64_getbit(bitmap, result[i]));
+    }
+}
+
+static inline void fuzz_check_bit_array64(const Bitmap64* bitmap, const char* result, uint64_t size) {
+    if (!result) return;
+
+    for (uint64_t i = 0; i < size; i++) {
+        bool expected = bitmap64_getbit(bitmap, i);
+        if (result[i] == '1') {
+            fuzz_require(expected);
+        } else {
+            fuzz_require(result[i] == '0');
+            fuzz_require(!expected);
+        }
+    }
+}
+
+static inline void fuzz_check_input_bit_array64(const Bitmap64* bitmap, const char* input, uint64_t size) {
+    if (!input) return;
+
+    for (uint64_t i = 0; i < size; i++) {
+        bool expected = (input[i] == '1');
+        fuzz_require(bitmap64_getbit(bitmap, i) == expected);
     }
 }
 
