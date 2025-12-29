@@ -297,7 +297,10 @@ static inline void fuzz_check_range_int_array64(const Bitmap64* bitmap, uint64_t
 
     for (uint64_t i = 0; i < result_count; i++) {
         bool found = false;
-        uint64_t expected = bitmap64_get_nth_element_present(bitmap, start + i + 1, &found);
+        /* Protect against potential overflow in start + i + 1 */
+        fuzz_require(start <= UINT64_MAX - (i + 1));
+        uint64_t nth_index = start + i + 1;
+        uint64_t expected = bitmap64_get_nth_element_present(bitmap, nth_index, &found);
         fuzz_require(found);
         fuzz_require(result[i] == expected);
     }
