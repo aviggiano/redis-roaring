@@ -23,10 +23,10 @@ static inline void *rm_calloc(size_t nelem, size_t elemsz) {
   return RedisModule_Calloc(nelem, elemsz);
 }
 static inline void *rm_malloc_try(size_t n) {
-  return RedisModule_TryAlloc(n);
+  return RedisModule_Alloc(n);
 }
 static inline void *rm_calloc_try(size_t nelem, size_t elemsz) {
-  return RedisModule_TryCalloc(nelem, elemsz);
+  return RedisModule_Calloc(nelem, elemsz);
 }
 static inline void *rm_realloc(void *p, size_t n) {
   if (n == 0) {

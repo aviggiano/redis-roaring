@@ -515,7 +515,7 @@ int RRangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
   uint32_t range_size = (end - start) + 1;
 
   if (range_size > BITMAP_MAX_RANGE_SIZE) {
-    return RedisModule_ReplyWithErrorFormat(ctx, ERRORMSG_RANGE_LIMIT, BITMAP_MAX_RANGE_SIZE);
+    return ReplyWithErrorFmt(ctx, ERRORMSG_RANGE_LIMIT, BITMAP_MAX_RANGE_SIZE);
   }
 
   if (bitmap == BITMAP_NILL) {
@@ -939,7 +939,7 @@ int RContainsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     } else if (strcmp(mode_arg, "EQ") == 0) {
       mode = BITMAP_INTERSECT_MODE_EQ;
     } else {
-      return RedisModule_ReplyWithErrorFormat(ctx, "ERR invalid mode argument: %s", mode_arg);
+      return ReplyWithErrorFmt(ctx, "ERR invalid mode argument: %s", mode_arg);
     }
   }
 

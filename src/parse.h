@@ -2,6 +2,7 @@
 
 #include "redismodule.h"
 #include "stdbool.h"
+#include <stdarg.h>
 
 #define ERRORMSG_WRONGARG(arg_name, description) "ERR invalid " arg_name ": " description
 #define ERRORMSG_WRONGARG_UINT32(arg_name) ERRORMSG_WRONGARG(arg_name, "must be an unsigned 32 bit integer")
@@ -27,6 +28,7 @@
 static char REPLY_UINT64_BUFFER[21];
 
 int ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value);
+int ReplyWithErrorFmt(RedisModuleCtx* ctx, const char* fmt, ...);
 bool StrToUInt32(const RedisModuleString* str, uint32_t* ull);
 bool StrToUInt64(const RedisModuleString* str, uint64_t* ull);
 bool StrToBool(const RedisModuleString* str, bool* ull);
