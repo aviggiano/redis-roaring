@@ -1,4 +1,6 @@
 #include "parse.h"
+#include <limits.h>
+#include <stdio.h>
 
 static inline size_t uint64_to_string(uint64_t value, char* buffer) {
   if (value == 0) {
@@ -32,7 +34,22 @@ static inline size_t uint64_to_string(uint64_t value, char* buffer) {
 
 int ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value) {
   size_t len = uint64_to_string(value, REPLY_UINT64_BUFFER);
-  return RedisModule_ReplyWithBigNumber(ctx, REPLY_UINT64_BUFFER, len);
+  if (value <= LLONG_MAX) {
+    return RedisModule_ReplyWithLongLong(ctx, (long long) value);
+  }
+
+  return RedisModule_ReplyWithStringBuffer(ctx, REPLY_UINT64_BUFFER, len);
+}
+
+int ReplyWithErrorFmt(RedisModuleCtx* ctx, const char* fmt, ...) {
+  char buffer[256];
+  va_list ap;
+
+  va_start(ap, fmt);
+  vsnprintf(buffer, sizeof(buffer), fmt, ap);
+  va_end(ap);
+
+  return RedisModule_ReplyWithError(ctx, buffer);
 }
 
 bool StrToUInt32(const RedisModuleString* str, uint32_t* ull) {
@@ -47,13 +64,39 @@ bool StrToUInt32(const RedisModuleString* str, uint32_t* ull) {
 }
 
 bool StrToUInt64(const RedisModuleString* str, uint64_t* ull) {
-  unsigned long long value;
-
-  if ((RedisModule_StringToULongLong(str, &value) != REDISMODULE_OK) || value > UINT64_MAX) {
+  size_t len;
+  const char* s = RedisModule_StringPtrLen(str, &len);
+  if (len == 0) {
     return false;
   }
 
-  *ull = (uint64_t) value;
+  if (s[0] == '-') {
+    return false;
+  }
+
+  size_t i = 0;
+  if (s[0] == '+') {
+    if (len == 1) {
+      return false;
+    }
+    i = 1;
+  }
+
+  uint64_t value = 0;
+  for (; i < len; i++) {
+    unsigned char c = (unsigned char) s[i];
+    if (c < '0' || c > '9') {
+      return false;
+    }
+
+    uint64_t digit = (uint64_t) (c - '0');
+    if (value > (UINT64_MAX - digit) / 10) {
+      return false;
+    }
+    value = value * 10 + digit;
+  }
+
+  *ull = value;
   return true;
 }
 

@@ -7,7 +7,7 @@ set -eu
 function test_load() {
   print_test_header "test_load"
 
-  FOUND=$(echo "KEYS *" | ./deps/redis/src/redis-cli)
+FOUND=$(echo "KEYS *" | ./deps/redis/src/redis-cli -p "$REDIS_PORT")
   EXPECTED="test_"
   [[ "$FOUND" =~ .*"$EXPECTED".* ]]
 }

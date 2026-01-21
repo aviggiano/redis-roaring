@@ -1,4 +1,6 @@
 #include "r_64.h"
+#include <limits.h>
+#include <stdio.h>
 #include "rmalloc.h"
 #include "roaring.h"
 #include "common.h"
@@ -18,6 +20,53 @@ Bitmap64* BITMAP64_NILL = NULL;
     RedisModule_ReplyWithError(ctx, x); \
     return REDISMODULE_ERR; \
   } while(0)
+
+static int ReplyWithJaccardRatio(RedisModuleCtx* ctx, uint64_t intersection, uint64_t union_count) {
+  if (union_count == 0) {
+    return RedisModule_ReplyWithStringBuffer(ctx, "-1", 2);
+  }
+
+  if (intersection == 0) {
+    return RedisModule_ReplyWithStringBuffer(ctx, "0", 1);
+  }
+
+  if (intersection == union_count) {
+    return RedisModule_ReplyWithStringBuffer(ctx, "1", 1);
+  }
+
+  static const uint64_t pow10[] = {
+      1ULL, 10ULL, 100ULL, 1000ULL, 10000ULL, 100000ULL, 1000000ULL, 10000000ULL, 100000000ULL, 1000000000ULL
+  };
+
+  uint64_t scaled = intersection;
+  for (int scale = 1; scale < (int) (sizeof(pow10) / sizeof(pow10[0])); scale++) {
+    if (scaled > UINT64_MAX / 10) {
+      break;
+    }
+
+    scaled *= 10;
+
+    if (scaled % union_count == 0) {
+      uint64_t value = scaled / union_count;
+      uint64_t int_part = value / pow10[scale];
+      uint64_t frac_part = value % pow10[scale];
+      char buffer[32];
+      int len = snprintf(
+          buffer,
+          sizeof(buffer),
+          "%llu.%0*llu",
+          (unsigned long long) int_part,
+          scale,
+          (unsigned long long) frac_part);
+      return RedisModule_ReplyWithStringBuffer(ctx, buffer, (size_t) len);
+    }
+  }
+
+  double result = (double) intersection / (double) union_count;
+  char buffer[32];
+  int len = snprintf(buffer, sizeof(buffer), "%.17g", result);
+  return RedisModule_ReplyWithStringBuffer(ctx, buffer, (size_t) len);
+}
 
 static int GetBitmapKey(RedisModuleCtx* ctx, RedisModuleString* keyName, Bitmap64** value_out, int mode) {
   RedisModuleKey* key = RedisModule_OpenKey(ctx, keyName, mode);
@@ -104,6 +153,10 @@ void Bitmap64AofRewrite(RedisModuleIO* aof, RedisModuleString* key, void* value)
  * R64.SETBIT <key> <offset> <value>
  * */
 int R64SetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 4) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -137,6 +190,10 @@ int R64SetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R64.GETBIT <key> <offset>
  * */
 int R64GetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -161,6 +218,10 @@ int R64GetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R64.GETBITS <key> offset [offset1 offset2 ... offsetN]
  * */
 int R64GetBitManyCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -201,6 +262,10 @@ int R64GetBitManyCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc
  * R64.CLEARBITS <key> offset [offset1 offset2 ... offsetN] [COUNT]
  * */
 int R64ClearBitsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -249,6 +314,10 @@ int R64ClearBitsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc)
  * R64.SETINTARRAY <key> <value1> [<value2> <value3> ... <valueN>]
  * */
 int R64SetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -282,6 +351,10 @@ int R64SetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
  * R64.GETINTARRAY <key>
  * */
 int R64GetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -312,6 +385,10 @@ int R64GetIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
  * R64.RANGEINTARRAY <key> <start> <end>
  * */
 int R64RangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 4) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -334,7 +411,7 @@ int R64RangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int a
   uint64_t range_size = (end - start) + 1;
 
   if (range_size > BITMAP64_MAX_RANGE_SIZE) {
-    return RedisModule_ReplyWithErrorFormat(ctx, ERRORMSG_RANGE_LIMIT, BITMAP64_MAX_RANGE_SIZE);
+    return ReplyWithErrorFmt(ctx, ERRORMSG_RANGE_LIMIT, BITMAP64_MAX_RANGE_SIZE);
   }
 
   if (bitmap == BITMAP64_NILL) {
@@ -367,6 +444,10 @@ int R64RangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int a
  * R64.APPENDINTARRAY <key> <value1> [<value2> <value3> ... <valueN>]
  * */
 int R64AppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -406,6 +487,10 @@ int R64AppendIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int 
  * R64.DELETEINTARRAY <key> <value1> [<value2> <value3> ... <valueN>]
  * */
 int R64DeleteIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -442,6 +527,10 @@ int R64DeleteIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int 
  * R64.DIFF <dest> <decreasing> <deductible>
  * */
 int R64DiffCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 4) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -478,6 +567,10 @@ int R64DiffCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R64.SETFULL <key>
  * */
 int R64SetFullCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -503,6 +596,10 @@ int R64SetFullCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R64.SETRANGE <key> <start_num> <end_num>
  * */
 int R64SetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 4) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -537,6 +634,10 @@ int R64SetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
  * R64.OPTIMIZE <key> [MEM]
  * */
 int R64OptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 2 || argc > 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   Bitmap64* bitmap;
 
@@ -566,6 +667,10 @@ int R64OptimizeBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
  * R64.SETBITARRAY <key> <value1>
  * */
 int R64SetBitArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -591,6 +696,10 @@ int R64SetBitArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
  * R64.GETBITARRAY <key>
  * */
 int R64GetBitArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -747,6 +856,10 @@ int R64BitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, void (*ope
  * R64.BITOP <operation> <destkey> <key> [<key> ...]
  * */
 int R64BitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc < 4) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   size_t len;
   const char* operation = RedisModule_StringPtrLen(argv[1], &len);
@@ -784,6 +897,10 @@ int R64BitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R64.BITCOUNT <key>
  * */
 int R64BitCountCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -805,6 +922,10 @@ int R64BitCountCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
  * R64.BITPOS <key> <bit>
  * */
 int R64BitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -839,6 +960,10 @@ int R64BitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R64.MIN <key>
  * */
 int R64MinCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -859,6 +984,10 @@ int R64MinCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R64.MAX <key>
  * */
 int R64MaxCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -879,6 +1008,10 @@ int R64MaxCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R64.CLEAR <key>
  * */
 int R64ClearCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 2) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -905,6 +1038,10 @@ int R64ClearCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R64.CONTAINS <key1> <key2> [ALL, ALL_STRICT]
  * */
 int R64ContainsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 3 && argc != 4) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   Bitmap64* b1;
   Bitmap64* b2;
@@ -929,7 +1066,7 @@ int R64ContainsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
     } else if (strcmp(mode_arg, "EQ") == 0) {
       mode = BITMAP_INTERSECT_MODE_EQ;
     } else {
-      return RedisModule_ReplyWithErrorFormat(ctx, "ERR invalid mode argument: %s", mode_arg);
+      return ReplyWithErrorFmt(ctx, "ERR invalid mode argument: %s", mode_arg);
     }
   }
 
@@ -946,6 +1083,10 @@ int R64ContainsCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
  * R64.JACCARD <key1> <key2>
  * */
 int R64JaccardCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   Bitmap64* b1;
   Bitmap64* b2;
@@ -958,7 +1099,9 @@ int R64JaccardCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return REDISMODULE_ERR;
   }
 
-  return RedisModule_ReplyWithDouble(ctx, bitmap64_jaccard(b1, b2));
+  uint64_t intersection = roaring64_bitmap_and_cardinality(b1, b2);
+  uint64_t union_count = roaring64_bitmap_or_cardinality(b1, b2);
+  return ReplyWithJaccardRatio(ctx, intersection, union_count);
 }
 
 void R64Module_onShutdown(RedisModuleCtx* ctx, RedisModuleEvent e, uint64_t sub, void* data) {

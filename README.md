@@ -19,12 +19,12 @@ Pull requests are welcome.
 
 ## Redis Version Compatibility
 
-This module is compatible with **Redis 6.0 and later**.
+This module is intended to support **Redis 6.2 and 7.0** (the versions we test in CI).
 
 - **Redis 7.4+**: Full feature support including custom ACL categories, command ACL categories, and command introspection
 - **Redis 7.2 - 7.3**: Command introspection and command ACL categories supported
 - **Redis 7.0 - 7.1**: Command introspection (COMMAND INFO, COMMAND DOCS) supported
-- **Redis 6.0 - 6.2**: Core roaring bitmap functionality supported
+- **Redis 6.2**: Core roaring bitmap functionality supported
 
 The module automatically detects the Redis version at runtime and adjusts its behavior accordingly:
 - Command metadata (via `RedisModule_SetCommandInfo`) is only registered on Redis 7.0+

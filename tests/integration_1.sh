@@ -135,6 +135,15 @@ function test_getintarray_setintarray() {
   rcall_assert "R.GETINTARRAY test_getintarray_setintarray_empty_key" "" "Get integer array from empty key"
 }
 
+function test_rangeintarray() {
+  print_test_header "test_rangeintarray"
+
+  rcall_assert "R.SETBIT test_rangeintarray 0 1" "0" "Set bit at 0"
+  rcall_assert "R.SETBIT test_rangeintarray 8 1" "0" "Set bit at 8"
+  rcall_assert "R.SETBIT test_rangeintarray 16 1" "0" "Set bit at 16"
+  rcall_assert "R.RANGEINTARRAY test_rangeintarray 0 2" "$(echo -e "0\n8\n16")" "Range int array for first three elements"
+}
+
 function test_getbitarray_setbitarray() {
   print_test_header "test_getbitarray_setbitarray"
 
@@ -726,6 +735,7 @@ test_bitop
 test_bitcount
 test_bitpos
 test_getintarray_setintarray
+test_rangeintarray
 test_getbitarray_setbitarray
 test_appendintarray_deleteintarray
 test_min_max
