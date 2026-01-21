@@ -2,7 +2,9 @@
 
 set -eu
 
-LOG_FILE=""
+LOG_FILE="${LOG_FILE:-}"
+REDIS_PID=""
+REDIS_PORT="${REDIS_PORT:-}"
 function setup() {
   mkdir -p build
   cd build
@@ -41,7 +43,23 @@ function start_redis() {
     LIB_PATH="./build/libredis-roaring.so"
   fi
 
-  local REDIS_COMMAND="./deps/redis/src/redis-server --loglevel warning --loadmodule $LIB_PATH"
+  if [ "$REDIS_PORT" == "" ]; then
+    for port in 6379 6380 6381 6382 6383; do
+      if ./deps/redis/src/redis-cli -p "$port" PING >/dev/null 2>&1; then
+        continue
+      fi
+      REDIS_PORT="$port"
+      break
+    done
+  fi
+
+  if [ "$REDIS_PORT" == "" ]; then
+    echo "No available Redis port found for tests" >&2
+    exit 1
+  fi
+  export REDIS_PORT
+
+  local REDIS_COMMAND="./deps/redis/src/redis-server --loglevel warning --loadmodule $LIB_PATH --port $REDIS_PORT"
   local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --suppressions=./deps/redis/src/valgrind.sup --error-exitcode=1 --log-file=$LOG_FILE"
   local AOF_OPTION="--appendonly $USE_AOF"
   if [ "$USE_VALGRIND" == "no" ]; then
@@ -49,17 +67,33 @@ function start_redis() {
   fi
 
   eval "$VALGRIND_COMMAND" "$REDIS_COMMAND" "$AOF_OPTION" &
+  REDIS_PID=$!
 
-  while [ "$(./deps/redis/src/redis-cli PING 2>/dev/null)" != "PONG" ]; do
+  while [ "$(./deps/redis/src/redis-cli -p "$REDIS_PORT" PING 2>/dev/null)" != "PONG" ]; do
     sleep 0.1
   done
 }
 
 function stop_redis() {
-  pkill -f redis || true
-  while [ $(ps aux | grep redis | grep -v grep | wc -l) -ne 0 ]; do
-    sleep 0.1
-  done
+  if [ "$REDIS_PORT" != "" ] && [ "$(./deps/redis/src/redis-cli -p "$REDIS_PORT" PING 2>/dev/null)" == "PONG" ]; then
+    ./deps/redis/src/redis-cli -p "$REDIS_PORT" shutdown nosave >/dev/null 2>&1 || true
+  fi
+
+  if [ "$REDIS_PID" != "" ]; then
+    if kill -0 "$REDIS_PID" 2>/dev/null; then
+      kill "$REDIS_PID" 2>/dev/null || true
+      local tries=0
+      while kill -0 "$REDIS_PID" 2>/dev/null; do
+        sleep 0.1
+        tries=$((tries + 1))
+        if [ "$tries" -ge 300 ]; then
+          break
+        fi
+      done
+    fi
+    REDIS_PID=""
+  fi
+
   sleep 2
   if [ "$LOG_FILE" != "" ]; then
     cat "$LOG_FILE"
@@ -72,7 +106,7 @@ function stop_redis() {
 
 function rcall() {
   local cmd="$1"
-  echo "$cmd" | ./deps/redis/src/redis-cli >/dev/null
+  echo "$cmd" | ./deps/redis/src/redis-cli -p "$REDIS_PORT" >/dev/null
 }
 
 function rcall_assert() {
@@ -80,7 +114,7 @@ function rcall_assert() {
   local expected="$(echo -e "$2")"
   local description="${3:-Redis command}"
 
-  local result=$(echo "$cmd" | ./deps/redis/src/redis-cli) 
+  local result=$(echo "$cmd" | ./deps/redis/src/redis-cli -p "$REDIS_PORT") 
 
   if [ "$result" == "$expected" ]; then
     echo -e "\x1b[32m✓\x1b[0m $description"
