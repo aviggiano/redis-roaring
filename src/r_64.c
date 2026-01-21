@@ -104,6 +104,10 @@ void Bitmap64AofRewrite(RedisModuleIO* aof, RedisModuleString* key, void* value)
  * R64.SETBIT <key> <offset> <value>
  * */
 int R64SetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 4) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;
@@ -137,6 +141,10 @@ int R64SetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R64.GETBIT <key> <offset>
  * */
 int R64GetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap64* bitmap;

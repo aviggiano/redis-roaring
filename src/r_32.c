@@ -161,6 +161,10 @@ int RSetRangeCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R.SETBIT <key> <offset> <value>
  * */
 int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 4) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap* bitmap;
@@ -194,6 +198,10 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * R.GETBIT <key> <offset>
  * */
 int RGetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  if (argc != 3) {
+    return RedisModule_WrongArity(ctx);
+  }
+
   RedisModule_AutoMemory(ctx);
   RedisModuleKey* key;
   Bitmap* bitmap;
