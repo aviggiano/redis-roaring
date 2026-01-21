@@ -20,8 +20,14 @@ jobs:
     - name: Configure
       run: ./configure.sh
   test:
-    name: Test project
+    name: Test project (Redis ${{ matrix.redis-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        redis-version:
+          - 6.2.14
+          - 7.0.15
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -29,6 +35,8 @@ jobs:
         submodules: recursive
     - name: Configure
       run: ./configure.sh
+      env:
+        REDIS_VERSION: ${{ matrix.redis-version }}
     - name: Install valgrind
       run: sudo apt-get install valgrind
     - name: Test

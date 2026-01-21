@@ -5,6 +5,11 @@ function configure_submodules()
   git submodule init
   git submodule update
   git submodule status
+  if [ -n "${REDIS_VERSION:-}" ]; then
+    git -C deps/redis fetch --tags
+    git -C deps/redis checkout "${REDIS_VERSION}"
+    git -C deps/redis submodule update --init --recursive
+  fi
 }
 function amalgamate_croaring()
 {
@@ -62,4 +67,3 @@ configure_redis
 configure_hiredis
 build
 instructions
-
