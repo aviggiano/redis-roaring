@@ -1,4 +1,5 @@
 #include "parse.h"
+#include <limits.h>
 
 static inline size_t uint64_to_string(uint64_t value, char* buffer) {
   if (value == 0) {
@@ -32,7 +33,15 @@ static inline size_t uint64_to_string(uint64_t value, char* buffer) {
 
 int ReplyWithUint64(RedisModuleCtx* ctx, uint64_t value) {
   size_t len = uint64_to_string(value, REPLY_UINT64_BUFFER);
-  return RedisModule_ReplyWithBigNumber(ctx, REPLY_UINT64_BUFFER, len);
+  if (RedisModule_ReplyWithBigNumber != NULL) {
+    return RedisModule_ReplyWithBigNumber(ctx, REPLY_UINT64_BUFFER, len);
+  }
+
+  if (value <= LLONG_MAX) {
+    return RedisModule_ReplyWithLongLong(ctx, (long long) value);
+  }
+
+  return RedisModule_ReplyWithStringBuffer(ctx, REPLY_UINT64_BUFFER, len);
 }
 
 bool StrToUInt32(const RedisModuleString* str, uint32_t* ull) {
