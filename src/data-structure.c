@@ -821,6 +821,8 @@ uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t start_offset, size
     return NULL;
   }
 
+  // Avoid rm_calloc_try here: RedisModule_TryCalloc is missing on Redis 6.2/7.0 and crashes
+  // when invoked; see https://github.com/aviggiano/redis-roaring/issues/139#issuecomment-3776839439
   uint32_t* ans = rm_calloc(range_size, sizeof(uint32_t));
   if (ans == NULL) {
     return NULL;
@@ -859,6 +861,8 @@ uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t start_offset
     return NULL;
   }
 
+  // Avoid rm_calloc_try here: RedisModule_TryCalloc is missing on Redis 6.2/7.0 and crashes
+  // when invoked; see https://github.com/aviggiano/redis-roaring/issues/139#issuecomment-3776839439
   uint64_t* ans = rm_calloc(range_size, sizeof(uint64_t));
 
   if (ans == NULL) {
