@@ -821,7 +821,7 @@ uint32_t* bitmap_range_int_array(const Bitmap* bitmap, size_t start_offset, size
     return NULL;
   }
 
-  uint32_t* ans = rm_calloc_try(range_size, sizeof(uint32_t));
+  uint32_t* ans = rm_calloc(range_size, sizeof(uint32_t));
   if (ans == NULL) {
     return NULL;
   }
@@ -859,7 +859,7 @@ uint64_t* bitmap64_range_int_array(const Bitmap64* bitmap, uint64_t start_offset
     return NULL;
   }
 
-  uint64_t* ans = rm_calloc_try(range_size, sizeof(uint64_t));
+  uint64_t* ans = rm_calloc(range_size, sizeof(uint64_t));
 
   if (ans == NULL) {
     return NULL;
