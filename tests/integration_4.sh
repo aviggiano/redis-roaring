@@ -8,7 +8,7 @@ function test_bitop_cluster_regression() {
   print_test_header "test_bitop_cluster_regression"
 
   if ! ./deps/redis/src/redis-cli -p "$REDIS_PORT" CLUSTER INFO 2>/dev/null | grep -q '^cluster_state:ok'; then
-    addslots_result=$(echo "CLUSTER ADDSLOTSRANGE 0 16383" | ./deps/redis/src/redis-cli -p "$REDIS_PORT")
+    addslots_result=$(assign_all_cluster_slots)
     if [ "$addslots_result" = "OK" ]; then
       echo -e "\x1b[32m✓\x1b[0m Assign all cluster slots"
     else

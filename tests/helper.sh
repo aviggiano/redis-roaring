@@ -160,6 +160,36 @@ function wait_for_cluster_ok() {
   done
 }
 
+function assign_all_cluster_slots() {
+  local addslotsrange_result
+  addslotsrange_result=$(echo "CLUSTER ADDSLOTSRANGE 0 16383" | ./deps/redis/src/redis-cli -p "$REDIS_PORT" 2>/dev/null || true)
+  if [ "$addslotsrange_result" = "OK" ]; then
+    echo "OK"
+    return 0
+  fi
+
+  local start=0
+  local end=0
+  local result=""
+  local batch_size=1024
+  while [ "$start" -le 16383 ]; do
+    end=$((start + batch_size - 1))
+    if [ "$end" -gt 16383 ]; then
+      end=16383
+    fi
+
+    result=$(echo "CLUSTER ADDSLOTS $(seq -s ' ' "$start" "$end")" | ./deps/redis/src/redis-cli -p "$REDIS_PORT" 2>/dev/null || true)
+    if [ "$result" != "OK" ]; then
+      echo "$result"
+      return 1
+    fi
+
+    start=$((end + 1))
+  done
+
+  echo "OK"
+}
+
 function print_test_header() {
   local test_name="$1"
   local total_width=80
