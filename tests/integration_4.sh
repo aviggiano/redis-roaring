@@ -28,13 +28,17 @@ function test_bitop_cluster_regression() {
   rcall_assert "R.GETBIT {bitop}dest 1" "1" "Clustered OR result should keep bit 1"
   rcall_assert "R.GETBIT {bitop}dest 2" "1" "Clustered OR result should keep bit 2"
   rcall_assert "R.BITOP NOT {bitop}not {bitop}foo" "1" "Clustered R.BITOP NOT should succeed"
+  rcall_assert "R.GETBIT {bitop}not 0" "1" "Clustered R.BITOP NOT should write bit 0 to destination"
+  rcall_assert "R.GETBIT {bitop}foo 1" "1" "Clustered R.BITOP NOT should not mutate the source key"
 
   rcall_assert "R64.SETBIT {bitop64}foo 1 1" "0" "Seed clustered 64-bit source bitmap foo"
   rcall_assert "R64.SETBIT {bitop64}bar 2 1" "0" "Seed clustered 64-bit source bitmap bar"
   rcall_assert "R64.BITOP OR {bitop64}dest {bitop64}foo {bitop64}bar" "2" "Clustered R64.BITOP OR should succeed"
   rcall_assert "R64.GETBIT {bitop64}dest 1" "1" "Clustered 64-bit OR result should keep bit 1"
   rcall_assert "R64.GETBIT {bitop64}dest 2" "1" "Clustered 64-bit OR result should keep bit 2"
-  rcall_assert "R64.BITOP NOT {bitop64}not {bitop64}foo" "2" "Clustered R64.BITOP NOT should succeed"
+  rcall_assert "R64.BITOP NOT {bitop64}not {bitop64}foo" "1" "Clustered R64.BITOP NOT should succeed"
+  rcall_assert "R64.GETBIT {bitop64}not 0" "1" "Clustered R64.BITOP NOT should write bit 0 to destination"
+  rcall_assert "R64.GETBIT {bitop64}foo 1" "1" "Clustered R64.BITOP NOT should not mutate the source key"
 
   rcall_assert "PING" "PONG" "Redis should stay alive after clustered BITOP operations"
 }

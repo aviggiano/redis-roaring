@@ -743,7 +743,7 @@ int R64BitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   RedisModuleKey* srckey;
   Bitmap64* bitmap;
 
-  if (TryGetBitmapKey(ctx, argv[3], &bitmap, &destkey, REDISMODULE_READ) == REDISMODULE_ERR) {
+  if (TryGetBitmapKey(ctx, argv[3], &bitmap, &srckey, REDISMODULE_READ) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
 
@@ -759,7 +759,7 @@ int R64BitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   // calculate destkey bitmap
-  Bitmap64* result = bitmap64_flip(bitmap, last);
+  Bitmap64* result = bitmap64_flip(bitmap, last + 1);
   RedisModule_ModuleTypeSetValue(destkey, Bitmap64Type, result);
   RedisModule_ReplicateVerbatim(ctx);
 

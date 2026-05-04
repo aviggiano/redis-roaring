@@ -831,7 +831,7 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   RedisModuleKey* srckey;
   Bitmap* bitmap;
 
-  if (TryGetBitmapKey(ctx, argv[3], &bitmap, &destkey, REDISMODULE_READ) == REDISMODULE_ERR) {
+  if (TryGetBitmapKey(ctx, argv[3], &bitmap, &srckey, REDISMODULE_READ) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
 
