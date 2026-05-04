@@ -19,6 +19,10 @@ fi
 BUILD_DIR="build-fuzz"
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
+
+echo "Generating seed corpus..."
+./scripts/generate_seeds.sh
+
 cd "$BUILD_DIR"
 
 # Configure with fuzzing enabled
@@ -37,6 +41,7 @@ echo "  - $BUILD_DIR/tests/fuzz/fuzz_bitmap_api"
 echo "  - $BUILD_DIR/tests/fuzz/fuzz_bitmap64_api"
 echo "  - $BUILD_DIR/tests/fuzz/fuzz_bitmap_operations"
 echo "  - $BUILD_DIR/tests/fuzz/fuzz_bitmap_serialization"
+echo "  - $BUILD_DIR/tests/fuzz/fuzz_bitop_keys"
 echo ""
 echo "Run a fuzzer with:"
 echo "  cd $BUILD_DIR"

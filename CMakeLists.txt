@@ -88,6 +88,7 @@ if(ENABLE_FUZZING)
       fuzz_bitmap64_api
       fuzz_bitmap_operations
       fuzz_bitmap_serialization
+      fuzz_bitop_keys
     )
 
     # Create each fuzzer

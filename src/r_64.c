@@ -5,6 +5,7 @@
 #include "roaring.h"
 #include "common.h"
 #include "parse.h"
+#include "bitop_keys.h"
 #include "cmd_info/command_info.h"
 
 RedisModuleType* Bitmap64Type = NULL;
@@ -857,12 +858,17 @@ int R64BitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, void (*ope
  * */
 int R64BitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (argc < 4) {
-    return RedisModule_WrongArity(ctx);
+    return (RedisModule_IsKeysPositionRequest(ctx) > 0) ? REDISMODULE_OK : RedisModule_WrongArity(ctx);
   }
 
   RedisModule_AutoMemory(ctx);
   size_t len;
   const char* operation = RedisModule_StringPtrLen(argv[1], &len);
+
+  if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
+    BitOpForEachKeyPosition(operation, argc, ctx, BitOpReportRedisKey);
+    return REDISMODULE_OK;
+  }
 
   if (strcmp(operation, "NOT") == 0) {
     return R64BitFlip(ctx, argv, argc);

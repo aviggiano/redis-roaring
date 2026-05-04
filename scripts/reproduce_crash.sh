@@ -31,7 +31,7 @@ BUILD_DIR="build-fuzz"
 echo "Attempting to reproduce crash: $CRASH_FILE"
 echo ""
 
-FUZZERS=("fuzz_bitmap_api" "fuzz_bitmap64_api" "fuzz_bitmap_operations" "fuzz_bitmap_serialization")
+FUZZERS=("fuzz_bitmap_api" "fuzz_bitmap64_api" "fuzz_bitmap_operations" "fuzz_bitmap_serialization" "fuzz_bitop_keys")
 
 for fuzzer in "${FUZZERS[@]}"; do
     FUZZER_PATH="$BUILD_DIR/tests/fuzz/$fuzzer"

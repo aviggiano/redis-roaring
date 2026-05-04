@@ -19,6 +19,7 @@ EXTRA_ARGS="$@"
 BUILD_DIR="build-fuzz"
 FUZZER_PATH="$BUILD_DIR/tests/fuzz/fuzz_$FUZZER_NAME"
 CORPUS_DIR="$BUILD_DIR/tests/fuzz/corpus/$FUZZER_NAME"
+RUNTIME_CORPUS_DIR="tests/fuzz/corpus/$FUZZER_NAME"
 
 # Check if fuzzer exists
 if [ ! -f "$FUZZER_PATH" ]; then
@@ -29,6 +30,7 @@ if [ ! -f "$FUZZER_PATH" ]; then
     echo "  - bitmap64_api"
     echo "  - bitmap_operations"
     echo "  - bitmap_serialization"
+    echo "  - bitop_keys"
     echo ""
     echo "Build fuzzers first with: ./scripts/build_fuzzers.sh"
     exit 1
@@ -49,7 +51,7 @@ cd "$BUILD_DIR"
     -max_total_time="$DURATION" \
     -print_final_stats=1 \
     -rss_limit_mb=4096 \
-    "$CORPUS_DIR" \
+    "$RUNTIME_CORPUS_DIR" \
     $EXTRA_ARGS
 
 echo ""

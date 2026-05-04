@@ -18,7 +18,7 @@ Fuzzing requires:
 
 ## Fuzz Targets
 
-The project includes four specialized fuzz targets:
+The project includes five specialized fuzz targets:
 
 ### 1. `fuzz_bitmap_api` - 32-bit Bitmap API Fuzzer
 - **Purpose**: Comprehensive testing of all 32-bit bitmap operations
@@ -42,7 +42,7 @@ The project includes four specialized fuzz targets:
   - Operations with 2-10 input bitmaps
   - Various input patterns (empty, sparse, dense, ranges)
   - Invariant checking for operation correctness
-- **Corpus**: `tests/fuzz/corpus/operations/`
+- **Corpus**: `tests/fuzz/corpus/bitmap_operations/`
 
 ### 4. `fuzz_bitmap_serialization` - Data Parsing Fuzzer
 - **Purpose**: Testing data conversion and parsing
@@ -51,7 +51,16 @@ The project includes four specialized fuzz targets:
   - from_bit_array / get_bit_array with malformed inputs
   - Range operations with edge cases
   - Both 32-bit and 64-bit serialization
-- **Corpus**: `tests/fuzz/corpus/serialization/`
+- **Corpus**: `tests/fuzz/corpus/bitmap_serialization/`
+
+### 5. `fuzz_bitop_keys` - BITOP Key Discovery Fuzzer
+- **Purpose**: Testing module key-extraction metadata used by cluster routing and functions
+- **Coverage**:
+  - `R.BITOP` / `R64.BITOP` key-position reporting
+  - Variadic vs unary BITOP arity handling
+  - Destination/source key flag assignments
+  - Unsupported-operation and invalid-arity behavior
+- **Corpus**: `tests/fuzz/corpus/bitop_keys/`
 
 ## Building Fuzzers
 
@@ -69,11 +78,12 @@ CC=clang CXX=clang++ cmake -DENABLE_FUZZING=ON ..
 make
 ```
 
-This will create four executables in `build-fuzz/tests/fuzz/`:
+This will create five executables in `build-fuzz/tests/fuzz/`:
 - `fuzz_bitmap_api`
 - `fuzz_bitmap64_api`
 - `fuzz_bitmap_operations`
 - `fuzz_bitmap_serialization`
+- `fuzz_bitop_keys`
 
 ## Running Fuzzers
 
