@@ -103,6 +103,7 @@ jobs:
         fuzzer:
           - fuzz_bitmap_api
           - fuzz_bitmap64_api
+          - fuzz_bitop_keys
           - fuzz_bitmap_operations
           - fuzz_bitmap_serialization
     steps:
@@ -193,6 +194,7 @@ jobs:
         fuzzer:
           - fuzz_bitmap_api
           - fuzz_bitmap64_api
+          - fuzz_bitop_keys
           - fuzz_bitmap_operations
           - fuzz_bitmap_serialization
     steps:

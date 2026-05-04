@@ -5,6 +5,7 @@
 #include "roaring.h"
 #include "common.h"
 #include "parse.h"
+#include "bitop_keys.h"
 #include "cmd_info/command_info.h"
 
 RedisModuleType* Bitmap64Type = NULL;
@@ -742,7 +743,7 @@ int R64BitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   RedisModuleKey* srckey;
   Bitmap64* bitmap;
 
-  if (TryGetBitmapKey(ctx, argv[3], &bitmap, &destkey, REDISMODULE_READ) == REDISMODULE_ERR) {
+  if (TryGetBitmapKey(ctx, argv[3], &bitmap, &srckey, REDISMODULE_READ) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
 
@@ -758,7 +759,7 @@ int R64BitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   }
 
   // calculate destkey bitmap
-  Bitmap64* result = bitmap64_flip(bitmap, last);
+  Bitmap64* result = bitmap64_flip(bitmap, last + 1);
   RedisModule_ModuleTypeSetValue(destkey, Bitmap64Type, result);
   RedisModule_ReplicateVerbatim(ctx);
 
@@ -857,12 +858,17 @@ int R64BitOp(RedisModuleCtx* ctx, RedisModuleString** argv, int argc, void (*ope
  * */
 int R64BitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (argc < 4) {
-    return RedisModule_WrongArity(ctx);
+    return (RedisModule_IsKeysPositionRequest(ctx) > 0) ? REDISMODULE_OK : RedisModule_WrongArity(ctx);
   }
 
   RedisModule_AutoMemory(ctx);
   size_t len;
   const char* operation = RedisModule_StringPtrLen(argv[1], &len);
+
+  if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
+    BitOpForEachKeyPosition(operation, argc, ctx, BitOpReportRedisKey);
+    return REDISMODULE_OK;
+  }
 
   if (strcmp(operation, "NOT") == 0) {
     return R64BitFlip(ctx, argv, argc);

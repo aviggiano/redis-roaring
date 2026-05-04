@@ -18,7 +18,7 @@ echo "Duration per fuzzer: ${DURATION}s"
 echo "=================================="
 echo ""
 
-FUZZERS=("bitmap_api" "bitmap64_api" "bitmap_operations" "bitmap_serialization")
+FUZZERS=("bitmap_api" "bitmap64_api" "bitmap_operations" "bitmap_serialization" "bitop_keys")
 
 for fuzzer in "${FUZZERS[@]}"; do
     echo "========================================"

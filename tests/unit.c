@@ -43,6 +43,7 @@
 #include "unit/test_bitmap64_intersect.c"
 #include "unit/test_bitmap64_jaccard.c"
 #include "unit/test_bitmap_jaccard.c"
+#include "unit/test_bitop_keys.c"
 
 int main(int argc, char* argv[]) {
   test_start();
@@ -87,6 +88,7 @@ int main(int argc, char* argv[]) {
   test_bitmap_clearbits_count();
   test_bitmap_intersect();
   test_bitmap_jaccard();
+  test_bitop_keys();
 
   test_end();
 

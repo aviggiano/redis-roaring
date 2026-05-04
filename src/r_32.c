@@ -5,6 +5,7 @@
 #include "roaring.h"
 #include "common.h"
 #include "parse.h"
+#include "bitop_keys.h"
 #include "cmd_info/command_info.h"
 
 RedisModuleType* BitmapType = NULL;
@@ -830,7 +831,7 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   RedisModuleKey* srckey;
   Bitmap* bitmap;
 
-  if (TryGetBitmapKey(ctx, argv[3], &bitmap, &destkey, REDISMODULE_READ) == REDISMODULE_ERR) {
+  if (TryGetBitmapKey(ctx, argv[3], &bitmap, &srckey, REDISMODULE_READ) == REDISMODULE_ERR) {
     return REDISMODULE_ERR;
   }
 
@@ -865,12 +866,17 @@ int RBitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
  * */
 int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   if (argc < 4) {
-    return RedisModule_WrongArity(ctx);
+    return (RedisModule_IsKeysPositionRequest(ctx) > 0) ? REDISMODULE_OK : RedisModule_WrongArity(ctx);
   }
 
   RedisModule_AutoMemory(ctx);
   size_t len;
   const char* operation = RedisModule_StringPtrLen(argv[1], &len);
+
+  if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
+    BitOpForEachKeyPosition(operation, argc, ctx, BitOpReportRedisKey);
+    return REDISMODULE_OK;
+  }
 
   if (strcmp(operation, "NOT") == 0) {
     return RBitFlip(ctx, argv, argc);

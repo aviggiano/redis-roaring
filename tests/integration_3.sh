@@ -84,6 +84,7 @@ function test_bitop() {
   and
   or
   xor
+  not
   and
   collision
 }

@@ -5,6 +5,7 @@ set -eu
 LOG_FILE="${LOG_FILE:-}"
 REDIS_PID=""
 REDIS_PORT="${REDIS_PORT:-}"
+REDIS_DIR=""
 function setup() {
   mkdir -p build
   cd build
@@ -19,6 +20,7 @@ function setup() {
 function start_redis() {
   local USE_VALGRIND="no"
   local USE_AOF="no"
+  local USE_CLUSTER="no"
   while [[ $# -gt 0 ]]; do
     local PARAM="$1"
     case $PARAM in
@@ -29,6 +31,9 @@ function start_redis() {
       --aof)
         USE_AOF="yes"
         ;;
+      --cluster)
+        USE_CLUSTER="yes"
+        ;;
     esac
     shift
   done
@@ -36,11 +41,11 @@ function start_redis() {
   local LIB_PATH
   if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
-    LIB_PATH="./build/libredis-roaring.dylib"
+    LIB_PATH="$(pwd)/build/libredis-roaring.dylib"
     USE_VALGRIND="no"
   else
     # Linux
-    LIB_PATH="./build/libredis-roaring.so"
+    LIB_PATH="$(pwd)/build/libredis-roaring.so"
   fi
 
   if [ "$REDIS_PORT" == "" ]; then
@@ -62,11 +67,17 @@ function start_redis() {
   local REDIS_COMMAND="./deps/redis/src/redis-server --loglevel warning --loadmodule $LIB_PATH --port $REDIS_PORT"
   local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --suppressions=./deps/redis/src/valgrind.sup --error-exitcode=1 --log-file=$LOG_FILE"
   local AOF_OPTION="--appendonly $USE_AOF"
+  local CLUSTER_OPTION=""
   if [ "$USE_VALGRIND" == "no" ]; then
     VALGRIND_COMMAND=""
   fi
 
-  eval "$VALGRIND_COMMAND" "$REDIS_COMMAND" "$AOF_OPTION" &
+  if [ "$USE_CLUSTER" == "yes" ]; then
+    REDIS_DIR=$(mktemp -d)
+    CLUSTER_OPTION="--cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --dir $REDIS_DIR"
+  fi
+
+  eval "$VALGRIND_COMMAND" "$REDIS_COMMAND" "$AOF_OPTION" "$CLUSTER_OPTION" &
   REDIS_PID=$!
 
   while [ "$(./deps/redis/src/redis-cli -p "$REDIS_PORT" PING 2>/dev/null)" != "PONG" ]; do
@@ -92,6 +103,11 @@ function stop_redis() {
       done
     fi
     REDIS_PID=""
+  fi
+
+  if [ "$REDIS_DIR" != "" ]; then
+    rm -rf "$REDIS_DIR"
+    REDIS_DIR=""
   fi
 
   sleep 2
@@ -125,6 +141,53 @@ function rcall_assert() {
     echo "  Got: '$result'"
     return 1
   fi
+}
+
+function wait_for_cluster_ok() {
+  local tries=0
+  while true; do
+    if ./deps/redis/src/redis-cli -p "$REDIS_PORT" CLUSTER INFO 2>/dev/null | grep -q '^cluster_state:ok'; then
+      return 0
+    fi
+
+    tries=$((tries + 1))
+    if [ "$tries" -ge 50 ]; then
+      echo "Cluster did not become ready on port $REDIS_PORT" >&2
+      return 1
+    fi
+
+    sleep 0.1
+  done
+}
+
+function assign_all_cluster_slots() {
+  local addslotsrange_result
+  addslotsrange_result=$(echo "CLUSTER ADDSLOTSRANGE 0 16383" | ./deps/redis/src/redis-cli -p "$REDIS_PORT" 2>/dev/null || true)
+  if [ "$addslotsrange_result" = "OK" ]; then
+    echo "OK"
+    return 0
+  fi
+
+  local start=0
+  local end=0
+  local result=""
+  local batch_size=1024
+  while [ "$start" -le 16383 ]; do
+    end=$((start + batch_size - 1))
+    if [ "$end" -gt 16383 ]; then
+      end=16383
+    fi
+
+    result=$(echo "CLUSTER ADDSLOTS $(seq -s ' ' "$start" "$end")" | ./deps/redis/src/redis-cli -p "$REDIS_PORT" 2>/dev/null || true)
+    if [ "$result" != "OK" ]; then
+      echo "$result"
+      return 1
+    fi
+
+    start=$((end + 1))
+  done
+
+  echo "OK"
 }
 
 function print_test_header() {

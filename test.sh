@@ -73,11 +73,24 @@ function integration_3() {
   echo "All integration (3) tests passed"
 }
 
+function integration_4() {
+  stop_redis
+  if [[ "${USE_VALGRIND:-1}" == "1" ]]; then
+    start_redis --valgrind --cluster
+  else
+    start_redis --cluster
+  fi
+  ./tests/integration_4.sh
+  stop_redis
+  echo "All integration (4) tests passed"
+}
+
 setup
 unit
 integration_1
 integration_2
 integration_3
+integration_4
 
 echo ""
 echo "************************"
