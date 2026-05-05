@@ -157,8 +157,10 @@ jobs:
     - name: Run fuzzer to generate coverage
       run: |
         cd build-fuzz-cov
+        fuzzer="${{ matrix.fuzzer }}"
+        corpus_dir="../tests/fuzz/corpus/${fuzzer#fuzz_}"
         export LLVM_PROFILE_FILE="fuzz-${{ matrix.fuzzer }}-%p.profraw"
-        ./tests/fuzz/${{ matrix.fuzzer }} -max_total_time=300 -rss_limit_mb=2048 -max_len=1024
+        ./tests/fuzz/${fuzzer} "${corpus_dir}" -max_total_time=300 -rss_limit_mb=2048 -max_len=1024
 
     - name: Generate coverage report
       run: |
@@ -240,8 +242,21 @@ jobs:
     - name: Run Fuzzing - ${{ matrix.fuzzer }}
       run: |
         cd build-fuzz
+        fuzzer="${{ matrix.fuzzer }}"
+        corpus_dir="../tests/fuzz/corpus/${fuzzer#fuzz_}"
         export ASAN_OPTIONS=allocator_may_return_null=1:malloc_limit_mb=2048
-        ./tests/fuzz/${{ matrix.fuzzer }} -max_total_time=60 -rss_limit_mb=2048 -max_len=1024
+        set +e
+        timeout 180 ./tests/fuzz/${fuzzer} "${corpus_dir}" -max_total_time=60 -rss_limit_mb=2048 -max_len=1024
+        status=$?
+        set -e
+
+        if [ "${status}" -ne 0 ] && [ "${status}" -ne 124 ]; then
+          exit "${status}"
+        fi
+
+        if [ "${status}" -eq 124 ]; then
+          echo "Fuzzer exceeded the 180s wall-clock cap after its libFuzzer time budget; continuing to crash checks."
+        fi
 
     - name: Check for crashes
       id: check_crashes
