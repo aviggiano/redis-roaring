@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "redismodule.h"
 #include "common.h"
 
@@ -655,6 +657,37 @@ static const RedisModuleCommandInfo R_JACCARD_INFO = {
   .args = (RedisModuleCommandArg*) R_JACCARD_ARGS,
 };
 
+typedef struct {
+  const char* name;
+  const RedisModuleCommandInfo* info;
+} NamedCommandInfo;
+
+static const NamedCommandInfo R_COMMAND_INFOS[] = {
+  {"R.SETBIT", &R_SETBIT_INFO},
+  {"R.GETBIT", &R_GETBIT_INFO},
+  {"R.GETBITS", &R_GETBITS_INFO},
+  {"R.CLEARBITS", &R_CLEARBITS_INFO},
+  {"R.SETINTARRAY", &R_SETINTARRAY_INFO},
+  {"R.GETINTARRAY", &R_GETINTARRAY_INFO},
+  {"R.RANGEINTARRAY", &R_RANGEINTARRAY_INFO},
+  {"R.APPENDINTARRAY", &R_APPENDINTARRAY_INFO},
+  {"R.DELETEINTARRAY", &R_DELETEINTARRAY_INFO},
+  {"R.DIFF", &R_DIFF_INFO},
+  {"R.SETFULL", &R_SETFULL_INFO},
+  {"R.SETRANGE", &R_SETRANGE_INFO},
+  {"R.OPTIMIZE", &R_OPTIMIZE_INFO},
+  {"R.SETBITARRAY", &R_SETBITARRAY_INFO},
+  {"R.GETBITARRAY", &R_GETBITARRAY_INFO},
+  {"R.BITOP", &R_BITOP_INFO},
+  {"R.BITCOUNT", &R_BITCOUNT_INFO},
+  {"R.BITPOS", &R_BITPOS_INFO},
+  {"R.MIN", &R_MIN_INFO},
+  {"R.MAX", &R_MAX_INFO},
+  {"R.CLEAR", &R_CLEAR_INFO},
+  {"R.CONTAINS", &R_CONTAINS_INFO},
+  {"R.JACCARD", &R_JACCARD_INFO},
+};
+
 int RegisterRCommandInfos(RedisModuleCtx* ctx) {
   SetCommandInfo(ctx, "R.SETBIT", &R_SETBIT_INFO);
   SetCommandInfo(ctx, "R.GETBIT", &R_GETBIT_INFO);
@@ -681,4 +714,18 @@ int RegisterRCommandInfos(RedisModuleCtx* ctx) {
   SetCommandInfo(ctx, "R.JACCARD", &R_JACCARD_INFO);
 
   return REDISMODULE_OK;
+}
+
+const RedisModuleCommandInfo* GetRCommandInfo(const char* name) {
+  if (name == NULL) {
+    return NULL;
+  }
+
+  for (size_t i = 0; i < (sizeof(R_COMMAND_INFOS) / sizeof(R_COMMAND_INFOS[0])); i++) {
+    if (strcmp(name, R_COMMAND_INFOS[i].name) == 0) {
+      return R_COMMAND_INFOS[i].info;
+    }
+  }
+
+  return NULL;
 }

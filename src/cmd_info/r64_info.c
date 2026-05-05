@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "redismodule.h"
 #include "common.h"
 
@@ -655,6 +657,37 @@ static const RedisModuleCommandInfo R_JACCARD_INFO = {
   .args = (RedisModuleCommandArg*) R_JACCARD_ARGS,
 };
 
+typedef struct {
+  const char* name;
+  const RedisModuleCommandInfo* info;
+} NamedCommandInfo;
+
+static const NamedCommandInfo R64_COMMAND_INFOS[] = {
+  {"R64.SETBIT", &R_SETBIT_INFO},
+  {"R64.GETBIT", &R_GETBIT_INFO},
+  {"R64.GETBITS", &R_GETBITS_INFO},
+  {"R64.CLEARBITS", &R_CLEARBITS_INFO},
+  {"R64.SETINTARRAY", &R_SETINTARRAY_INFO},
+  {"R64.GETINTARRAY", &R_GETINTARRAY_INFO},
+  {"R64.RANGEINTARRAY", &R_RANGEINTARRAY_INFO},
+  {"R64.APPENDINTARRAY", &R_APPENDINTARRAY_INFO},
+  {"R64.DELETEINTARRAY", &R_DELETEINTARRAY_INFO},
+  {"R64.DIFF", &R_DIFF_INFO},
+  {"R64.SETFULL", &R_SETFULL_INFO},
+  {"R64.SETRANGE", &R_SETRANGE_INFO},
+  {"R64.OPTIMIZE", &R_OPTIMIZE_INFO},
+  {"R64.SETBITARRAY", &R_SETBITARRAY_INFO},
+  {"R64.GETBITARRAY", &R_GETBITARRAY_INFO},
+  {"R64.BITOP", &R_BITOP_INFO},
+  {"R64.BITCOUNT", &R_BITCOUNT_INFO},
+  {"R64.BITPOS", &R_BITPOS_INFO},
+  {"R64.MIN", &R_MIN_INFO},
+  {"R64.MAX", &R_MAX_INFO},
+  {"R64.CLEAR", &R_CLEAR_INFO},
+  {"R64.CONTAINS", &R_CONTAINS_INFO},
+  {"R64.JACCARD", &R_JACCARD_INFO},
+};
+
 int RegisterR64CommandInfos(RedisModuleCtx* ctx) {
   SetCommandInfo(ctx, "R64.SETBIT", &R_SETBIT_INFO);
   SetCommandInfo(ctx, "R64.GETBIT", &R_GETBIT_INFO);
@@ -681,4 +714,18 @@ int RegisterR64CommandInfos(RedisModuleCtx* ctx) {
   SetCommandInfo(ctx, "R64.JACCARD", &R_JACCARD_INFO);
 
   return REDISMODULE_OK;
+}
+
+const RedisModuleCommandInfo* GetR64CommandInfo(const char* name) {
+  if (name == NULL) {
+    return NULL;
+  }
+
+  for (size_t i = 0; i < (sizeof(R64_COMMAND_INFOS) / sizeof(R64_COMMAND_INFOS[0])); i++) {
+    if (strcmp(name, R64_COMMAND_INFOS[i].name) == 0) {
+      return R64_COMMAND_INFOS[i].info;
+    }
+  }
+
+  return NULL;
 }

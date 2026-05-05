@@ -21,7 +21,11 @@ node_modules
 **/.vitepress/cache/
 
 # Fuzzing artifacts
-tests/fuzz/corpus/
+tests/fuzz/corpus/*
+!tests/fuzz/corpus/*/
+tests/fuzz/corpus/*/*
+!tests/fuzz/corpus/*/seed*
+!tests/fuzz/corpus/*/regression*
 crash-*
 leak-*
 timeout-*
