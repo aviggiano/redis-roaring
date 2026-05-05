@@ -135,40 +135,40 @@ Tested using CRoaring's `census1881` dataset. Performance tests are run automati
 <!-- BEGIN_PERFORMANCE -->
 |               OP |     TIME/OP (us) |     ST.DEV. (us) |
 | ---------------- | ---------------- | ---------------- |
-|         R.SETBIT |            51.30 |            12.36 |
-|       R64.SETBIT |            51.45 |            12.61 |
-|           SETBIT |            50.22 |            12.67 |
-|         R.GETBIT |            49.72 |             6.99 |
-|       R64.GETBIT |            50.49 |             7.00 |
-|           GETBIT |            49.33 |             6.75 |
-|       R.BITCOUNT |            47.08 |             0.04 |
-|     R64.BITCOUNT |            46.93 |             0.02 |
-|         BITCOUNT |            61.36 |             0.11 |
-|         R.BITPOS |            47.14 |             0.04 |
-|       R64.BITPOS |            46.46 |             0.04 |
-|           BITPOS |            51.36 |             0.26 |
-|      R.BITOP NOT |            92.14 |             1.24 |
-|    R64.BITOP NOT |            97.68 |             1.21 |
-|        BITOP NOT |           215.40 |             1.19 |
-|      R.BITOP AND |            53.62 |             0.24 |
-|    R64.BITOP AND |            55.09 |             0.22 |
-|        BITOP AND |           267.58 |             3.74 |
-|       R.BITOP OR |            65.82 |             1.19 |
-|     R64.BITOP OR |            66.24 |             0.72 |
-|         BITOP OR |           431.63 |             6.91 |
-|      R.BITOP XOR |            79.75 |             1.15 |
-|    R64.BITOP XOR |            71.13 |             0.75 |
-|        BITOP XOR |           385.66 |             6.12 |
-|    R.BITOP ANDOR |            53.62 |             0.14 |
-|  R64.BITOP ANDOR |            55.26 |             0.23 |
-|      BITOP ANDOR |           400.76 |             6.46 |
-|      R.BITOP ONE |            64.07 |             0.68 |
-|    R64.BITOP ONE |            71.59 |             0.97 |
-|        BITOP ONE |           431.38 |             7.06 |
-|            R.MIN |            48.03 |             0.18 |
-|          R64.MIN |            47.04 |             0.03 |
-|              MIN |            46.79 |             0.02 |
-|            R.MAX |            47.03 |             0.02 |
-|          R64.MAX |            47.23 |             0.02 |
-|              MAX |            47.08 |             0.02 |
+|         R.SETBIT |            59.74 |            31.13 |
+|       R64.SETBIT |            60.29 |            47.68 |
+|           SETBIT |            57.77 |            35.00 |
+|         R.GETBIT |            57.92 |            11.20 |
+|       R64.GETBIT |            57.88 |            19.85 |
+|           GETBIT |            57.34 |            23.25 |
+|       R.BITCOUNT |            64.96 |             0.06 |
+|     R64.BITCOUNT |            56.12 |             0.26 |
+|         BITCOUNT |            69.27 |             0.15 |
+|         R.BITPOS |            54.01 |             0.19 |
+|       R64.BITPOS |            55.13 |             0.05 |
+|           BITPOS |            60.85 |             0.24 |
+|      R.BITOP NOT |           100.59 |             1.26 |
+|    R64.BITOP NOT |           105.95 |             1.26 |
+|        BITOP NOT |           232.21 |             1.27 |
+|      R.BITOP AND |            60.82 |             0.23 |
+|    R64.BITOP AND |            60.95 |             0.20 |
+|        BITOP AND |           282.14 |             3.82 |
+|       R.BITOP OR |            72.36 |             1.23 |
+|     R64.BITOP OR |            73.62 |             0.75 |
+|         BITOP OR |           440.59 |             7.11 |
+|      R.BITOP XOR |            73.91 |             1.20 |
+|    R64.BITOP XOR |            77.42 |             0.70 |
+|        BITOP XOR |           411.25 |             6.20 |
+|    R.BITOP ANDOR |            63.71 |             0.17 |
+|  R64.BITOP ANDOR |            79.06 |             0.23 |
+|      BITOP ANDOR |           433.86 |             6.55 |
+|      R.BITOP ONE |            90.31 |             0.94 |
+|    R64.BITOP ONE |            97.37 |             1.07 |
+|        BITOP ONE |           460.40 |             7.10 |
+|            R.MIN |            54.46 |             0.09 |
+|          R64.MIN |            57.72 |             0.30 |
+|              MIN |            53.56 |             0.03 |
+|            R.MAX |            53.81 |             0.05 |
+|          R64.MAX |            53.89 |             0.03 |
+|              MAX |            52.16 |             0.02 |
 <!-- END_PERFORMANCE -->
