@@ -26,6 +26,23 @@ emit_manifest_targets() {
   perl -nE 'while(/\b(fuzz_[a-z0-9_]+)\b/g){ say $1 }' tests/fuzz/fuzz_manifest.md | sort -u
 }
 
+emit_descriptor_commands() {
+  perl -nE '
+    if (/FUZZ_PAIR_(?:SINGLE_KEY|TWO_KEY_RANGE)\("([^"]+)"/) {
+      say "R.$1";
+      say "R64.$1";
+    } elsif (/FUZZ_PAIR_DIFF\(\)/) {
+      say "R.DIFF";
+      say "R64.DIFF";
+    } elsif (/FUZZ_PAIR_BITOP\(\)/) {
+      say "R.BITOP";
+      say "R64.BITOP";
+    } elsif (/\{\s*"([^"]+)"\s*,\s*NULL\s*,/) {
+      say $1;
+    }
+  ' tests/fuzz/fuzz_command_manifest.h | sort -u
+}
+
 emit_cmake_targets() {
   perl -nE 'say $1 if /^\s*(fuzz_[a-z0-9_]+)\s*$/' CMakeLists.txt | sort -u
 }
@@ -62,11 +79,13 @@ emit_registered_commands > "$TMP_DIR/registered.txt"
 emit_metadata_commands > "$TMP_DIR/metadata.txt"
 emit_manifest_commands > "$TMP_DIR/manifest_commands.txt"
 emit_manifest_targets > "$TMP_DIR/manifest_targets.txt"
+emit_descriptor_commands > "$TMP_DIR/descriptor_commands.txt"
 emit_cmake_targets > "$TMP_DIR/cmake_targets.txt"
 emit_workflow_targets > "$TMP_DIR/workflow_targets.txt"
 
 compare_sets "registered commands" "$TMP_DIR/registered.txt" "metadata commands" "$TMP_DIR/metadata.txt"
 compare_sets "registered commands" "$TMP_DIR/registered.txt" "manifest commands" "$TMP_DIR/manifest_commands.txt"
+compare_sets "registered commands" "$TMP_DIR/registered.txt" "metadata fuzz descriptors" "$TMP_DIR/descriptor_commands.txt"
 compare_sets "manifest targets" "$TMP_DIR/manifest_targets.txt" "CMake fuzz targets" "$TMP_DIR/cmake_targets.txt"
 compare_sets "manifest targets" "$TMP_DIR/manifest_targets.txt" "workflow fuzz targets" "$TMP_DIR/workflow_targets.txt"
 
