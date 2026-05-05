@@ -11,6 +11,7 @@ mkdir -p tests/fuzz/corpus/bitmap64_api
 mkdir -p tests/fuzz/corpus/bitmap_operations
 mkdir -p tests/fuzz/corpus/bitmap_serialization
 mkdir -p tests/fuzz/corpus/bitop_keys
+mkdir -p tests/fuzz/corpus/command_metadata
 
 echo "Generating seed files for fuzzers..."
 
@@ -82,9 +83,26 @@ printf '\x08\x06\x00' > tests/fuzz/corpus/bitop_keys/seed3_invalid_op
 # Seed 4: Variadic op with invalid arity
 printf '\x00\x04\x00' > tests/fuzz/corpus/bitop_keys/seed4_invalid_arity
 
+# Generate seeds for command_metadata
+# Seed 1: Single-key fixed-arity command
+printf '\x00\x01' > tests/fuzz/corpus/command_metadata/seed1_single_key
+
+# Seed 2: Variadic single-key command near minimum arity
+printf '\x02\x03' > tests/fuzz/corpus/command_metadata/seed2_variadic_floor
+
+# Seed 3: Multi-key fixed command
+printf '\x09\x04' > tests/fuzz/corpus/command_metadata/seed3_diff
+
+# Seed 4: BITOP NOT path
+printf '\x0f\x04\x03' > tests/fuzz/corpus/command_metadata/seed4_bitop_not
+
+# Seed 5: Root command with optional token
+printf '\x2e\x03' > tests/fuzz/corpus/command_metadata/seed5_stat_optional
+
 echo "✓ Seed files generated successfully!"
 echo "  - bitmap_api: 5 seeds"
 echo "  - bitmap64_api: 4 seeds"
 echo "  - bitmap_operations: 4 seeds"
 echo "  - bitmap_serialization: 4 seeds"
 echo "  - bitop_keys: 4 seeds"
+echo "  - command_metadata: 5 seeds"

@@ -55,6 +55,8 @@ set(REDIS_ROARING_SOURCE_FILES
   ${SRC_PATH}/r_64.c
   ${SRC_PATH}/data-structure.c
   ${SRC_PATH}/parse.c
+  ${SRC_PATH}/cmd_info/command_info.c
+  ${SRC_PATH}/cmd_info/root_info.c
   ${SRC_PATH}/cmd_info/r_info.c
   ${SRC_PATH}/cmd_info/r64_info.c
 )
@@ -89,14 +91,26 @@ if(ENABLE_FUZZING)
       fuzz_bitmap_operations
       fuzz_bitmap_serialization
       fuzz_bitop_keys
+      fuzz_command_metadata
     )
 
     # Create each fuzzer
     foreach(FUZZER ${FUZZERS})
-      add_executable(${FUZZER}
+      set(FUZZER_SOURCES
         ${TEST_PATH}/fuzz/${FUZZER}.c
         ${SRC_PATH}/data-structure.c
       )
+
+      if(FUZZER STREQUAL "fuzz_command_metadata")
+        list(APPEND FUZZER_SOURCES
+          ${SRC_PATH}/cmd_info/command_info.c
+          ${SRC_PATH}/cmd_info/root_info.c
+          ${SRC_PATH}/cmd_info/r_info.c
+          ${SRC_PATH}/cmd_info/r64_info.c
+        )
+      endif()
+
+      add_executable(${FUZZER} ${FUZZER_SOURCES})
 
       target_include_directories(${FUZZER} PRIVATE
         ${TEST_PATH}/fuzz
