@@ -38,6 +38,17 @@ static void fuzz_dispatch_require_error(redisReply* reply) {
   fuzz_require(reply->type == REDIS_REPLY_ERROR);
 }
 
+static bool fuzz_dispatch_find_previous_source(size_t index, const char* const* source_keys, size_t* match_index) {
+  for (size_t i = 0; i < index; i++) {
+    if (strcmp(source_keys[index], source_keys[i]) == 0) {
+      *match_index = i;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   if (size < 4) {
     return 0;
@@ -79,9 +90,10 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     Bitmap64* logical_dest = NULL;
 
     for (size_t i = 0; i < source_count; i++) {
-      if (i > 0 && source_keys[i] == source_keys[0]) {
-        logical_sources[i] = roaring64_bitmap_copy(logical_sources[0]);
-        source_value_counts[i] = source_value_counts[0];
+      size_t previous_index = 0;
+      if (fuzz_dispatch_find_previous_source(i, source_keys, &previous_index)) {
+        logical_sources[i] = roaring64_bitmap_copy(logical_sources[previous_index]);
+        source_value_counts[i] = source_value_counts[previous_index];
         continue;
       }
       source_value_counts[i] = fuzz_generate_values64(&input, source_values[i], 16, 2048);
@@ -140,7 +152,9 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       fuzz_redis_free_reply(reply);
       fuzz_require_bitmap64_matches_key(server, key_names[0], logical_dest);
       for (size_t i = 0; i < source_count; i++) {
-        if (strcmp(source_keys[i], key_names[0]) != 0) {
+        size_t previous_index = 0;
+        if (strcmp(source_keys[i], key_names[0]) != 0
+            && !fuzz_dispatch_find_previous_source(i, source_keys, &previous_index)) {
           fuzz_require_bitmap64_matches_key(server, source_keys[i], logical_sources[i]);
         }
       }
@@ -160,7 +174,9 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       fuzz_require_bitmap64_matches_key(server, key_names[0], expected);
 
       for (size_t i = 0; i < source_count; i++) {
-        if (strcmp(source_keys[i], key_names[0]) != 0) {
+        size_t previous_index = 0;
+        if (strcmp(source_keys[i], key_names[0]) != 0
+            && !fuzz_dispatch_find_previous_source(i, source_keys, &previous_index)) {
           fuzz_require_bitmap64_matches_key(server, source_keys[i], logical_sources[i]);
         }
       }
@@ -184,9 +200,10 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     Bitmap* logical_dest = NULL;
 
     for (size_t i = 0; i < source_count; i++) {
-      if (i > 0 && source_keys[i] == source_keys[0]) {
-        logical_sources[i] = roaring_bitmap_copy(logical_sources[0]);
-        source_value_counts[i] = source_value_counts[0];
+      size_t previous_index = 0;
+      if (fuzz_dispatch_find_previous_source(i, source_keys, &previous_index)) {
+        logical_sources[i] = roaring_bitmap_copy(logical_sources[previous_index]);
+        source_value_counts[i] = source_value_counts[previous_index];
         continue;
       }
       source_value_counts[i] = fuzz_generate_values32(&input, source_values[i], 16, 2048);
@@ -245,7 +262,9 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       fuzz_redis_free_reply(reply);
       fuzz_require_bitmap32_matches_key(server, key_names[0], logical_dest);
       for (size_t i = 0; i < source_count; i++) {
-        if (strcmp(source_keys[i], key_names[0]) != 0) {
+        size_t previous_index = 0;
+        if (strcmp(source_keys[i], key_names[0]) != 0
+            && !fuzz_dispatch_find_previous_source(i, source_keys, &previous_index)) {
           fuzz_require_bitmap32_matches_key(server, source_keys[i], logical_sources[i]);
         }
       }
@@ -265,7 +284,9 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       fuzz_require_bitmap32_matches_key(server, key_names[0], expected);
 
       for (size_t i = 0; i < source_count; i++) {
-        if (strcmp(source_keys[i], key_names[0]) != 0) {
+        size_t previous_index = 0;
+        if (strcmp(source_keys[i], key_names[0]) != 0
+            && !fuzz_dispatch_find_previous_source(i, source_keys, &previous_index)) {
           fuzz_require_bitmap32_matches_key(server, source_keys[i], logical_sources[i]);
         }
       }

@@ -240,6 +240,11 @@ static size_t fuzz_metadata_expected_keys(const FuzzMetadataSpec* spec, const ch
       }
       expected[0] = argv[2];
       expected[1] = argv[3];
+      if (argc > 4) {
+        // COMMAND GETKEYS treats the optional trailing "last" argument as a key.
+        expected[2] = argv[4];
+        return 3;
+      }
       return 2;
   }
 
