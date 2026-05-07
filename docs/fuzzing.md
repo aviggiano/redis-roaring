@@ -277,32 +277,26 @@ mkdir minimized_corpus
 
 ## CI/CD Integration
 
-redis-roaring runs fuzzing in `.github/workflows/ci.yml` on both `push` and `pull_request`.
+redis-roaring runs fuzzing in `.github/workflows/ci.yml` on `push`, `pull_request`, and a nightly `schedule`.
 
 ### Workflow Coverage
 
 - `fuzz_manifest` validates `tests/fuzz/fuzz_manifest.json`
-- `fuzz` builds all ten fuzzers and runs a short ASan/UBSan-backed smoke pass per target
+- `fuzz` builds all ten fuzzers and runs a short ASan/UBSan-backed smoke pass per target on every push and PR
 - `fuzz_coverage` builds the same matrix with LLVM coverage instrumentation and exports LCOV data
+- `fuzz_nightly` reuses the same corpus directories for longer scheduled campaigns and uploads crash and corpus artifacts
 
 ### Viewing Results
 
 1. Go to the Actions tab
 2. Open the relevant workflow run
 3. Inspect the `Fuzz Testing` or `Fuzzing Coverage` matrix jobs
-4. Download crash or corpus artifacts if a job failed
+4. Download crash or corpus artifacts from the matching matrix entry when needed
 
 ### Artifact Details
 
-**Crash Artifacts**: `fuzzing-crashes-<commit-sha>`
-- Retention: 90 days
-- Contains all crash files from the run
-- Named by commit SHA for easy tracking
-
-**Corpus Artifacts**: `fuzzing-corpus`
-- Retention: 30 days
-- Contains evolved test inputs
-- Grows over time with interesting cases
+- `fuzz-<target>-artifacts` preserves smoke-run crash files and the evolved corpus directory for that target
+- `nightly-fuzz-<target>-artifacts` preserves the same data for scheduled long runs
 
 ## Best Practices
 
