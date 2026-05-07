@@ -279,7 +279,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
             case OP_GETBITS: {
                 size_t n_offsets = fuzz_consume_size_in_range(&input, 1, 100);
-                uint64_t* offsets = (uint64_t*)malloc(n_offsets * sizeof(uint64_t));
+                uint64_t* offsets = (uint64_t*)calloc(n_offsets, sizeof(uint64_t));
                 if (offsets) {
                     for (size_t i = 0; i < n_offsets && fuzz_input_remaining(&input) > sizeof(uint64_t); i++) {
                         offsets[i] = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
@@ -298,7 +298,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
             case OP_CLEARBITS: {
                 size_t n_offsets = fuzz_consume_size_in_range(&input, 1, 100);
-                uint64_t* offsets = (uint64_t*)malloc(n_offsets * sizeof(uint64_t));
+                uint64_t* offsets = (uint64_t*)calloc(n_offsets, sizeof(uint64_t));
                 if (offsets) {
                     for (size_t i = 0; i < n_offsets && fuzz_input_remaining(&input) > sizeof(uint64_t); i++) {
                         offsets[i] = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
@@ -314,7 +314,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
             case OP_CLEARBITS_COUNT: {
                 size_t n_offsets = fuzz_consume_size_in_range(&input, 1, 100);
-                uint64_t* offsets = (uint64_t*)malloc(n_offsets * sizeof(uint64_t));
+                uint64_t* offsets = (uint64_t*)calloc(n_offsets, sizeof(uint64_t));
                 if (offsets) {
                     for (size_t i = 0; i < n_offsets && fuzz_input_remaining(&input) > sizeof(uint64_t); i++) {
                         offsets[i] = fuzz_consume_u64_in_range(&input, 0, MAX_BIT_OFFSET_64);
