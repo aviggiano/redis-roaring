@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "tests" / "fuzz" / "fuzz_manifest.json"
 CMAKE_PATH = ROOT / "CMakeLists.txt"
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "ci.yml"
+METADATA_FUZZ_PATH = ROOT / "tests" / "fuzz" / "fuzz_command_metadata.c"
 REGISTER_SOURCES = [
     ROOT / "src" / "r_32.c",
     ROOT / "src" / "r_64.c",
@@ -18,6 +19,7 @@ REGISTER_SOURCES = [
 REGISTER_RE = re.compile(r'RegisterCommand\(ctx,\s*"([^"]+)"')
 CMAKE_TARGET_RE = re.compile(r"^\s*(fuzz_[a-z0-9_]+)\s*$", re.MULTILINE)
 WORKFLOW_TARGET_RE = re.compile(r"^\s*-\s*(fuzz_[a-z0-9_]+)\s*$", re.MULTILINE)
+METADATA_FUZZ_COMMAND_RE = re.compile(r'^\s*\{"([^"]+)",\s*FUZZ_META_[A-Z_]+,', re.MULTILINE)
 REQUIRED_SCOPE_KEYS = {"metadata", "dispatch", "routing", "persistence", "parity"}
 
 
@@ -51,6 +53,13 @@ def declared_cmake_targets() -> set[str]:
 
 def declared_workflow_targets() -> set[str]:
     return set(WORKFLOW_TARGET_RE.findall(WORKFLOW_PATH.read_text()))
+
+
+def declared_metadata_fuzzer_commands() -> set[str]:
+    commands = set(METADATA_FUZZ_COMMAND_RE.findall(METADATA_FUZZ_PATH.read_text()))
+    if not commands:
+        fail(f"no metadata fuzzer commands found in {METADATA_FUZZ_PATH}")
+    return commands
 
 
 def validate_family(family: dict) -> None:
@@ -130,13 +139,20 @@ def main() -> None:
     validate_target_inventory(families)
 
     covered_set = set(covered)
+    metadata_fuzzer_set = declared_metadata_fuzzer_commands()
     missing = sorted(registered_set - covered_set)
     extra = sorted(covered_set - registered_set)
+    metadata_missing = sorted(registered_set - metadata_fuzzer_set)
+    metadata_extra = sorted(metadata_fuzzer_set - registered_set)
 
     if missing:
         fail(f"manifest is missing registered commands: {', '.join(missing)}")
     if extra:
         fail(f"manifest contains unknown commands: {', '.join(extra)}")
+    if metadata_missing:
+        fail("metadata fuzzer is missing registered commands: " + ", ".join(metadata_missing))
+    if metadata_extra:
+        fail("metadata fuzzer contains unknown commands: " + ", ".join(metadata_extra))
 
     print(
         f"validated fuzz manifest: {len(families)} families cover "

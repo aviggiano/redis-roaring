@@ -139,6 +139,13 @@ function test_getintarray_setintarray() {
   rcall_assert "R.GETINTARRAY test_getintarray_setintarray_empty_key" "" "Get integer array from empty key"
 }
 
+function test_command_getkeysandflags() {
+  print_test_header "test_command_getkeysandflags"
+
+  rcall_assert "COMMAND GETKEYSANDFLAGS R.SETINTARRAY test_command_flags 1" $'test_command_flags\nOW\ninsert' "SETINTARRAY reports overwrite/insert key flags"
+  rcall_assert "COMMAND GETKEYSANDFLAGS R.SETBITARRAY test_command_flags 0101" $'test_command_flags\nOW\ninsert' "SETBITARRAY reports overwrite/insert key flags"
+}
+
 function test_rangeintarray() {
   print_test_header "test_rangeintarray"
 
@@ -739,6 +746,7 @@ test_bitop
 test_bitcount
 test_bitpos
 test_getintarray_setintarray
+test_command_getkeysandflags
 test_rangeintarray
 test_getbitarray_setbitarray
 test_appendintarray_deleteintarray

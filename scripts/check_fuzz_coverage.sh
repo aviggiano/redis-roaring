@@ -18,21 +18,12 @@ emit_metadata_commands() {
     src/cmd_info/r_info.c src/cmd_info/r64_info.c src/cmd_info/root_info.c | sort -u
 }
 
-emit_descriptor_commands() {
+emit_metadata_fuzzer_commands() {
   perl -nE '
-    if (/FUZZ_PAIR_(?:SINGLE_KEY|TWO_KEY_RANGE)\("([^"]+)"/) {
-      say "R.$1";
-      say "R64.$1";
-    } elsif (/FUZZ_PAIR_DIFF\(\)/) {
-      say "R.DIFF";
-      say "R64.DIFF";
-    } elsif (/FUZZ_PAIR_BITOP\(\)/) {
-      say "R.BITOP";
-      say "R64.BITOP";
-    } elsif (/\{\s*"([^"]+)"\s*,\s*NULL\s*,/) {
+    if (/^\s*\{\s*"([^"]+)"\s*,\s*FUZZ_META_[A-Z_]+\s*,/) {
       say $1;
     }
-  ' tests/fuzz/fuzz_command_manifest.h | sort -u
+  ' tests/fuzz/fuzz_command_metadata.c | sort -u
 }
 
 emit_cmake_targets() {
@@ -95,14 +86,14 @@ compare_sets() {
 
 emit_registered_commands > "$TMP_DIR/registered.txt"
 emit_metadata_commands > "$TMP_DIR/metadata.txt"
-emit_descriptor_commands > "$TMP_DIR/descriptor_commands.txt"
+emit_metadata_fuzzer_commands > "$TMP_DIR/metadata_fuzzer_commands.txt"
 emit_cmake_targets > "$TMP_DIR/cmake_targets.txt"
 emit_workflow_targets > "$TMP_DIR/workflow_targets.txt"
 
 python3 ./scripts/validate_fuzz_manifest.py
 
 compare_sets "registered commands" "$TMP_DIR/registered.txt" "metadata commands" "$TMP_DIR/metadata.txt"
-compare_sets "registered commands" "$TMP_DIR/registered.txt" "metadata fuzz descriptors" "$TMP_DIR/descriptor_commands.txt"
+compare_sets "registered commands" "$TMP_DIR/registered.txt" "metadata fuzzer commands" "$TMP_DIR/metadata_fuzzer_commands.txt"
 compare_sets "CMake fuzz targets" "$TMP_DIR/cmake_targets.txt" "workflow fuzz targets" "$TMP_DIR/workflow_targets.txt"
 
 ensure_targets_have_sources_and_corpora "$TMP_DIR/cmake_targets.txt"

@@ -23,7 +23,7 @@
 When the command surface changes:
 
 1. Update `tests/fuzz/fuzz_manifest.json`.
-2. Update `tests/fuzz/fuzz_command_manifest.h` if metadata-descriptor coverage changed.
+2. Update `FUZZ_METADATA_SPECS` in `tests/fuzz/fuzz_command_metadata.c` if metadata coverage changed.
 3. Add or update any required seed corpora.
 4. Run `python3 ./scripts/validate_fuzz_manifest.py`.
 5. Run `./scripts/check_fuzz_coverage.sh`.

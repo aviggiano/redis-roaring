@@ -121,7 +121,7 @@ static const RedisModuleCommandInfo R_CLEARBITS_INFO = {
 // R.SETINTARRAY key value [value...]
 // ===============================
 static const RedisModuleCommandKeySpec R_SETINTARRAY_KEYSPECS[] = {
-  {.flags = REDISMODULE_CMD_KEY_RO | REDISMODULE_CMD_KEY_INSERT,
+  {.flags = REDISMODULE_CMD_KEY_OW | REDISMODULE_CMD_KEY_INSERT,
    .begin_search_type = REDISMODULE_KSPEC_BS_INDEX,
    .bs.index = {.pos = 1},
    .find_keys_type = REDISMODULE_KSPEC_FK_RANGE,
@@ -365,7 +365,7 @@ static const RedisModuleCommandInfo R_OPTIMIZE_INFO = {
 // R.SETBITARRAY key value
 // ===============================
 static const RedisModuleCommandKeySpec R_SETBITARRAY_KEYSPECS[] = {
-  {.flags = REDISMODULE_CMD_KEY_RO | REDISMODULE_CMD_KEY_INSERT,
+  {.flags = REDISMODULE_CMD_KEY_OW | REDISMODULE_CMD_KEY_INSERT,
    .begin_search_type = REDISMODULE_KSPEC_BS_INDEX,
    .bs.index = {.pos = 1},
    .find_keys_type = REDISMODULE_KSPEC_FK_RANGE,
