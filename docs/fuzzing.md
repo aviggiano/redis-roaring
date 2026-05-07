@@ -66,8 +66,9 @@ The project includes ten specialized fuzz targets. Five are pure in-process API 
 - **Purpose**: Validates command-family coverage, `COMMAND GETKEYS`, and valid/invalid runtime shapes
 - **Coverage**:
   - Manifest-backed command family coverage
-  - Metadata and runtime agreement for key extraction
-  - Invalid BITOP forms and unsupported operations
+  - Metadata and runtime agreement for key extraction and arity handling
+  - Introspection-only paths that must not mutate the keyspace
+  - Valid runtime dispatch for every manifest family and non-mutation on invalid forms
 - **Corpus**: `tests/fuzz/corpus/command_metadata/`
 
 ### 7. `fuzz_command_dispatch` - BITOP Command Semantics Fuzzer
@@ -96,11 +97,11 @@ The project includes ten specialized fuzz targets. Five are pure in-process API 
 - **Corpus**: `tests/fuzz/corpus/persistence_sequences/`
 
 ### 10. `fuzz_r_vs_r64_parity` - 32/64 Parity Fuzzer
-- **Purpose**: Compares `R.BITOP` and `R64.BITOP` behavior within the shared 32-bit-safe range
+- **Purpose**: Compares every paired `R.*` / `R64.*` command family within the shared 32-bit-safe range
 - **Coverage**:
-  - Integer reply parity
-  - Final bitmap parity
-  - Source immutability parity
+  - Reply parity across the full paired command surface
+  - Final bitmap parity for every mirrored key touched by the command
+  - Shared-range allowlist handling for intentional differences such as `SETFULL`
 - **Corpus**: `tests/fuzz/corpus/r_vs_r64_parity/`
 
 ## Manifest Coverage
@@ -109,6 +110,7 @@ The project includes ten specialized fuzz targets. Five are pure in-process API 
 
 - `python3 scripts/validate_fuzz_manifest.py` verifies that the manifest covers every registered command exactly once
 - the validator also checks that each family points at real fuzz targets and corpus directories
+- paired command families now declare both runtime dispatch and parity coverage through `fuzz_r_vs_r64_parity`
 - CI runs the validator before the fuzz jobs, and `scripts/build_fuzzers.sh` runs it locally before building
 
 ## Building Fuzzers
@@ -284,8 +286,8 @@ redis-roaring runs fuzzing in `.github/workflows/ci.yml` on `push`, `pull_reques
 
 - `fuzz_manifest` validates `tests/fuzz/fuzz_manifest.json`
 - `fuzz` builds all ten fuzzers and runs a short ASan/UBSan-backed smoke pass per target on every push and PR
-- `fuzz_coverage` builds the same matrix with LLVM coverage instrumentation and exports LCOV data
-- `fuzz_nightly` reuses the same corpus directories for longer scheduled campaigns and uploads crash and corpus artifacts
+- `fuzz_coverage` restores cached corpora, layers them over the committed seeds, then builds the same matrix with LLVM coverage instrumentation and exports LCOV data
+- `fuzz_nightly` reuses cached corpora for longer scheduled campaigns, minimizes the evolved corpus, and uploads crash and minimized-corpus artifacts
 
 ### Viewing Results
 
@@ -296,8 +298,9 @@ redis-roaring runs fuzzing in `.github/workflows/ci.yml` on `push`, `pull_reques
 
 ### Artifact Details
 
-- `fuzz-<target>-artifacts` preserves smoke-run crash files and the evolved corpus directory for that target
+- `fuzz-<target>-artifacts` preserves smoke-run crash files and the minimized corpus directory for that target
 - `nightly-fuzz-<target>-artifacts` preserves the same data for scheduled long runs
+- the workflow cache keeps rolling corpus state between runs, while artifacts provide point-in-time download and triage snapshots
 
 ## Best Practices
 
@@ -311,7 +314,7 @@ redis-roaring runs fuzzing in `.github/workflows/ci.yml` on `push`, `pull_reques
 
 - Commit interesting corpus inputs to repository
 - Periodically merge and minimize corpus
-- Share corpus between CI runs using artifacts
+- Share corpus between CI runs using the workflow cache, and keep artifacts for reproducible snapshots
 
 ### 3. Crash Triage
 

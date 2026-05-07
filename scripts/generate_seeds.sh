@@ -125,11 +125,32 @@ printf '\x00\x01\x02\x03\x04\x05\x06\x07' > tests/fuzz/corpus/persistence_sequen
 printf '\x01\x02\x03\x04\x05\x06\x07\x08' > tests/fuzz/corpus/persistence_sequences/seed2_rdb_aof_64
 
 # Generate seeds for r_vs_r64_parity
-# Seed 1: shared-range OR
-printf '\x01\x00\x00\x01\x02\x03\x04' > tests/fuzz/corpus/r_vs_r64_parity/seed1_or
+# Seed 1: SETBIT parity
+printf '\x00\x10\x01' > tests/fuzz/corpus/r_vs_r64_parity/seed1_setbit
 
-# Seed 2: shared-range NOT with aliasing
-printf '\x03\x01\x01\x01\x02\x03\x04' > tests/fuzz/corpus/r_vs_r64_parity/seed2_not_alias
+# Seed 2: GETBITS parity with multiple offsets
+printf '\x02\x03\x20\x40\x60' > tests/fuzz/corpus/r_vs_r64_parity/seed2_getbits
+
+# Seed 3: RANGEINTARRAY parity
+printf '\x06\x02\x04' > tests/fuzz/corpus/r_vs_r64_parity/seed3_range
+
+# Seed 4: DIFF parity with aliasing pressure
+printf '\x09\x02\x01\x02\x03\x04' > tests/fuzz/corpus/r_vs_r64_parity/seed4_diff_alias
+
+# Seed 5: SETFULL shared-range allowlist
+printf '\x0a' > tests/fuzz/corpus/r_vs_r64_parity/seed5_setfull
+
+# Seed 6: SETBITARRAY parity
+printf '\x0d\x01\x01\x01\x01' > tests/fuzz/corpus/r_vs_r64_parity/seed6_setbitarray
+
+# Seed 7: BITOP parity with unary-style aliasing
+printf '\x0f\x03\x01\x01\x02\x03\x04' > tests/fuzz/corpus/r_vs_r64_parity/seed7_bitop_alias
+
+# Seed 8: CONTAINS parity with explicit mode
+printf '\x15\x01\x01\x02' > tests/fuzz/corpus/r_vs_r64_parity/seed8_contains
+
+# Seed 9: JACCARD parity with same-key comparison
+printf '\x16\x01\x00' > tests/fuzz/corpus/r_vs_r64_parity/seed9_jaccard
 
 echo "✓ Seed files generated successfully!"
 echo "  - bitmap_api: 5 seeds"
@@ -141,4 +162,4 @@ echo "  - command_metadata: 3 seeds"
 echo "  - command_dispatch: 3 seeds"
 echo "  - cluster_routing: 3 seeds"
 echo "  - persistence_sequences: 2 seeds"
-echo "  - r_vs_r64_parity: 2 seeds"
+echo "  - r_vs_r64_parity: 9 seeds"
