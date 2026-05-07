@@ -8,12 +8,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "tests" / "fuzz" / "fuzz_manifest.json"
+CMAKE_PATH = ROOT / "CMakeLists.txt"
+WORKFLOW_PATH = ROOT / ".github" / "workflows" / "ci.yml"
 REGISTER_SOURCES = [
     ROOT / "src" / "r_32.c",
     ROOT / "src" / "r_64.c",
     ROOT / "src" / "redis-roaring.c",
 ]
 REGISTER_RE = re.compile(r'RegisterCommand\(ctx,\s*"([^"]+)"')
+CMAKE_TARGET_RE = re.compile(r"^\s*(fuzz_[a-z0-9_]+)\s*$", re.MULTILINE)
+WORKFLOW_TARGET_RE = re.compile(r"^\s*-\s*(fuzz_[a-z0-9_]+)\s*$", re.MULTILINE)
 REQUIRED_SCOPE_KEYS = {"metadata", "dispatch", "routing", "persistence", "parity"}
 
 
@@ -39,6 +43,14 @@ def registered_commands() -> list[str]:
             fail(f"no commands found in {path}")
         commands.extend(matches)
     return commands
+
+
+def declared_cmake_targets() -> set[str]:
+    return set(CMAKE_TARGET_RE.findall(CMAKE_PATH.read_text()))
+
+
+def declared_workflow_targets() -> set[str]:
+    return set(WORKFLOW_TARGET_RE.findall(WORKFLOW_PATH.read_text()))
 
 
 def validate_family(family: dict) -> None:
@@ -69,6 +81,28 @@ def validate_family(family: dict) -> None:
         seed_path = ROOT / seed_dir
         if not seed_path.exists():
             fail(f"family '{family['family']}' references missing seed corpus {seed_path}")
+        if not any(seed_path.iterdir()):
+            fail(f"family '{family['family']}' references empty seed corpus {seed_path}")
+
+
+def validate_target_inventory(families: list[dict]) -> None:
+    manifest_targets = {target for family in families for target in family["targets"]}
+    cmake_targets = declared_cmake_targets()
+    workflow_targets = declared_workflow_targets()
+
+    missing_from_cmake = sorted(manifest_targets - cmake_targets)
+    if missing_from_cmake:
+        fail(
+            "manifest targets missing from CMake fuzz target list: "
+            + ", ".join(missing_from_cmake)
+        )
+
+    missing_from_workflow = sorted(manifest_targets - workflow_targets)
+    if missing_from_workflow:
+        fail(
+            "manifest targets missing from CI workflow target list: "
+            + ", ".join(missing_from_workflow)
+        )
 
 
 def main() -> None:
@@ -92,6 +126,8 @@ def main() -> None:
             if previous is not None:
                 fail(f"command '{command}' appears in both '{previous}' and '{family_name}'")
             covered[command] = family_name
+
+    validate_target_inventory(families)
 
     covered_set = set(covered)
     missing = sorted(registered_set - covered_set)

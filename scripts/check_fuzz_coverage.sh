@@ -18,14 +18,6 @@ emit_metadata_commands() {
     src/cmd_info/r_info.c src/cmd_info/r64_info.c src/cmd_info/root_info.c | sort -u
 }
 
-emit_manifest_commands() {
-  perl -nE 'say $1 if /^\|\s*`([^`]+)`\s*\|/' tests/fuzz/fuzz_manifest.md | sort -u
-}
-
-emit_manifest_targets() {
-  perl -nE 'while(/\b(fuzz_[a-z0-9_]+)\b/g){ say $1 }' tests/fuzz/fuzz_manifest.md | sort -u
-}
-
 emit_descriptor_commands() {
   perl -nE '
     if (/FUZZ_PAIR_(?:SINGLE_KEY|TWO_KEY_RANGE)\("([^"]+)"/) {
@@ -49,6 +41,32 @@ emit_cmake_targets() {
 
 emit_workflow_targets() {
   perl -nE 'say $1 if /^\s*-\s*(fuzz_[a-z0-9_]+)\s*$/' .github/workflows/ci.yml | sort -u
+}
+
+ensure_targets_have_sources_and_corpora() {
+  local targets_file="$1"
+
+  while IFS= read -r target; do
+    [[ -n "$target" ]] || continue
+
+    local source_file="tests/fuzz/${target}.c"
+    local corpus_dir="tests/fuzz/corpus/${target#fuzz_}"
+
+    if [[ ! -f "$source_file" ]]; then
+      echo "Missing fuzzer source: $source_file" >&2
+      exit 1
+    fi
+
+    if [[ ! -d "$corpus_dir" ]]; then
+      echo "Missing corpus directory: $corpus_dir" >&2
+      exit 1
+    fi
+
+    if ! find "$corpus_dir" -mindepth 1 -type f | grep -q .; then
+      echo "Corpus directory has no seeds: $corpus_dir" >&2
+      exit 1
+    fi
+  done < "$targets_file"
 }
 
 compare_sets() {
@@ -77,38 +95,16 @@ compare_sets() {
 
 emit_registered_commands > "$TMP_DIR/registered.txt"
 emit_metadata_commands > "$TMP_DIR/metadata.txt"
-emit_manifest_commands > "$TMP_DIR/manifest_commands.txt"
-emit_manifest_targets > "$TMP_DIR/manifest_targets.txt"
 emit_descriptor_commands > "$TMP_DIR/descriptor_commands.txt"
 emit_cmake_targets > "$TMP_DIR/cmake_targets.txt"
 emit_workflow_targets > "$TMP_DIR/workflow_targets.txt"
 
+python3 ./scripts/validate_fuzz_manifest.py
+
 compare_sets "registered commands" "$TMP_DIR/registered.txt" "metadata commands" "$TMP_DIR/metadata.txt"
-compare_sets "registered commands" "$TMP_DIR/registered.txt" "manifest commands" "$TMP_DIR/manifest_commands.txt"
 compare_sets "registered commands" "$TMP_DIR/registered.txt" "metadata fuzz descriptors" "$TMP_DIR/descriptor_commands.txt"
-compare_sets "manifest targets" "$TMP_DIR/manifest_targets.txt" "CMake fuzz targets" "$TMP_DIR/cmake_targets.txt"
-compare_sets "manifest targets" "$TMP_DIR/manifest_targets.txt" "workflow fuzz targets" "$TMP_DIR/workflow_targets.txt"
+compare_sets "CMake fuzz targets" "$TMP_DIR/cmake_targets.txt" "workflow fuzz targets" "$TMP_DIR/workflow_targets.txt"
 
-while IFS= read -r target; do
-  [[ -n "$target" ]] || continue
+ensure_targets_have_sources_and_corpora "$TMP_DIR/cmake_targets.txt"
 
-  source_file="tests/fuzz/${target}.c"
-  corpus_dir="tests/fuzz/corpus/${target#fuzz_}"
-
-  if [[ ! -f "$source_file" ]]; then
-    echo "Missing fuzzer source: $source_file" >&2
-    exit 1
-  fi
-
-  if [[ ! -d "$corpus_dir" ]]; then
-    echo "Missing corpus directory: $corpus_dir" >&2
-    exit 1
-  fi
-
-  if ! find "$corpus_dir" -mindepth 1 -type f | grep -q .; then
-    echo "Corpus directory has no seeds: $corpus_dir" >&2
-    exit 1
-  fi
-done < "$TMP_DIR/manifest_targets.txt"
-
-echo "Fuzz coverage manifest is consistent with the command registry, build, workflow, and corpora."
+echo "Fuzz coverage is consistent with the command registry, manifest, build, workflow, and corpora."

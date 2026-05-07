@@ -108,11 +108,14 @@ printf '\x01\x03\x00\x01\x08\x00\x00\x00' > tests/fuzz/corpus/command_dispatch/s
 printf '\x00\x08\x00\x00\x01' > tests/fuzz/corpus/command_dispatch/seed3_invalid
 
 # Generate seeds for cluster_routing
-# Seed 1: same-slot OR
-printf '\x00\x00\x00\x01\x02\x03' > tests/fuzz/corpus/cluster_routing/seed1_same_slot
+# Seed 1: same-slot OR via direct command path
+printf '\x00\x00\x00\x00\x00\x01\x02\x03' > tests/fuzz/corpus/cluster_routing/seed1_same_slot
 
-# Seed 2: cross-slot NOT
-printf '\x01\x01\x01\x01\x02\x03' > tests/fuzz/corpus/cluster_routing/seed2_cross_slot
+# Seed 2: cross-slot NOT via direct command path
+printf '\x01\x01\x01\x00\x01\x01\x02\x03' > tests/fuzz/corpus/cluster_routing/seed2_cross_slot
+
+# Seed 3: same-slot OR via FCALL function-routing path
+printf '\x00\x00\x00\x01\x00\x01\x02\x03' > tests/fuzz/corpus/cluster_routing/seed3_function_route
 
 # Generate seeds for persistence_sequences
 # Seed 1: short 32-bit sequence
@@ -136,6 +139,6 @@ echo "  - bitmap_serialization: 4 seeds"
 echo "  - bitop_keys: 4 seeds"
 echo "  - command_metadata: 3 seeds"
 echo "  - command_dispatch: 3 seeds"
-echo "  - cluster_routing: 2 seeds"
+echo "  - cluster_routing: 3 seeds"
 echo "  - persistence_sequences: 2 seeds"
 echo "  - r_vs_r64_parity: 2 seeds"

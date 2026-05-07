@@ -9,17 +9,65 @@
 
 static FuzzRedisServer FUZZ_CLUSTER_SERVER;
 static bool FUZZ_CLUSTER_SERVER_READY = false;
+static bool FUZZ_CLUSTER_FUNCTIONS_READY = false;
+static bool FUZZ_CLUSTER_FUNCTIONS_SUPPORTED = false;
+
+static const char* FUZZ_CLUSTER_FUNCTION_LIBRARY =
+    "#!lua name=rrfuzz\n"
+    "redis.register_function('rr_bitop32_or', function(keys, args)\n"
+    "  return redis.call('R.BITOP', 'OR', keys[1], keys[2], keys[3])\n"
+    "end)\n"
+    "redis.register_function('rr_bitop32_not', function(keys, args)\n"
+    "  if #args > 0 then\n"
+    "    return redis.call('R.BITOP', 'NOT', keys[1], keys[2], args[1])\n"
+    "  end\n"
+    "  return redis.call('R.BITOP', 'NOT', keys[1], keys[2])\n"
+    "end)\n"
+    "redis.register_function('rr_bitop64_or', function(keys, args)\n"
+    "  return redis.call('R64.BITOP', 'OR', keys[1], keys[2], keys[3])\n"
+    "end)\n"
+    "redis.register_function('rr_bitop64_not', function(keys, args)\n"
+    "  if #args > 0 then\n"
+    "    return redis.call('R64.BITOP', 'NOT', keys[1], keys[2], args[1])\n"
+    "  end\n"
+    "  return redis.call('R64.BITOP', 'NOT', keys[1], keys[2])\n"
+    "end)\n";
 
 static void fuzz_cluster_cleanup(void) {
   if (FUZZ_CLUSTER_SERVER_READY) {
     fuzz_redis_shutdown(&FUZZ_CLUSTER_SERVER, false);
     FUZZ_CLUSTER_SERVER_READY = false;
   }
+  FUZZ_CLUSTER_FUNCTIONS_READY = false;
+  FUZZ_CLUSTER_FUNCTIONS_SUPPORTED = false;
+}
+
+static void fuzz_cluster_load_functions(FuzzRedisServer* server) {
+  if (FUZZ_CLUSTER_FUNCTIONS_READY) {
+    return;
+  }
+
+  const char* argv[] = {"FUNCTION", "LOAD", "REPLACE", FUZZ_CLUSTER_FUNCTION_LIBRARY};
+  redisReply* reply = fuzz_redis_command_argv(server, 4, argv);
+  fuzz_reply_require(reply);
+
+  if (reply->type == REDIS_REPLY_ERROR) {
+    fuzz_require(strstr(reply->str, "unknown command") != NULL);
+    FUZZ_CLUSTER_FUNCTIONS_SUPPORTED = false;
+  } else {
+    fuzz_require(reply->type == REDIS_REPLY_STATUS || reply->type == REDIS_REPLY_STRING);
+    fuzz_require(strcmp(reply->str, "rrfuzz") == 0);
+    FUZZ_CLUSTER_FUNCTIONS_SUPPORTED = true;
+  }
+
+  fuzz_redis_free_reply(reply);
+  FUZZ_CLUSTER_FUNCTIONS_READY = true;
 }
 
 static FuzzRedisServer* fuzz_cluster_server(void) {
   if (!FUZZ_CLUSTER_SERVER_READY) {
     fuzz_require(fuzz_redis_start(&FUZZ_CLUSTER_SERVER, true, false, false));
+    fuzz_cluster_load_functions(&FUZZ_CLUSTER_SERVER);
     atexit(fuzz_cluster_cleanup);
     FUZZ_CLUSTER_SERVER_READY = true;
   }
@@ -28,7 +76,7 @@ static FuzzRedisServer* fuzz_cluster_server(void) {
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  if (size < 4) {
+  if (size < 5) {
     return 0;
   }
 
@@ -41,6 +89,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   bool use_64 = fuzz_consume_bool(&input);
   bool cross_slot = fuzz_consume_bool(&input);
   FuzzBitOpKind kind = fuzz_consume_bool(&input) ? FUZZ_BITOP_NOT : FUZZ_BITOP_OR;
+  bool via_function = fuzz_consume_bool(&input) && FUZZ_CLUSTER_FUNCTIONS_SUPPORTED;
   bool has_last = kind == FUZZ_BITOP_NOT && fuzz_consume_bool(&input);
 
   const char* dest = cross_slot ? "{dest}dest" : "{bitop}dest";
@@ -68,13 +117,25 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     }
 
     const char* argv[8];
+    const char* function_name = kind == FUZZ_BITOP_NOT ? "rr_bitop64_not" : "rr_bitop64_or";
     int argc = 0;
-    argv[argc++] = "R64.BITOP";
-    argv[argc++] = fuzz_bitop_kind_name(kind);
-    argv[argc++] = dest;
-    argv[argc++] = src1;
-    if (kind != FUZZ_BITOP_NOT) {
-      argv[argc++] = src2;
+    if (via_function) {
+      argv[argc++] = "FCALL";
+      argv[argc++] = function_name;
+      argv[argc++] = kind == FUZZ_BITOP_NOT ? "2" : "3";
+      argv[argc++] = dest;
+      argv[argc++] = src1;
+      if (kind != FUZZ_BITOP_NOT) {
+        argv[argc++] = src2;
+      }
+    } else {
+      argv[argc++] = "R64.BITOP";
+      argv[argc++] = fuzz_bitop_kind_name(kind);
+      argv[argc++] = dest;
+      argv[argc++] = src1;
+      if (kind != FUZZ_BITOP_NOT) {
+        argv[argc++] = src2;
+      }
     }
 
     char last_buffer[32];
@@ -133,13 +194,25 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     }
 
     const char* argv[8];
+    const char* function_name = kind == FUZZ_BITOP_NOT ? "rr_bitop32_not" : "rr_bitop32_or";
     int argc = 0;
-    argv[argc++] = "R.BITOP";
-    argv[argc++] = fuzz_bitop_kind_name(kind);
-    argv[argc++] = dest;
-    argv[argc++] = src1;
-    if (kind != FUZZ_BITOP_NOT) {
-      argv[argc++] = src2;
+    if (via_function) {
+      argv[argc++] = "FCALL";
+      argv[argc++] = function_name;
+      argv[argc++] = kind == FUZZ_BITOP_NOT ? "2" : "3";
+      argv[argc++] = dest;
+      argv[argc++] = src1;
+      if (kind != FUZZ_BITOP_NOT) {
+        argv[argc++] = src2;
+      }
+    } else {
+      argv[argc++] = "R.BITOP";
+      argv[argc++] = fuzz_bitop_kind_name(kind);
+      argv[argc++] = dest;
+      argv[argc++] = src1;
+      if (kind != FUZZ_BITOP_NOT) {
+        argv[argc++] = src2;
+      }
     }
 
     char last_buffer[32];

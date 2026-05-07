@@ -139,6 +139,7 @@
         "aliasing/repeated-source semantics",
         "cardinality replies",
         "same-slot vs cross-slot routing",
+        "FCALL function-routing where supported",
         "RDB/AOF round-trip stability",
         "R/R64 parity in shared 32-bit-safe range"
       ],

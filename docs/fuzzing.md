@@ -83,6 +83,7 @@ The project includes ten specialized fuzz targets. Five are pure in-process API 
 - **Coverage**:
   - Same-slot success cases for unary and variadic BITOP
   - Cross-slot `CROSSSLOT` failures
+  - Function-routing coverage through `FCALL` where the Redis version supports functions
   - Destination and source immutability on routing errors
 - **Corpus**: `tests/fuzz/corpus/cluster_routing/`
 
