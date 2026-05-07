@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "families": [
+    {
+      "family": "setbit",
+      "commands": ["R.SETBIT", "R64.SETBIT"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "getbit",
+      "commands": ["R.GETBIT", "R64.GETBIT"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "getbits",
+      "commands": ["R.GETBITS", "R64.GETBITS"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "clearbits",
+      "commands": ["R.CLEARBITS", "R64.CLEARBITS"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "setintarray",
+      "commands": ["R.SETINTARRAY", "R64.SETINTARRAY"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "getintarray",
+      "commands": ["R.GETINTARRAY", "R64.GETINTARRAY"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "rangeintarray",
+      "commands": ["R.RANGEINTARRAY", "R64.RANGEINTARRAY"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "appendintarray",
+      "commands": ["R.APPENDINTARRAY", "R64.APPENDINTARRAY"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "deleteintarray",
+      "commands": ["R.DELETEINTARRAY", "R64.DELETEINTARRAY"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "diff",
+      "commands": ["R.DIFF", "R64.DIFF"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["destination/source key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "setfull",
+      "commands": ["R.SETFULL", "R64.SETFULL"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "setrange",
+      "commands": ["R.SETRANGE", "R64.SETRANGE"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "optimize",
+      "commands": ["R.OPTIMIZE", "R64.OPTIMIZE"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "setbitarray",
+      "commands": ["R.SETBITARRAY", "R64.SETBITARRAY"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "getbitarray",
+      "commands": ["R.GETBITARRAY", "R64.GETBITARRAY"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "bitop",
+      "commands": ["R.BITOP", "R64.BITOP"],
+      "targets": [
+        "fuzz_bitop_keys",
+        "fuzz_command_metadata",
+        "fuzz_command_dispatch",
+        "fuzz_cluster_routing",
+        "fuzz_persistence_sequences",
+        "fuzz_r_vs_r64_parity"
+      ],
+      "oracles": [
+        "key discovery parity",
+        "destination contents",
+        "source immutability",
+        "aliasing/repeated-source semantics",
+        "cardinality replies",
+        "same-slot vs cross-slot routing",
+        "RDB/AOF round-trip stability",
+        "R/R64 parity in shared 32-bit-safe range"
+      ],
+      "seed_corpus": [
+        "tests/fuzz/corpus/bitop_keys",
+        "tests/fuzz/corpus/command_metadata",
+        "tests/fuzz/corpus/command_dispatch",
+        "tests/fuzz/corpus/cluster_routing",
+        "tests/fuzz/corpus/persistence_sequences",
+        "tests/fuzz/corpus/r_vs_r64_parity"
+      ],
+      "scope": {"metadata": true, "dispatch": true, "routing": true, "persistence": true, "parity": true}
+    },
+    {
+      "family": "bitcount",
+      "commands": ["R.BITCOUNT", "R64.BITCOUNT"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "bitpos",
+      "commands": ["R.BITPOS", "R64.BITPOS"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "min",
+      "commands": ["R.MIN", "R64.MIN"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "max",
+      "commands": ["R.MAX", "R64.MAX"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "clear",
+      "commands": ["R.CLEAR", "R64.CLEAR"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "contains",
+      "commands": ["R.CONTAINS", "R64.CONTAINS"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["multi-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "jaccard",
+      "commands": ["R.JACCARD", "R64.JACCARD"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["multi-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    },
+    {
+      "family": "stat",
+      "commands": ["R.STAT"],
+      "targets": ["fuzz_command_metadata"],
+      "oracles": ["single-key coverage", "arity/key extraction parity"],
+      "seed_corpus": ["tests/fuzz/corpus/command_metadata"],
+      "scope": {"metadata": true, "dispatch": false, "routing": false, "persistence": false, "parity": false}
+    }
+  ]
+}

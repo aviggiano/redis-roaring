@@ -898,7 +898,7 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
       return REDISMODULE_OK;
     } else {
-      RedisModule_ReplyWithSimpleString(ctx, "ERR syntax error");
+      RedisModule_ReplyWithError(ctx, "ERR syntax error");
       return REDISMODULE_ERR;
     }
   }

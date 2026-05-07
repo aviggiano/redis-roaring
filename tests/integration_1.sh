@@ -72,6 +72,9 @@ function test_bitop() {
     rcall_assert "R.BITOP NOT test_bitop_dest_3 test_bitop_4 3" "2" "BITOP NOT operation with size parameter"
     rcall_assert "R.GETBIT test_bitop_dest_3 0" "1" "Check result of NOT operation at bit 0 (with size)"
     rcall_assert "R.MAX test_bitop_dest_3" "3" "Check max value after NOT operation (with size)"
+
+    rcall_assert "R.BITOP NOT test_bitop_dest_empty test_bitop_missing" "0" "BITOP NOT on an empty source should stay empty"
+    rcall_assert "R.GETBIT test_bitop_dest_empty 0" "0" "Empty-source NOT should not set bit 0"
   }
 
   function collision() {

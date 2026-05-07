@@ -723,10 +723,12 @@ int R64GetBitArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
 }
 
 int R64BitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
+  bool has_last_arg = false;
   uint64_t last = 0;
 
   if (argc == 5) {
     ParseUint64OrReturn(ctx, argv[4], "last", last);
+    has_last_arg = true;
   } else if (argc > 5) {
     return RedisModule_WrongArity(ctx);
   }
@@ -747,14 +749,22 @@ int R64BitFlip(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     return REDISMODULE_ERR;
   }
 
+  bool source_is_empty = bitmap64_is_empty(bitmap);
   unsigned long long max = 0;
-  if (!bitmap64_is_empty(bitmap)) {
+  if (!source_is_empty) {
     max = (unsigned long long) bitmap64_max(bitmap);
   }
 
-  if (argc == 4) {
+  if (!has_last_arg && source_is_empty) {
+    Bitmap64* result = bitmap64_alloc();
+    RedisModule_ModuleTypeSetValue(destkey, Bitmap64Type, result);
+    RedisModule_ReplicateVerbatim(ctx);
+    return ReplyWithUint64(ctx, 0);
+  }
+
+  if (!has_last_arg) {
     last = max;
-  } else if (argc == 5 && last < max) {
+  } else if (last < max) {
     last = max;
   }
 
@@ -890,7 +900,7 @@ int R64BitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
       return REDISMODULE_OK;
     } else {
-      RedisModule_ReplyWithSimpleString(ctx, "ERR syntax error");
+      RedisModule_ReplyWithError(ctx, "ERR syntax error");
       return REDISMODULE_ERR;
     }
   }

@@ -18,7 +18,7 @@ Fuzzing requires:
 
 ## Fuzz Targets
 
-The project includes five specialized fuzz targets:
+The project includes ten specialized fuzz targets. Five are pure in-process API fuzzers and five exercise the module through a real Redis server.
 
 ### 1. `fuzz_bitmap_api` - 32-bit Bitmap API Fuzzer
 - **Purpose**: Comprehensive testing of all 32-bit bitmap operations
@@ -62,6 +62,54 @@ The project includes five specialized fuzz targets:
   - Unsupported-operation and invalid-arity behavior
 - **Corpus**: `tests/fuzz/corpus/bitop_keys/`
 
+### 6. `fuzz_command_metadata` - Command Metadata Fuzzer
+- **Purpose**: Validates command-family coverage, `COMMAND GETKEYS`, and valid/invalid runtime shapes
+- **Coverage**:
+  - Manifest-backed command family coverage
+  - Metadata and runtime agreement for key extraction
+  - Invalid BITOP forms and unsupported operations
+- **Corpus**: `tests/fuzz/corpus/command_metadata/`
+
+### 7. `fuzz_command_dispatch` - BITOP Command Semantics Fuzzer
+- **Purpose**: Exercises Redis-backed `R.BITOP` / `R64.BITOP` semantics directly
+- **Coverage**:
+  - Reply cardinality vs oracle cardinality
+  - Destination/source aliasing
+  - Invalid-operation and wrong-arity non-mutation guarantees
+- **Corpus**: `tests/fuzz/corpus/command_dispatch/`
+
+### 8. `fuzz_cluster_routing` - Cluster Routing Fuzzer
+- **Purpose**: Validates clustered BITOP routing behavior through a Redis server in cluster mode
+- **Coverage**:
+  - Same-slot success cases for unary and variadic BITOP
+  - Cross-slot `CROSSSLOT` failures
+  - Destination and source immutability on routing errors
+- **Corpus**: `tests/fuzz/corpus/cluster_routing/`
+
+### 9. `fuzz_persistence_sequences` - Persistence Round-Trip Fuzzer
+- **Purpose**: Checks BITOP command sequences across RDB and AOF reloads
+- **Coverage**:
+  - Multi-step Redis-backed command sequences
+  - `SAVE` + restart round-trips
+  - `BGREWRITEAOF` + restart round-trips
+- **Corpus**: `tests/fuzz/corpus/persistence_sequences/`
+
+### 10. `fuzz_r_vs_r64_parity` - 32/64 Parity Fuzzer
+- **Purpose**: Compares `R.BITOP` and `R64.BITOP` behavior within the shared 32-bit-safe range
+- **Coverage**:
+  - Integer reply parity
+  - Final bitmap parity
+  - Source immutability parity
+- **Corpus**: `tests/fuzz/corpus/r_vs_r64_parity/`
+
+## Manifest Coverage
+
+`tests/fuzz/fuzz_manifest.json` maps every registered command to at least one fuzz family.
+
+- `python3 scripts/validate_fuzz_manifest.py` verifies that the manifest covers every registered command exactly once
+- the validator also checks that each family points at real fuzz targets and corpus directories
+- CI runs the validator before the fuzz jobs, and `scripts/build_fuzzers.sh` runs it locally before building
+
 ## Building Fuzzers
 
 ### Step 1: Configure with Fuzzing Enabled
@@ -78,12 +126,23 @@ CC=clang CXX=clang++ cmake -DENABLE_FUZZING=ON ..
 make
 ```
 
-This will create five executables in `build-fuzz/tests/fuzz/`:
+This will create ten executables in `build-fuzz/tests/fuzz/`:
 - `fuzz_bitmap_api`
 - `fuzz_bitmap64_api`
 - `fuzz_bitmap_operations`
 - `fuzz_bitmap_serialization`
 - `fuzz_bitop_keys`
+- `fuzz_command_metadata`
+- `fuzz_command_dispatch`
+- `fuzz_cluster_routing`
+- `fuzz_persistence_sequences`
+- `fuzz_r_vs_r64_parity`
+
+For a one-shot local build, `./scripts/build_fuzzers.sh` also:
+- validates the fuzz manifest
+- builds vendored Redis and hiredis
+- regenerates the CRoaring amalgamation used by the module build
+- regenerates the seed corpus
 
 ## Running Fuzzers
 
@@ -218,40 +277,20 @@ mkdir minimized_corpus
 
 ## CI/CD Integration
 
-redis-roaring has **full CI/CD integration** for fuzzing in the main workflow.
+redis-roaring runs fuzzing in `.github/workflows/ci.yml` on both `push` and `pull_request`.
 
-### Master Branch Fuzzing (`.github/workflows/ci.yml`)
+### Workflow Coverage
 
-Runs on every push to `master`:
-- **Duration**: 10 minutes per fuzzer (40 minutes total)
-- **Purpose**: Thorough testing before production deployment
-- **Artifacts**: Uploads crashes and corpus
-
-```yaml
-# Automatically runs on master branch
-# See .github/workflows/ci.yml for full configuration
-```
-
-**What it does:**
-- - Builds all 4 fuzzers with Clang + sanitizers
-- - Runs each fuzzer for 10 minutes
-- - Uploads crash files as artifacts (90 days retention)
-- - Uploads evolved corpus (30 days retention)
-- - Fails the build if crashes are found
-
-**Why master only?**
-- Provides thorough testing without slowing down PRs
-- 40-minute fuzzing is substantial for regression detection
-- Corpus evolves with each master push
-- Crashes block deployment automatically
+- `fuzz_manifest` validates `tests/fuzz/fuzz_manifest.json`
+- `fuzz` builds all ten fuzzers and runs a short ASan/UBSan-backed smoke pass per target
+- `fuzz_coverage` builds the same matrix with LLVM coverage instrumentation and exports LCOV data
 
 ### Viewing Results
 
-**On Master Push:**
 1. Go to the Actions tab
-2. Click on the workflow run
-3. Check the "Fuzz Testing" job
-4. Download artifacts if crashes were found
+2. Open the relevant workflow run
+3. Inspect the `Fuzz Testing` or `Fuzzing Coverage` matrix jobs
+4. Download crash or corpus artifacts if a job failed
 
 ### Artifact Details
 

@@ -1,6 +1,10 @@
 name: CI/CD
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 3 * * *'
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -9,18 +13,8 @@ permissions:
   id-token: write
 
 jobs:
-  fuzz_manifest:
-    name: Validate fuzz manifest
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: Validate command coverage manifest
-      run: ./scripts/check_fuzz_coverage.sh
-
   configure:
+    if: github.event_name != 'schedule'
     name: Configure project
     runs-on: ubuntu-latest
     steps:
@@ -30,7 +24,19 @@ jobs:
         submodules: recursive
     - name: Configure
       run: ./configure.sh
+
+  fuzz_manifest:
+    name: Validate fuzz manifest
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Validate manifest
+      run: python3 ./scripts/validate_fuzz_manifest.py
   test:
+    if: github.event_name != 'schedule'
     name: Test project (Redis ${{ matrix.redis-version }})
     runs-on: ubuntu-latest
     strategy:
@@ -54,6 +60,7 @@ jobs:
       run: ./test.sh
 
   coverage:
+    if: github.event_name != 'schedule'
     name: Generate and upload coverage
     runs-on: ubuntu-latest
     steps:
@@ -106,7 +113,9 @@ jobs:
         debug: true
 
   fuzz_coverage:
+    if: github.event_name != 'schedule'
     name: Fuzzing Coverage - ${{ matrix.fuzzer }}
+    needs: [fuzz_manifest]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -118,6 +127,10 @@ jobs:
           - fuzz_bitmap_operations
           - fuzz_bitmap_serialization
           - fuzz_command_metadata
+          - fuzz_command_dispatch
+          - fuzz_cluster_routing
+          - fuzz_persistence_sequences
+          - fuzz_r_vs_r64_parity
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -133,6 +146,9 @@ jobs:
       run: |
         git submodule init
         git submodule update
+
+    - name: Validate fuzz manifest
+      run: python3 ./scripts/validate_fuzz_manifest.py
 
     - name: Amalgamate CRoaring
       run: |
@@ -152,26 +168,22 @@ jobs:
           -DCMAKE_C_FLAGS="-fprofile-instr-generate -fcoverage-mapping" \
           -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate" \
           ..
-        make
+        make -j"$(nproc)" fuzz_redis_server
+        make -j"$(nproc)"
 
     - name: Run fuzzer to generate coverage
       run: |
         cd build-fuzz-cov
-        fuzzer="${{ matrix.fuzzer }}"
-        corpus_dir="../tests/fuzz/corpus/${fuzzer#fuzz_}"
         export LLVM_PROFILE_FILE="fuzz-${{ matrix.fuzzer }}-%p.profraw"
-        set +e
-        timeout -s INT 600 ./tests/fuzz/${fuzzer} "${corpus_dir}" -max_total_time=300 -rss_limit_mb=2048 -max_len=1024
-        status=$?
-        set -e
-
-        if [ "${status}" -ne 0 ] && [ "${status}" -ne 124 ]; then
-          exit "${status}"
-        fi
-
-        if [ "${status}" -eq 124 ]; then
-          echo "Coverage fuzzing exceeded the 600s wall-clock cap after its libFuzzer time budget; continuing with collected profiles."
-        fi
+        CORPUS_DIR="${{ matrix.fuzzer }}"
+        CORPUS_DIR="${CORPUS_DIR#fuzz_}"
+        ./tests/fuzz/${{ matrix.fuzzer }} \
+          ./tests/fuzz/corpus/${CORPUS_DIR} \
+          -artifact_prefix=./ \
+          -max_total_time=300 \
+          -timeout=30 \
+          -rss_limit_mb=2048 \
+          -max_len=1024
 
     - name: Generate coverage report
       run: |
@@ -211,7 +223,9 @@ jobs:
   #       parallel-finished: true
 
   fuzz:
+    if: github.event_name != 'schedule'
     name: Fuzz Testing - ${{ matrix.fuzzer }}
+    needs: [fuzz_manifest]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -223,6 +237,10 @@ jobs:
           - fuzz_bitmap_operations
           - fuzz_bitmap_serialization
           - fuzz_command_metadata
+          - fuzz_command_dispatch
+          - fuzz_cluster_routing
+          - fuzz_persistence_sequences
+          - fuzz_r_vs_r64_parity
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -239,6 +257,9 @@ jobs:
         git submodule init
         git submodule update
 
+    - name: Validate fuzz manifest
+      run: python3 ./scripts/validate_fuzz_manifest.py
+
     - name: Amalgamate CRoaring
       run: |
         cd src
@@ -253,21 +274,127 @@ jobs:
     - name: Run Fuzzing - ${{ matrix.fuzzer }}
       run: |
         cd build-fuzz
-        fuzzer="${{ matrix.fuzzer }}"
-        corpus_dir="../tests/fuzz/corpus/${fuzzer#fuzz_}"
         export ASAN_OPTIONS=allocator_may_return_null=1:malloc_limit_mb=2048
-        set +e
-        timeout 180 ./tests/fuzz/${fuzzer} "${corpus_dir}" -max_total_time=60 -rss_limit_mb=2048 -max_len=1024
-        status=$?
-        set -e
+        CORPUS_DIR="${{ matrix.fuzzer }}"
+        CORPUS_DIR="${CORPUS_DIR#fuzz_}"
+        ./tests/fuzz/${{ matrix.fuzzer }} \
+          ./tests/fuzz/corpus/${CORPUS_DIR} \
+          -artifact_prefix=./ \
+          -max_total_time=60 \
+          -timeout=30 \
+          -rss_limit_mb=2048 \
+          -max_len=1024
 
-        if [ "${status}" -ne 0 ] && [ "${status}" -ne 124 ]; then
-          exit "${status}"
+    - name: Collect fuzz artifacts
+      if: always()
+      run: |
+        CORPUS_DIR="${{ matrix.fuzzer }}"
+        CORPUS_DIR="${CORPUS_DIR#fuzz_}"
+        mkdir -p fuzz-artifacts/${{ matrix.fuzzer }}
+        if [ -d "build-fuzz/tests/fuzz/corpus/${CORPUS_DIR}" ]; then
+          cp -R "build-fuzz/tests/fuzz/corpus/${CORPUS_DIR}" "fuzz-artifacts/${{ matrix.fuzzer }}/corpus"
         fi
+        shopt -s nullglob
+        for pattern in crash-* leak-* timeout-* oom-* slow-unit-*; do
+          for file in build-fuzz/$pattern; do
+            cp "$file" "fuzz-artifacts/${{ matrix.fuzzer }}/"
+          done
+        done
 
-        if [ "${status}" -eq 124 ]; then
-          echo "Fuzzer exceeded the 180s wall-clock cap after its libFuzzer time budget; continuing to crash checks."
+    - name: Upload fuzz artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: fuzz-${{ matrix.fuzzer }}-artifacts
+        path: fuzz-artifacts/${{ matrix.fuzzer }}
+        if-no-files-found: ignore
+
+  fuzz_nightly:
+    if: github.event_name == 'schedule'
+    name: Nightly Fuzzing - ${{ matrix.fuzzer }}
+    needs: [fuzz_manifest]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fuzzer:
+          - fuzz_bitmap_api
+          - fuzz_bitmap64_api
+          - fuzz_bitop_keys
+          - fuzz_bitmap_operations
+          - fuzz_bitmap_serialization
+          - fuzz_command_metadata
+          - fuzz_command_dispatch
+          - fuzz_cluster_routing
+          - fuzz_persistence_sequences
+          - fuzz_r_vs_r64_parity
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install Clang and CMake
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang cmake
+
+    - name: Initialize submodules
+      run: |
+        git submodule init
+        git submodule update
+
+    - name: Validate fuzz manifest
+      run: python3 ./scripts/validate_fuzz_manifest.py
+
+    - name: Amalgamate CRoaring
+      run: |
+        cd src
+        ../deps/CRoaring/amalgamation.sh
+
+    - name: Generate fuzzing seeds
+      run: ./scripts/generate_seeds.sh
+
+    - name: Build Fuzzers
+      run: ./scripts/build_fuzzers.sh
+
+    - name: Run Nightly Fuzzing - ${{ matrix.fuzzer }}
+      run: |
+        cd build-fuzz
+        export ASAN_OPTIONS=allocator_may_return_null=1:malloc_limit_mb=2048
+        CORPUS_DIR="${{ matrix.fuzzer }}"
+        CORPUS_DIR="${CORPUS_DIR#fuzz_}"
+        ./tests/fuzz/${{ matrix.fuzzer }} \
+          ./tests/fuzz/corpus/${CORPUS_DIR} \
+          -artifact_prefix=./ \
+          -max_total_time=900 \
+          -timeout=30 \
+          -rss_limit_mb=2048 \
+          -max_len=1024
+
+    - name: Collect nightly fuzz artifacts
+      if: always()
+      run: |
+        CORPUS_DIR="${{ matrix.fuzzer }}"
+        CORPUS_DIR="${CORPUS_DIR#fuzz_}"
+        mkdir -p fuzz-artifacts/${{ matrix.fuzzer }}
+        if [ -d "build-fuzz/tests/fuzz/corpus/${CORPUS_DIR}" ]; then
+          cp -R "build-fuzz/tests/fuzz/corpus/${CORPUS_DIR}" "fuzz-artifacts/${{ matrix.fuzzer }}/corpus"
         fi
+        shopt -s nullglob
+        for pattern in crash-* leak-* timeout-* oom-* slow-unit-*; do
+          for file in build-fuzz/$pattern; do
+            cp "$file" "fuzz-artifacts/${{ matrix.fuzzer }}/"
+          done
+        done
+
+    - name: Upload nightly fuzz artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: nightly-fuzz-${{ matrix.fuzzer }}-artifacts
+        path: fuzz-artifacts/${{ matrix.fuzzer }}
+        if-no-files-found: ignore
 
     - name: Check for crashes
       id: check_crashes
