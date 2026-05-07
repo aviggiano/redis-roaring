@@ -196,31 +196,36 @@ double bitmap64_jaccard(const Bitmap64* b1, const Bitmap64* b2) {
 }
 
 int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {
-  roaring_uint32_iterator_t* iterator = roaring_iterator_create(bitmap);
-  int64_t element = -1;
-  for (uint64_t i = 1; iterator->has_value; i++) {
-    if (i == n) {
-      element = iterator->current_value;
-      break;
-    }
-    roaring_uint32_iterator_advance(iterator);
+  uint32_t element = 0;
+
+  if (bitmap == NULL || n == 0 || n > ((uint64_t)UINT32_MAX + 1)) {
+    return -1;
   }
-  roaring_uint32_iterator_free(iterator);
+
+  if (!roaring_bitmap_select(bitmap, (uint32_t)(n - 1), &element)) {
+    return -1;
+  }
+
   return element;
 }
 
 uint64_t bitmap64_get_nth_element_present(const Bitmap64* bitmap, uint64_t n, bool* found) {
-  roaring64_iterator_t* iterator = roaring64_iterator_create(bitmap);
   uint64_t element = 0;
-  for (uint64_t i = 1; roaring64_iterator_has_value(iterator); i++) {
-    if (i == n) {
-      element = roaring64_iterator_value(iterator);
-      *found = true;
-      break;
-    }
-    roaring64_iterator_advance(iterator);
+
+  if (found == NULL) {
+    return 0;
   }
-  roaring64_iterator_free(iterator);
+
+  *found = false;
+  if (bitmap == NULL || n == 0) {
+    return 0;
+  }
+
+  if (!roaring64_bitmap_select(bitmap, n - 1, &element)) {
+    return 0;
+  }
+
+  *found = true;
   return element;
 }
 
