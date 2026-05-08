@@ -954,15 +954,14 @@ int R64BitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   ParseBoolOrReturn(ctx, argv[2], "bit", bit);
 
   bool found = false;
-  uint64_t pos;
+  uint64_t pos = 0;
 
-  if (bitmap != BITMAP64_NILL) {
-    if (bit == 1) {
-      pos = bitmap64_get_nth_element_present(bitmap, 1, &found);
-    } else {
-      pos = bitmap64_get_nth_element_not_present(bitmap, 1, &found);
-      found = true;
-    }
+  if (bitmap == BITMAP64_NILL) {
+    found = !bit;
+  } else if (bit == 1) {
+    pos = bitmap64_get_nth_element_present(bitmap, 1, &found);
+  } else {
+    pos = bitmap64_get_nth_element_not_present(bitmap, 1, &found);
   }
 
   if (found) {

@@ -234,47 +234,84 @@ uint64_t bitmap64_get_nth_element_present(const Bitmap64* bitmap, uint64_t n, bo
 }
 
 int64_t bitmap_get_nth_element_not_present(const Bitmap* bitmap, uint64_t n) {
+  if (bitmap == NULL || n == 0) {
+    return -1;
+  }
+
   roaring_uint32_iterator_t* iterator = roaring_iterator_create(bitmap);
-  int64_t element = -1;
-  int64_t last = -1;
-  for (uint64_t i = 1; iterator->has_value; i++) {
-    int64_t current = iterator->current_value;
-    int64_t step = current - last;
-    if (n < step) {
-      element = last + n;
-      break;
-    } else {
-      n -= (step - 1);
+  uint64_t candidate = 0;
+
+  while (iterator->has_value) {
+    uint32_t current = iterator->current_value;
+
+    if ((uint64_t) current > candidate) {
+      uint64_t gap = (uint64_t) current - candidate;
+      if (n <= gap) {
+        roaring_uint32_iterator_free(iterator);
+        return (int64_t) (candidate + n - 1);
+      }
+      n -= gap;
     }
-    last = current;
+
+    if (current == UINT32_MAX) {
+      roaring_uint32_iterator_free(iterator);
+      return -1;
+    }
+
+    candidate = (uint64_t) current + 1;
     roaring_uint32_iterator_advance(iterator);
   }
+
   roaring_uint32_iterator_free(iterator);
-  return element;
+
+  if (n - 1 > UINT32_MAX - candidate) {
+    return -1;
+  }
+
+  return (int64_t) (candidate + n - 1);
 }
 
 uint64_t bitmap64_get_nth_element_not_present(const Bitmap64* bitmap, uint64_t n, bool* found) {
+  if (found != NULL) {
+    *found = false;
+  }
+  if (bitmap == NULL || found == NULL || n == 0) {
+    return 0;
+  }
+
   roaring64_iterator_t* iterator = roaring64_iterator_create(bitmap);
-  uint64_t element = 0;
-  uint64_t last = UINT64_MAX;
+  uint64_t candidate = 0;
 
-  for (uint64_t i = 1; roaring64_iterator_has_value(iterator); i++) {
+  while (roaring64_iterator_has_value(iterator)) {
     uint64_t current = roaring64_iterator_value(iterator);
-    uint64_t step = (last == UINT64_MAX) ? current + 1 : current - last;
 
-    if (n < step) {
-      element = (last == UINT64_MAX) ? n : last + n;
-      *found = true;
-      break;
-    } else {
-      n -= (step - 1);
+    if (current > candidate) {
+      uint64_t gap = current - candidate;
+      if (n <= gap) {
+        roaring64_iterator_free(iterator);
+        *found = true;
+        return candidate + n - 1;
+      }
+      n -= gap;
     }
-    last = current;
+
+    if (current == UINT64_MAX) {
+      roaring64_iterator_free(iterator);
+      return 0;
+    }
+
+    candidate = current + 1;
     roaring64_iterator_advance(iterator);
   }
 
   roaring64_iterator_free(iterator);
-  return element;
+
+  if (n - 1 > UINT64_MAX - candidate) {
+    return 0;
+  }
+
+  *found = true;
+  return candidate + n - 1;
 }
 
 int64_t bitmap_get_nth_element_not_present_slow(const Bitmap* bitmap, uint64_t n) {

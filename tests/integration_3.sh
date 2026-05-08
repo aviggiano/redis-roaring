@@ -122,6 +122,10 @@ function test_bitpos() {
   rcall "R64.SETBIT test_bitpos_0 4 1"
   rcall "R64.SETBIT test_bitpos_0 6 1"
   rcall_assert "R64.BITPOS test_bitpos_0 0" "5" "Find first unset bit position"
+  rcall_assert "R64.BITPOS test_bitpos_missing 0" "0" "Empty key should report bit 0 at position 0"
+  rcall_assert "R64.BITPOS test_bitpos_missing 1" "-1" "Empty key should report no set bit"
+  rcall_assert "R64.SETINTARRAY test_bitpos_single_zero 0" "OK" "Set isolated zero bit for BITPOS edge case"
+  rcall_assert "R64.BITPOS test_bitpos_single_zero 0" "1" "Single zero bit should report first unset position after 0"
 }
 
 function test_getintarray_setintarray() {

@@ -56,8 +56,11 @@ void test_bitmap_get_nth_element() {
         }
       }
       {
-        int64_t element = bitmap_get_nth_element_not_present(bitmap, array[array_len - 1]);
-        ASSERT(element == -1, "expect last element to return -1");
+        Bitmap* single = bitmap_alloc();
+        bitmap_setbit(single, 0, 1);
+        ASSERT(bitmap_get_nth_element_not_present(single, 1) == 1, "expect first missing element after {0} to be 1");
+        ASSERT(bitmap_get_nth_element_not_present(single, 2) == 2, "expect second missing element after {0} to be 2");
+        bitmap_free(single);
       }
 
       bitmap_free(bitmap);
