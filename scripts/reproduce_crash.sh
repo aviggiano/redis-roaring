@@ -10,12 +10,13 @@
 set -e
 
 CRASH_FILE="$1"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [ -z "$CRASH_FILE" ]; then
     echo "Usage: $0 <crash-file>"
     echo ""
     echo "Available crash files:"
-    ls -1 build-fuzz/crash-* 2>/dev/null || echo "  (none found)"
+    ls -1 "$ROOT_DIR"/build-fuzz/crash-* 2>/dev/null || echo "  (none found)"
     exit 1
 fi
 
@@ -24,9 +25,11 @@ if [ ! -f "$CRASH_FILE" ]; then
     exit 1
 fi
 
+CRASH_FILE_ABS="$(cd "$(dirname "$CRASH_FILE")" && pwd)/$(basename "$CRASH_FILE")"
+
 # Try to determine which fuzzer from the crash file location or name
 # For now, try all fuzzers
-BUILD_DIR="build-fuzz"
+BUILD_DIR="$ROOT_DIR/build-fuzz"
 
 echo "Attempting to reproduce crash: $CRASH_FILE"
 echo ""
@@ -46,24 +49,22 @@ FUZZERS=(
 
 for fuzzer in "${FUZZERS[@]}"; do
     FUZZER_PATH="$BUILD_DIR/tests/fuzz/$fuzzer"
+    FUZZER_SHORT="${fuzzer#fuzz_}"
 
     if [ -f "$FUZZER_PATH" ]; then
         echo "Trying with $fuzzer..."
-        cd "$BUILD_DIR"
 
-        if "./tests/fuzz/$fuzzer" "../$CRASH_FILE" 2>&1 | grep -q "ERROR:"; then
+        if (cd "$BUILD_DIR" && "./tests/fuzz/$fuzzer" "$CRASH_FILE_ABS" 2>&1) | grep -q "ERROR:"; then
             echo ""
             echo "✓ Crash reproduced with: $fuzzer"
             echo ""
             echo "Debug with:"
-            echo "  gdb --args ./$FUZZER_PATH ../$CRASH_FILE"
+            echo "  gdb --args build-fuzz/tests/fuzz/$fuzzer $CRASH_FILE"
             echo ""
             echo "Minimize with:"
-            echo "  ./scripts/minimize_crash.sh $CRASH_FILE $fuzzer"
+            echo "  ./scripts/minimize_crash.sh $CRASH_FILE $FUZZER_SHORT"
             exit 0
         fi
-
-        cd - > /dev/null
     fi
 done
 
