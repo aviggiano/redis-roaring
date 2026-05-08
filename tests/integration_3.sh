@@ -72,6 +72,9 @@ function test_bitop() {
     rcall_assert "R64.BITOP NOT test_bitop_dest_3 test_bitop_4 3" "2" "BITOP NOT operation with size parameter"
     rcall_assert "R64.GETBIT test_bitop_dest_3 0" "1" "Check result of NOT operation at bit 0 (with size)"
     rcall_assert "R64.MAX test_bitop_dest_3" "3" "Check max value after NOT operation (with size)"
+
+    rcall_assert "R64.BITOP NOT test_bitop_dest_empty test_bitop_missing" "0" "BITOP NOT on an empty source should stay empty"
+    rcall_assert "R64.GETBIT test_bitop_dest_empty 0" "0" "Empty-source NOT should not set bit 0"
   }
 
   function collision() {
@@ -119,6 +122,10 @@ function test_bitpos() {
   rcall "R64.SETBIT test_bitpos_0 4 1"
   rcall "R64.SETBIT test_bitpos_0 6 1"
   rcall_assert "R64.BITPOS test_bitpos_0 0" "5" "Find first unset bit position"
+  rcall_assert "R64.BITPOS test_bitpos_missing 0" "0" "Empty key should report bit 0 at position 0"
+  rcall_assert "R64.BITPOS test_bitpos_missing 1" "-1" "Empty key should report no set bit"
+  rcall_assert "R64.SETINTARRAY test_bitpos_single_zero 0" "OK" "Set isolated zero bit for BITPOS edge case"
+  rcall_assert "R64.BITPOS test_bitpos_single_zero 0" "1" "Single zero bit should report first unset position after 0"
 }
 
 function test_getintarray_setintarray() {
@@ -134,6 +141,18 @@ function test_getintarray_setintarray() {
   rcall_assert "R64.GETINTARRAY test_getintarray_setintarray" "$(echo -e "2\n4\n8\n16\n32\n64\n128")" "Get integer array with powers of 2"
 
   rcall_assert "R64.GETINTARRAY test_getintarray_setintarray_empty_key" "" "Get integer array from empty key"
+}
+
+function test_command_getkeysandflags() {
+  print_test_header "test_command_getkeysandflags (64)"
+
+  if ! redis_supports_command_getkeysandflags; then
+    echo "Skipping: Redis does not support COMMAND GETKEYSANDFLAGS"
+    return
+  fi
+
+  rcall_assert "COMMAND GETKEYSANDFLAGS R64.SETINTARRAY test_command_flags 1" $'test_command_flags\nOW\ninsert' "R64.SETINTARRAY reports overwrite/insert key flags"
+  rcall_assert "COMMAND GETKEYSANDFLAGS R64.SETBITARRAY test_command_flags 0101" $'test_command_flags\nOW\ninsert' "R64.SETBITARRAY reports overwrite/insert key flags"
 }
 
 function test_getbitarray_setbitarray() {
@@ -159,6 +178,10 @@ function test_appendintarray_deleteintarray() {
   rcall_assert "R64.GETINTARRAY test_appendintarray_deleteintarray" "$(echo -e "1\n2\n3")" "Get array after initialization"
   rcall_assert "R64.DELETEINTARRAY test_appendintarray_deleteintarray 1 3" "OK" "Delete values 1 and 3"
   rcall_assert "R64.GETINTARRAY test_appendintarray_deleteintarray" "2" "Get array after deletion"
+
+  rcall_assert "R64.SETINTARRAY test_appendintarray_deleteintarray_dupes 0" "OK" "Initialize bitmap with single zero value"
+  rcall_assert "R64.DELETEINTARRAY test_appendintarray_deleteintarray_dupes 0 0 0" "OK" "Delete duplicate zero values without crashing"
+  rcall_assert "R64.GETINTARRAY test_appendintarray_deleteintarray_dupes" "" "Bitmap should be empty after deleting duplicate zero values"
 }
 
 function test_min_max() {
@@ -721,6 +744,7 @@ test_bitop
 test_bitcount
 test_bitpos
 test_getintarray_setintarray
+test_command_getkeysandflags
 test_getbitarray_setbitarray
 test_appendintarray_deleteintarray
 test_setrage

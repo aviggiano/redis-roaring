@@ -55,7 +55,6 @@ set(REDIS_ROARING_SOURCE_FILES
   ${SRC_PATH}/r_64.c
   ${SRC_PATH}/data-structure.c
   ${SRC_PATH}/parse.c
-  ${SRC_PATH}/cmd_info/command_info.c
   ${SRC_PATH}/cmd_info/root_info.c
   ${SRC_PATH}/cmd_info/r_info.c
   ${SRC_PATH}/cmd_info/r64_info.c
@@ -92,25 +91,34 @@ if(ENABLE_FUZZING)
       fuzz_bitmap_serialization
       fuzz_bitop_keys
       fuzz_command_metadata
+      fuzz_command_dispatch
+      fuzz_cluster_routing
+      fuzz_persistence_sequences
+      fuzz_r_vs_r64_parity
+    )
+
+    set(REDIS_BACKED_FUZZERS
+      fuzz_command_metadata
+      fuzz_command_dispatch
+      fuzz_cluster_routing
+      fuzz_persistence_sequences
+      fuzz_r_vs_r64_parity
+    )
+
+    find_program(REDIS_MAKE_EXECUTABLE NAMES gmake make REQUIRED)
+    add_custom_target(fuzz_redis_server
+      COMMAND "${REDIS_MAKE_EXECUTABLE}" -C "${DEPS_PATH}/redis" redis-server
+      BYPRODUCTS "${DEPS_PATH}/redis/src/redis-server"
+      USES_TERMINAL
+      COMMENT "Building vendored Redis server for Redis-backed fuzzers"
     )
 
     # Create each fuzzer
     foreach(FUZZER ${FUZZERS})
-      set(FUZZER_SOURCES
+      add_executable(${FUZZER}
         ${TEST_PATH}/fuzz/${FUZZER}.c
         ${SRC_PATH}/data-structure.c
       )
-
-      if(FUZZER STREQUAL "fuzz_command_metadata")
-        list(APPEND FUZZER_SOURCES
-          ${SRC_PATH}/cmd_info/command_info.c
-          ${SRC_PATH}/cmd_info/root_info.c
-          ${SRC_PATH}/cmd_info/r_info.c
-          ${SRC_PATH}/cmd_info/r64_info.c
-        )
-      endif()
-
-      add_executable(${FUZZER} ${FUZZER_SOURCES})
 
       target_include_directories(${FUZZER} PRIVATE
         ${TEST_PATH}/fuzz
@@ -122,6 +130,15 @@ if(ENABLE_FUZZING)
       target_link_options(${FUZZER} PRIVATE ${FUZZ_FLAGS})
 
       target_link_libraries(${FUZZER} PRIVATE roaring::roaring)
+
+      if (${FUZZER} IN_LIST REDIS_BACKED_FUZZERS)
+        add_dependencies(${FUZZER} redis-roaring fuzz_redis_server)
+        target_link_libraries(${FUZZER} PRIVATE hiredis::hiredis)
+        target_compile_definitions(${FUZZER} PRIVATE
+          FUZZ_REDIS_SERVER_PATH="${CMAKE_SOURCE_DIR}/deps/redis/src/redis-server"
+          FUZZ_MODULE_LIBRARY_PATH="$<TARGET_FILE:redis-roaring>"
+        )
+      endif()
 
       # Set output directory
       set_target_properties(${FUZZER} PROPERTIES

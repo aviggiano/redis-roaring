@@ -87,7 +87,9 @@ bool bitmap_clearbits(Bitmap* bitmap, size_t n_offsets, const uint32_t* offsets)
   if (bitmap == NULL) return false;
   if (offsets == NULL) return true;
 
-  roaring_bitmap_remove_many(bitmap, n_offsets, offsets);
+  for (size_t i = 0; i < n_offsets; i++) {
+    roaring_bitmap_remove(bitmap, offsets[i]);
+  }
 
   return true;
 }
@@ -96,7 +98,9 @@ bool bitmap64_clearbits(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offs
   if (bitmap == NULL) return false;
   if (offsets == NULL) return true;
 
-  roaring64_bitmap_remove_many(bitmap, n_offsets, offsets);
+  for (size_t i = 0; i < n_offsets; i++) {
+    roaring64_bitmap_remove(bitmap, offsets[i]);
+  }
 
   return true;
 }
@@ -112,7 +116,7 @@ size_t bitmap_clearbits_count(Bitmap* bitmap, size_t n_offsets, const uint32_t* 
     }
   }
 
-  return count++;
+  return count;
 }
 
 size_t bitmap64_clearbits_count(Bitmap64* bitmap, size_t n_offsets, const uint64_t* offsets) {
@@ -126,7 +130,7 @@ size_t bitmap64_clearbits_count(Bitmap64* bitmap, size_t n_offsets, const uint64
     }
   }
 
-  return count++;
+  return count;
 }
 
 bool bitmap_intersect(const Bitmap* b1, const Bitmap* b2, uint32_t mode) {
@@ -196,76 +200,118 @@ double bitmap64_jaccard(const Bitmap64* b1, const Bitmap64* b2) {
 }
 
 int64_t bitmap_get_nth_element_present(const Bitmap* bitmap, uint64_t n) {
-  roaring_uint32_iterator_t* iterator = roaring_iterator_create(bitmap);
-  int64_t element = -1;
-  for (uint64_t i = 1; iterator->has_value; i++) {
-    if (i == n) {
-      element = iterator->current_value;
-      break;
-    }
-    roaring_uint32_iterator_advance(iterator);
+  uint32_t element = 0;
+
+  if (bitmap == NULL || n == 0 || n > ((uint64_t)UINT32_MAX + 1)) {
+    return -1;
   }
-  roaring_uint32_iterator_free(iterator);
+
+  if (!roaring_bitmap_select(bitmap, (uint32_t)(n - 1), &element)) {
+    return -1;
+  }
+
   return element;
 }
 
 uint64_t bitmap64_get_nth_element_present(const Bitmap64* bitmap, uint64_t n, bool* found) {
-  roaring64_iterator_t* iterator = roaring64_iterator_create(bitmap);
   uint64_t element = 0;
-  for (uint64_t i = 1; roaring64_iterator_has_value(iterator); i++) {
-    if (i == n) {
-      element = roaring64_iterator_value(iterator);
-      *found = true;
-      break;
-    }
-    roaring64_iterator_advance(iterator);
+
+  if (found == NULL) {
+    return 0;
   }
-  roaring64_iterator_free(iterator);
+
+  *found = false;
+  if (bitmap == NULL || n == 0) {
+    return 0;
+  }
+
+  if (!roaring64_bitmap_select(bitmap, n - 1, &element)) {
+    return 0;
+  }
+
+  *found = true;
   return element;
 }
 
 int64_t bitmap_get_nth_element_not_present(const Bitmap* bitmap, uint64_t n) {
+  if (bitmap == NULL || n == 0) {
+    return -1;
+  }
+
   roaring_uint32_iterator_t* iterator = roaring_iterator_create(bitmap);
-  int64_t element = -1;
-  int64_t last = -1;
-  for (uint64_t i = 1; iterator->has_value; i++) {
-    int64_t current = iterator->current_value;
-    int64_t step = current - last;
-    if (n < step) {
-      element = last + n;
-      break;
-    } else {
-      n -= (step - 1);
+  uint64_t candidate = 0;
+
+  while (iterator->has_value) {
+    uint32_t current = iterator->current_value;
+
+    if ((uint64_t) current > candidate) {
+      uint64_t gap = (uint64_t) current - candidate;
+      if (n <= gap) {
+        roaring_uint32_iterator_free(iterator);
+        return (int64_t) (candidate + n - 1);
+      }
+      n -= gap;
     }
-    last = current;
+
+    if (current == UINT32_MAX) {
+      roaring_uint32_iterator_free(iterator);
+      return -1;
+    }
+
+    candidate = (uint64_t) current + 1;
     roaring_uint32_iterator_advance(iterator);
   }
+
   roaring_uint32_iterator_free(iterator);
-  return element;
+
+  if (n - 1 > UINT32_MAX - candidate) {
+    return -1;
+  }
+
+  return (int64_t) (candidate + n - 1);
 }
 
 uint64_t bitmap64_get_nth_element_not_present(const Bitmap64* bitmap, uint64_t n, bool* found) {
+  if (found != NULL) {
+    *found = false;
+  }
+  if (bitmap == NULL || found == NULL || n == 0) {
+    return 0;
+  }
+
   roaring64_iterator_t* iterator = roaring64_iterator_create(bitmap);
-  uint64_t element = 0;
-  uint64_t last = UINT64_MAX;
+  uint64_t candidate = 0;
 
-  for (uint64_t i = 1; roaring64_iterator_has_value(iterator); i++) {
+  while (roaring64_iterator_has_value(iterator)) {
     uint64_t current = roaring64_iterator_value(iterator);
-    uint64_t step = (last == UINT64_MAX) ? current + 1 : current - last;
 
-    if (n < step) {
-      element = (last == UINT64_MAX) ? n : last + n;
-      *found = true;
-      break;
-    } else {
-      n -= (step - 1);
+    if (current > candidate) {
+      uint64_t gap = current - candidate;
+      if (n <= gap) {
+        roaring64_iterator_free(iterator);
+        *found = true;
+        return candidate + n - 1;
+      }
+      n -= gap;
     }
-    last = current;
+
+    if (current == UINT64_MAX) {
+      roaring64_iterator_free(iterator);
+      return 0;
+    }
+
+    candidate = current + 1;
     roaring64_iterator_advance(iterator);
   }
 
   roaring64_iterator_free(iterator);
-  return element;
+
+  if (n - 1 > UINT64_MAX - candidate) {
+    return 0;
+  }
+
+  *found = true;
+  return candidate + n - 1;
 }
 
 int64_t bitmap_get_nth_element_not_present_slow(const Bitmap* bitmap, uint64_t n) {

@@ -21,11 +21,10 @@ node_modules
 **/.vitepress/cache/
 
 # Fuzzing artifacts
-tests/fuzz/corpus/*
-!tests/fuzz/corpus/*/
-tests/fuzz/corpus/*/*
-!tests/fuzz/corpus/*/seed*
-!tests/fuzz/corpus/*/regression*
+# Keep curated seed corpora in git; ignore ad-hoc inputs discovered by fuzz runs.
+tests/fuzz/corpus/**
+!tests/fuzz/corpus/**/
+!tests/fuzz/corpus/**/seed*
 crash-*
 leak-*
 timeout-*

@@ -72,6 +72,9 @@ function test_bitop() {
     rcall_assert "R.BITOP NOT test_bitop_dest_3 test_bitop_4 3" "2" "BITOP NOT operation with size parameter"
     rcall_assert "R.GETBIT test_bitop_dest_3 0" "1" "Check result of NOT operation at bit 0 (with size)"
     rcall_assert "R.MAX test_bitop_dest_3" "3" "Check max value after NOT operation (with size)"
+
+    rcall_assert "R.BITOP NOT test_bitop_dest_empty test_bitop_missing" "0" "BITOP NOT on an empty source should stay empty"
+    rcall_assert "R.GETBIT test_bitop_dest_empty 0" "0" "Empty-source NOT should not set bit 0"
   }
 
   function collision() {
@@ -119,6 +122,10 @@ function test_bitpos() {
   rcall "R.SETBIT test_bitpos_0 4 1"
   rcall "R.SETBIT test_bitpos_0 6 1"
   rcall_assert "R.BITPOS test_bitpos_0 0" "5" "Find first unset bit position"
+  rcall_assert "R.BITPOS test_bitpos_missing 0" "0" "Empty key should report bit 0 at position 0"
+  rcall_assert "R.BITPOS test_bitpos_missing 1" "-1" "Empty key should report no set bit"
+  rcall_assert "R.SETINTARRAY test_bitpos_single_zero 0" "OK" "Set isolated zero bit for BITPOS edge case"
+  rcall_assert "R.BITPOS test_bitpos_single_zero 0" "1" "Single zero bit should report first unset position after 0"
 }
 
 function test_getintarray_setintarray() {
@@ -134,6 +141,18 @@ function test_getintarray_setintarray() {
   rcall_assert "R.GETINTARRAY test_getintarray_setintarray" "$(echo -e "2\n4\n8\n16\n32\n64\n128")" "Get integer array with powers of 2"
 
   rcall_assert "R.GETINTARRAY test_getintarray_setintarray_empty_key" "" "Get integer array from empty key"
+}
+
+function test_command_getkeysandflags() {
+  print_test_header "test_command_getkeysandflags"
+
+  if ! redis_supports_command_getkeysandflags; then
+    echo "Skipping: Redis does not support COMMAND GETKEYSANDFLAGS"
+    return
+  fi
+
+  rcall_assert "COMMAND GETKEYSANDFLAGS R.SETINTARRAY test_command_flags 1" $'test_command_flags\nOW\ninsert' "SETINTARRAY reports overwrite/insert key flags"
+  rcall_assert "COMMAND GETKEYSANDFLAGS R.SETBITARRAY test_command_flags 0101" $'test_command_flags\nOW\ninsert' "SETBITARRAY reports overwrite/insert key flags"
 }
 
 function test_rangeintarray() {
@@ -736,6 +755,7 @@ test_bitop
 test_bitcount
 test_bitpos
 test_getintarray_setintarray
+test_command_getkeysandflags
 test_rangeintarray
 test_getbitarray_setbitarray
 test_appendintarray_deleteintarray

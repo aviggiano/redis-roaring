@@ -898,7 +898,7 @@ int RBitOpCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
     if (RedisModule_IsKeysPositionRequest(ctx) > 0) {
       return REDISMODULE_OK;
     } else {
-      RedisModule_ReplyWithSimpleString(ctx, "ERR syntax error");
+      RedisModule_ReplyWithError(ctx, "ERR syntax error");
       return REDISMODULE_ERR;
     }
   }
@@ -950,13 +950,15 @@ int RBitPosCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   bool bit;
   ParseBoolOrReturn(ctx, argv[2], "bit", bit);
 
-  int64_t pos = 1;
-  if (bitmap != BITMAP_NILL) {
-    if (bit) {
-      pos = bitmap_get_nth_element_present(bitmap, 1);
-    } else {
-      pos = bitmap_get_nth_element_not_present(bitmap, 1);
-    }
+  if (bitmap == BITMAP_NILL) {
+    return RedisModule_ReplyWithLongLong(ctx, bit ? -1 : 0);
+  }
+
+  int64_t pos;
+  if (bit) {
+    pos = bitmap_get_nth_element_present(bitmap, 1);
+  } else {
+    pos = bitmap_get_nth_element_not_present(bitmap, 1);
   }
 
   return RedisModule_ReplyWithLongLong(ctx, (long long) pos);

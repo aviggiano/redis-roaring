@@ -53,20 +53,27 @@ void test_bitmap64_get_nth_element() {
         bool found = false;
         uint64_t element = bitmap64_get_nth_element_not_present(bitmap, 0, &found);
         ASSERT(element == 0, "expect first item to return 0");
-        ASSERT(found == true, "expect first item found = false");
+        ASSERT(found == false, "expect first item found = false");
       }
       {
         for (size_t i = 0; i < 1000; i++) {
           bool found = false;
+          bool slow_found = false;
           uint64_t element = bitmap64_get_nth_element_not_present(bitmap, i + 1, &found);
-          uint64_t element_check = bitmap64_get_nth_element_not_present_slow(bitmap, i + 1, &found);
+          uint64_t element_check = bitmap64_get_nth_element_not_present_slow(bitmap, i + 1, &slow_found);
           ASSERT(element == element_check, "expect item[%zu] to be %llu. Received: %u", i, element, element_check);
+          ASSERT(found == slow_found, "expect found flag for item[%zu] to match slow path", i);
         }
       }
       {
+        Bitmap64* single = bitmap64_alloc();
         bool found = false;
-        uint64_t element = bitmap64_get_nth_element_not_present(bitmap, array[array_len - 1], &found);
-        ASSERT(element == 0, "expect last element to return 0");
+        bitmap64_setbit(single, 0, 1);
+        ASSERT(bitmap64_get_nth_element_not_present(single, 1, &found) == 1, "expect first missing element after {0} to be 1");
+        ASSERT(found == true, "expect first missing element after {0} to be found");
+        ASSERT(bitmap64_get_nth_element_not_present(single, 2, &found) == 2, "expect second missing element after {0} to be 2");
+        ASSERT(found == true, "expect second missing element after {0} to be found");
+        bitmap64_free(single);
       }
 
       bitmap64_free(bitmap);

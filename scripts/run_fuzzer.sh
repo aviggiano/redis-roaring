@@ -31,6 +31,11 @@ if [ ! -f "$FUZZER_PATH" ]; then
     echo "  - bitmap_operations"
     echo "  - bitmap_serialization"
     echo "  - bitop_keys"
+    echo "  - command_metadata"
+    echo "  - command_dispatch"
+    echo "  - cluster_routing"
+    echo "  - persistence_sequences"
+    echo "  - r_vs_r64_parity"
     echo ""
     echo "Build fuzzers first with: ./scripts/build_fuzzers.sh"
     exit 1
