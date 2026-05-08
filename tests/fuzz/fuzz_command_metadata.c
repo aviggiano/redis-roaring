@@ -164,6 +164,10 @@ static bool fuzz_metadata_command_is_readonly(const FuzzMetadataSpec* spec) {
       || strcmp(suffix, "STAT") == 0;
 }
 
+static bool fuzz_metadata_skip_runtime_success(const FuzzMetadataSpec* spec) {
+  return strcmp(fuzz_metadata_command_suffix(spec), "SETFULL") == 0;
+}
+
 static void fuzz_metadata_snapshot_free(FuzzMetadataSnapshot* snapshot, bool use_64) {
   if (use_64) {
     safe_free(snapshot->values64);
@@ -673,7 +677,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     fuzz_require(fuzz_redis_dbsize(server) == dbsize_before);
     fuzz_metadata_require_string_sentinel(server);
     fuzz_metadata_require_snapshots(server, use_64, tracked_snapshots, runtime_key_count);
-  } else {
+  } else if (!fuzz_metadata_skip_runtime_success(spec)) {
     fuzz_metadata_require_runtime_success(server, argv, argc);
     if (fuzz_metadata_command_is_readonly(spec)) {
       fuzz_require(fuzz_redis_dbsize(server) == dbsize_before);

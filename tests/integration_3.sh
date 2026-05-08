@@ -142,6 +142,11 @@ function test_getintarray_setintarray() {
 function test_command_getkeysandflags() {
   print_test_header "test_command_getkeysandflags (64)"
 
+  if ! redis_supports_command_getkeysandflags; then
+    echo "Skipping: Redis does not support COMMAND GETKEYSANDFLAGS"
+    return
+  fi
+
   rcall_assert "COMMAND GETKEYSANDFLAGS R64.SETINTARRAY test_command_flags 1" $'test_command_flags\nOW\ninsert' "R64.SETINTARRAY reports overwrite/insert key flags"
   rcall_assert "COMMAND GETKEYSANDFLAGS R64.SETBITARRAY test_command_flags 0101" $'test_command_flags\nOW\ninsert' "R64.SETBITARRAY reports overwrite/insert key flags"
 }

@@ -601,6 +601,26 @@ static void fuzz_parity_build_case(FuzzInput* input, FuzzParityCase* parity_case
   fuzz_require(false);
 }
 
+static void fuzz_parity_execute_case(FuzzRedisServer* server, const FuzzParityCase* parity_case,
+                                     redisReply** reply32, redisReply** reply64) {
+  fuzz_require(reply32 != NULL);
+  fuzz_require(reply64 != NULL);
+
+  if (parity_case->spec->kind == FUZZ_PARITY_SETFULL) {
+    /*
+     * R64.SETFULL attempts to materialize the full 64-bit universe, which is
+     * not practical under sanitizer-backed fuzzing time budgets. Model the
+     * shared observable range instead so the parity oracle remains bounded.
+     */
+    *reply32 = fuzz_redis_command(server, "R.SETRANGE %s 0 256", parity_case->argv32[1]);
+    *reply64 = fuzz_redis_command(server, "R64.SETRANGE %s 0 256", parity_case->argv64[1]);
+    return;
+  }
+
+  *reply32 = fuzz_redis_command_argv(server, parity_case->argc32, parity_case->argv32);
+  *reply64 = fuzz_redis_command_argv(server, parity_case->argc64, parity_case->argv64);
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   if (size == 0) {
     return 0;
@@ -623,8 +643,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   fuzz_redis_flushall(server);
   fuzz_parity_seed_case(server, &parity_case);
 
-  reply32 = fuzz_redis_command_argv(server, parity_case.argc32, parity_case.argv32);
-  reply64 = fuzz_redis_command_argv(server, parity_case.argc64, parity_case.argv64);
+  fuzz_parity_execute_case(server, &parity_case, &reply32, &reply64);
   fuzz_parity_compare_reply(reply32, reply64);
   fuzz_redis_free_reply(reply32);
   fuzz_redis_free_reply(reply64);

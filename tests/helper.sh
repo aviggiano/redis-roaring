@@ -143,6 +143,12 @@ function rcall_assert() {
   fi
 }
 
+function redis_supports_command_getkeysandflags() {
+  local probe
+  probe=$(echo "COMMAND GETKEYSANDFLAGS SET __fuzz_probe__ 1" | ./deps/redis/src/redis-cli -p "$REDIS_PORT" 2>/dev/null || true)
+  [ "$probe" != "ERR Unknown subcommand or wrong number of arguments for 'GETKEYSANDFLAGS'. Try COMMAND HELP." ]
+}
+
 function wait_for_cluster_ok() {
   local tries=0
   while true; do
