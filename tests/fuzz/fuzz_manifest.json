@@ -88,7 +88,7 @@
       "oracles": [
         "single-key coverage",
         "arity/key extraction parity",
-        "R/R64 parity in the shared 32-bit-safe range using a bounded full-range surrogate for the 64-bit runtime path"
+        "R/R64 parity in the shared 32-bit-safe range using a bounded full-range surrogate with sampled shared-bit assertions"
       ],
       "seed_corpus": ["tests/fuzz/corpus/command_metadata", "tests/fuzz/corpus/r_vs_r64_parity"],
       "scope": {"metadata": true, "dispatch": true, "routing": false, "persistence": false, "parity": true}

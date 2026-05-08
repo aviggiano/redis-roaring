@@ -45,6 +45,7 @@ typedef enum {
 typedef enum {
   FUZZ_PARITY_STATE_FULL = 0,
   FUZZ_PARITY_STATE_SHARED_RANGE,
+  FUZZ_PARITY_STATE_SHARED_BITS,
 } FuzzParityStateMode;
 
 typedef struct {
@@ -322,6 +323,17 @@ static uint64_t* fuzz_parity_get_range64(FuzzRedisServer* server, const char* ke
   return values;
 }
 
+static void fuzz_parity_compare_shared_bits(FuzzRedisServer* server, const char* key32, const char* key64) {
+  const uint32_t sample_offsets[] = {0, 1, 2, 7, 15, 31, 63, 127, 255};
+  for (size_t i = 0; i < sizeof(sample_offsets) / sizeof(sample_offsets[0]); i++) {
+    redisReply* reply32 = fuzz_redis_command(server, "R.GETBIT %s %u", key32, sample_offsets[i]);
+    redisReply* reply64 = fuzz_redis_command(server, "R64.GETBIT %s %u", key64, sample_offsets[i]);
+    fuzz_parity_compare_reply(reply32, reply64);
+    fuzz_redis_free_reply(reply32);
+    fuzz_redis_free_reply(reply64);
+  }
+}
+
 static void fuzz_parity_compare_key_pair_shared_range(FuzzRedisServer* server, const char* key32, const char* key64) {
   size_t count32 = 0;
   size_t count64 = 0;
@@ -336,20 +348,15 @@ static void fuzz_parity_compare_key_pair_shared_range(FuzzRedisServer* server, c
   safe_free(values32);
   safe_free(values64);
 
-  const uint32_t sample_offsets[] = {0, 1, 2, 7, 15, 31, 63, 127, 255};
-  for (size_t i = 0; i < sizeof(sample_offsets) / sizeof(sample_offsets[0]); i++) {
-    redisReply* reply32 = fuzz_redis_command(server, "R.GETBIT %s %u", key32, sample_offsets[i]);
-    redisReply* reply64 = fuzz_redis_command(server, "R64.GETBIT %s %u", key64, sample_offsets[i]);
-    fuzz_parity_compare_reply(reply32, reply64);
-    fuzz_redis_free_reply(reply32);
-    fuzz_redis_free_reply(reply64);
-  }
+  fuzz_parity_compare_shared_bits(server, key32, key64);
 }
 
 static void fuzz_parity_compare_case_state(FuzzRedisServer* server, const FuzzParityCase* parity_case) {
   for (size_t i = 0; i < FUZZ_PARITY_MAX_KEYS; i++) {
     if (parity_case->key_modes[i] == FUZZ_PARITY_STATE_SHARED_RANGE) {
       fuzz_parity_compare_key_pair_shared_range(server, FUZZ_PARITY_KEYS32[i], FUZZ_PARITY_KEYS64[i]);
+    } else if (parity_case->key_modes[i] == FUZZ_PARITY_STATE_SHARED_BITS) {
+      fuzz_parity_compare_shared_bits(server, FUZZ_PARITY_KEYS32[i], FUZZ_PARITY_KEYS64[i]);
     } else {
       fuzz_parity_compare_key_pair_full(server, FUZZ_PARITY_KEYS32[i], FUZZ_PARITY_KEYS64[i]);
     }
@@ -483,7 +490,7 @@ static void fuzz_parity_build_case(FuzzInput* input, FuzzParityCase* parity_case
     }
     case FUZZ_PARITY_SETFULL:
       fuzz_require(fuzz_parity_command_is_shared_range_allowlisted(spec->kind));
-      parity_case->key_modes[0] = FUZZ_PARITY_STATE_SHARED_RANGE;
+      parity_case->key_modes[0] = FUZZ_PARITY_STATE_SHARED_BITS;
       fuzz_parity_append_key_arg(parity_case, 0);
       return;
     case FUZZ_PARITY_SETRANGE: {
