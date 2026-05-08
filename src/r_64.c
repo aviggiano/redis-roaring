@@ -517,7 +517,14 @@ int R64DeleteIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int 
     }
   }
 
-  roaring64_bitmap_remove_many(bitmap, length, values);
+  /*
+   * CRoaring's 64-bit bulk-removal cursor can retain stale container state
+   * when duplicate values remove the final element from a container. Remove
+   * values one by one so repeated DELETEINTARRAY arguments stay safe.
+   */
+  for (size_t i = 0; i < length; i++) {
+    roaring64_bitmap_remove(bitmap, values[i]);
+  }
   rm_free(values);
 
   RedisModule_ReplicateVerbatim(ctx);

@@ -178,6 +178,10 @@ function test_appendintarray_deleteintarray() {
   rcall_assert "R64.GETINTARRAY test_appendintarray_deleteintarray" "$(echo -e "1\n2\n3")" "Get array after initialization"
   rcall_assert "R64.DELETEINTARRAY test_appendintarray_deleteintarray 1 3" "OK" "Delete values 1 and 3"
   rcall_assert "R64.GETINTARRAY test_appendintarray_deleteintarray" "2" "Get array after deletion"
+
+  rcall_assert "R64.SETINTARRAY test_appendintarray_deleteintarray_dupes 0" "OK" "Initialize bitmap with single zero value"
+  rcall_assert "R64.DELETEINTARRAY test_appendintarray_deleteintarray_dupes 0 0 0" "OK" "Delete duplicate zero values without crashing"
+  rcall_assert "R64.GETINTARRAY test_appendintarray_deleteintarray_dupes" "" "Bitmap should be empty after deleting duplicate zero values"
 }
 
 function test_min_max() {
