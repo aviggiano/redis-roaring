@@ -57,6 +57,47 @@ docker run -p 6379:6379 aviggiano/redis-roaring:latest
 Run the `test.sh` script for unit tests, integration tests and performance tests.
 The performance tests can take a while, since they run on a real dataset of integer values.
 
+## Migrating to Redis native bitmaps
+
+The standalone `tools/redis-bitmap-migrate.py` utility migrates `R.*` and
+`R64.*` redis-roaring keys into Redis native bitmap values through public Redis
+and redis-roaring commands. It streams integer ranges from the source, writes
+native bitmap values on the target, validates temporary keys, and records a
+durable JSON manifest. It does not depend on Redis core internals or
+redis-roaring private payload layouts.
+
+By default the tool performs a dry run:
+
+```bash
+python3 tools/redis-bitmap-migrate.py \
+  --source-host 127.0.0.1 --source-port 6379 \
+  --target-host 127.0.0.1 --target-port 6380 \
+  --manifest redis-bitmap-migrate-manifest.json
+```
+
+To write destination keys, run a final pass while source writes are frozen and
+acknowledge that with `--apply --assume-frozen`.
+
+```bash
+python3 tools/redis-bitmap-migrate.py \
+  --source-host 127.0.0.1 --source-port 6379 \
+  --target-host 127.0.0.1 --target-port 6380 \
+  --manifest redis-bitmap-migrate-manifest.json \
+  --apply --assume-frozen
+```
+
+Run the migrator contract tests with:
+
+```bash
+python3 -m py_compile tools/redis-bitmap-migrate.py tests/integration/redis-bitmap-migrate.py
+python3 tests/integration/redis-bitmap-migrate.py
+```
+
+The default test run uses fake RESP servers to verify the public-command
+contract. Real Redis-to-native integration tests are enabled when
+`REDIS_NATIVE_SERVER`, `REDIS_ROARING_SERVER`, and `REDIS_ROARING_MODULE` point
+to built binaries.
+
 ## Fuzzing
 
 redis-roaring includes fuzz testing using libFuzzer with AddressSanitizer and UndefinedBehaviorSanitizer. Five fuzz targets cover 32-bit operations, 64-bit operations, complex bitwise operations, data parsing, and BITOP key-discovery metadata. Fuzzing runs automatically on every push to master.
