@@ -164,7 +164,7 @@ class FakeRedisHandler(socketserver.BaseRequestHandler):
             values = sorted(self.server.bits[key])
             start = int(command[2])
             end = int(command[3])
-            reply = values[start:end + 1]
+            reply = [value for value in values if start <= value <= end]
             if self.server.mutate_after_range and key not in self.server.mutated_range_keys:
                 next_offset = max(values) + 1 if values else 0
                 self.server.bits[key].add(next_offset)
@@ -358,6 +358,58 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 rc = migrate.main(args)
         return rc, stdout.getvalue(), stderr.getvalue()
 
+    def test_scanned_same_endpoint_apply_snapshots_keys_before_migrating(self):
+        class DummyClient:
+            def __init__(self, endpoint):
+                self.endpoint = endpoint
+
+            def with_db(self, db):
+                return DummyClient(self.endpoint.with_db(db))
+
+        class SnapshotMigrator(migrate.BitmapMigrator):
+            def __init__(self):
+                self.args = migrate.parse_args([
+                    "--source-host", "127.0.0.1",
+                    "--source-port", "6379",
+                    "--target-host", "127.0.0.1",
+                    "--target-port", "6379",
+                    "--manifest", "unused.json",
+                    "--apply",
+                    "--assume-frozen",
+                ])
+                endpoint = migrate.RedisEndpoint("127.0.0.1", 6379, 0, None, None, 1.0, "dummy")
+                self.source = DummyClient(endpoint)
+                self.target = DummyClient(endpoint)
+                self.summary = {
+                    "scanned": 0,
+                    "non_roaring": 0,
+                    "planned": 0,
+                    "migrated": 0,
+                    "skipped": 0,
+                    "failed": 0,
+                    "resumed": 0,
+                }
+                self.events = []
+
+            def iter_keys(self, source):
+                for key in (b"foo", b"bar"):
+                    self.events.append(("yield", key))
+                    yield key
+
+            def migrate_key(self, source, target, db, key):
+                self.events.append(("migrate", key))
+
+        migrator = SnapshotMigrator()
+        migrator.migrate_db(0)
+
+        self.assertEqual(migrator.summary["scanned"], 2)
+        self.assertEqual(migrator.events, [
+            ("yield", b"foo"),
+            ("yield", b"bar"),
+            ("migrate", b"foo"),
+            ("migrate", b"bar"),
+        ])
+
     def test_apply_migrates_reroaring_key(self):
         with tempfile.TemporaryDirectory() as tmp, ServerPair(bits={1, 2, 5, 100}) as servers:
             manifest = Path(tmp) / "manifest.json"
@@ -375,6 +427,25 @@ class RedisBitmapMigrateTests(unittest.TestCase):
             self.assertEqual(data["entries"][0]["state"], "committed")
             self.assertEqual(data["entries"][0]["cardinality"], 4)
             self.assertEqual(data["entries"][0]["validation"]["type"], "bitmap")
+
+    def test_apply_migrates_sparse_reroaring_key_by_offset_range(self):
+        with tempfile.TemporaryDirectory() as tmp, ServerPair(bits={100, 200}) as servers:
+            manifest = Path(tmp) / "manifest.json"
+            rc, stdout, stderr = self.run_migrator(
+                servers.args(manifest, "--apply", "--assume-frozen", "--page-size", "100")
+            )
+
+            self.assertEqual(rc, 0)
+            self.assertIn("MIGRATED db=0 key=foo count=2", stdout)
+            self.assertEqual(stderr, "")
+            self.assertEqual(servers.target.target[b"foo"], {100, 200})
+
+            range_commands = [
+                command for command in servers.source.commands
+                if command and command[0].upper() == b"R.RANGEINTARRAY"
+            ]
+            self.assertEqual(range_commands[0][2:], [b"100", b"199"])
+            self.assertEqual(range_commands[1][2:], [b"200", b"200"])
 
     def test_apply_preserves_empty_source_as_empty_native_bitmap(self):
         with tempfile.TemporaryDirectory() as tmp, ServerPair(bits=set()) as servers:
@@ -497,6 +568,20 @@ class RedisBitmapMigrateTests(unittest.TestCase):
             self.assertEqual(data["entries"][0]["state"], "failed")
             self.assertIn(str(wide), data["entries"][0]["error"])
 
+    def test_roaring64_above_cap_keep_going_counts_failure(self):
+        wide = migrate.NATIVE_V1_MAX_BIT + 1
+        with tempfile.TemporaryDirectory() as tmp, ServerPair(source_type="roaring64", bits={wide}) as servers:
+            manifest = Path(tmp) / "manifest.json"
+            rc, stdout, stderr = self.run_migrator(
+                servers.args(manifest, "--source-type", "auto", "--keep-going")
+            )
+
+            self.assertEqual(rc, 1)
+            self.assertIn("failed=1", stdout)
+            self.assertIn("FAILED db=0 key=foo", stderr)
+            data = json.loads(manifest.read_text())
+            self.assertEqual(data["entries"][0]["state"], "failed")
+
     def test_roaring64_above_cap_can_skip_loudly(self):
         wide = migrate.NATIVE_V1_MAX_BIT + 1
         with tempfile.TemporaryDirectory() as tmp, ServerPair(source_type="roaring64", bits={wide}) as servers:
@@ -601,6 +686,31 @@ class RedisBitmapMigrateTests(unittest.TestCase):
             self.assertNotIn(temp_key, servers.target.target)
             data = json.loads(manifest.read_text())
             self.assertEqual(data["entries"][0]["state"], "committed")
+
+    def test_resume_frozen_pass_refreshes_committed_live_copy(self):
+        with tempfile.TemporaryDirectory() as tmp, ServerPair(bits={100, 200}) as servers:
+            manifest = Path(tmp) / "manifest.json"
+
+            rc, stdout, stderr = self.run_migrator(
+                servers.args(manifest, "--apply", "--allow-live-copy", "--page-size", "100")
+            )
+            self.assertEqual(rc, 0)
+            self.assertIn("MIGRATED db=0 key=foo count=2", stdout)
+            self.assertEqual(stderr, "")
+            self.assertEqual(servers.target.target[b"foo"], {100, 200})
+
+            servers.source.bits[b"foo"].add(300)
+            rc, stdout, stderr = self.run_migrator(
+                servers.args(manifest, "--resume", "--apply", "--assume-frozen", "--page-size", "100")
+            )
+
+            self.assertEqual(rc, 0)
+            self.assertIn("MIGRATED db=0 key=foo count=3", stdout)
+            self.assertEqual(stderr, "")
+            self.assertEqual(servers.target.target[b"foo"], {100, 200, 300})
+            data = json.loads(manifest.read_text())
+            self.assertEqual(data["entries"][0]["state"], "committed")
+            self.assertTrue(data["entries"][0]["source_writes_frozen"])
 
 
 def free_tcp_port():

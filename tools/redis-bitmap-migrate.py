@@ -363,6 +363,7 @@ class BitmapMigrator:
             "failed": 0,
             "resumed": 0,
         }
+        self.failed_entries_this_run: set[str] = set()
 
     def run(self) -> int:
         self.manifest.save()
@@ -411,7 +412,11 @@ class BitmapMigrator:
     def migrate_db(self, db: int) -> None:
         source = self.source.with_db(db)
         target = self.target.with_db(db)
-        for key in self.iter_keys(source):
+        keys = self.iter_keys(source)
+        if self.should_snapshot_scan():
+            # Finish SCAN before apply-mode writes mutate the keyspace.
+            keys = list(keys)
+        for key in keys:
             self.summary["scanned"] += 1
             try:
                 self.migrate_key(source, target, db, key)
@@ -456,10 +461,14 @@ class BitmapMigrator:
                 if cursor == 0:
                     break
 
+    def should_snapshot_scan(self) -> bool:
+        return self.args.apply and not self.args.key and not self.args.key_file
+
     def migrate_key(self, source: RedisClient, target: RedisClient, db: int, key: bytes) -> None:
         entry_id = self.entry_id(db, key)
         existing = self.manifest.get(entry_id)
-        if existing and existing.get("state") in {"committed", "skipped"}:
+        refresh_committed = self.should_refresh_committed_entry(existing)
+        if existing and existing.get("state") in {"committed", "skipped"} and not refresh_committed:
             self.summary["resumed"] += 1
             return
         if existing and existing.get("state") == "dry_run" and self.args.dry_run:
@@ -490,7 +499,7 @@ class BitmapMigrator:
                 self.manifest.upsert(entry)
                 print(f"SKIP db={db} key={key_to_text(key)}: {error}", file=sys.stderr)
                 return
-            entry["state"] = "failed"
+            entry["state"] = "planned"
             self.manifest.upsert(entry)
             raise MigrateError(error)
 
@@ -518,13 +527,26 @@ class BitmapMigrator:
         entry["state"] = "validated"
         self.manifest.upsert(entry)
 
-        self.commit_temp(target, dest_key, temp_key)
+        self.commit_temp(target, dest_key, temp_key, replace=refresh_committed)
         entry["state"] = "committed"
         entry["committed_at_ms"] = now_ms()
+        entry["source_writes_frozen"] = bool(self.args.assume_frozen)
         entry["error"] = None
         self.manifest.upsert(entry)
         self.summary["migrated"] += 1
         print(f"MIGRATED db={db} key={key_to_text(key)} count={info.cardinality}")
+
+    def should_refresh_committed_entry(self, entry: Optional[dict[str, Any]]) -> bool:
+        if not entry or entry.get("state") != "committed":
+            return False
+        if not (self.args.resume and self.args.apply and self.args.assume_frozen):
+            return False
+        if entry.get("source_writes_frozen") is False:
+            return True
+        if "source_writes_frozen" not in entry:
+            options = self.manifest.data.get("options") or {}
+            return bool(options.get("allow_live_copy") and not options.get("assume_frozen"))
+        return False
 
     def resume_imported_key(
         self,
@@ -551,6 +573,7 @@ class BitmapMigrator:
             self.commit_temp(target, dest_key, temp_key)
             entry["state"] = "committed"
             entry["committed_at_ms"] = now_ms()
+            entry["source_writes_frozen"] = bool(self.args.assume_frozen)
             entry["error"] = None
             self.manifest.upsert(entry)
             self.summary["migrated"] += 1
@@ -562,6 +585,7 @@ class BitmapMigrator:
             entry["validation"] = validation
             entry["state"] = "committed"
             entry["committed_at_ms"] = now_ms()
+            entry["source_writes_frozen"] = bool(self.args.assume_frozen)
             entry["error"] = None
             self.manifest.upsert(entry)
             self.summary["resumed"] += 1
@@ -660,30 +684,27 @@ class BitmapMigrator:
             dst.command(["BITMAP", "CONVERT", build_key, "NATIVE"])
 
             if info.cardinality:
-                for rank_start in range(0, info.cardinality, self.args.page_size):
-                    rank_end = min(info.cardinality - 1, rank_start + self.args.page_size - 1)
+                range_start = info.min_offset
+                while range_start <= info.max_offset:
+                    range_end = min(info.max_offset, range_start + self.args.page_size - 1)
                     raw_offsets = src.command([
                         f"{info.command_prefix}.RANGEINTARRAY",
                         info.key,
-                        str(rank_start),
-                        str(rank_end),
+                        str(range_start),
+                        str(range_end),
                     ])
                     if not isinstance(raw_offsets, list):
                         raise MigrateError(f"unexpected RANGEINTARRAY reply for {key_to_text(info.key)}")
-                    expected = rank_end - rank_start + 1
-                    if len(raw_offsets) != expected:
-                        raise MigrateError(
-                            f"source changed while exporting {key_to_text(info.key)}: "
-                            f"expected {expected} offsets, got {len(raw_offsets)}"
-                        )
                     offsets = [parse_uint(offset, "offset") for offset in raw_offsets]
                     commands: list[list[Any]] = []
                     for i, offset in enumerate(offsets):
+                        if offset < range_start or offset > range_end:
+                            raise MigrateError(f"source returned offset {offset} outside requested range")
                         if offset > NATIVE_V1_MAX_BIT:
                             raise MigrateError(f"offset {offset} exceeds v1 native bitmap cap")
                         if last_offset is not None and offset <= last_offset:
                             raise MigrateError(f"source offsets are not strictly increasing at {offset}")
-                        absolute_rank = rank_start + i
+                        absolute_rank = exported_count + i
                         if absolute_rank in sample_ranks:
                             sample_offsets.add(offset)
                         if full_offsets is not None:
@@ -692,6 +713,7 @@ class BitmapMigrator:
                         last_offset = offset
                     self.send_in_chunks(dst, commands, self.args.pipeline_size)
                     exported_count += len(offsets)
+                    range_start = range_end + 1
 
             if exported_count != info.cardinality:
                 raise MigrateError(
@@ -790,15 +812,16 @@ class BitmapMigrator:
                 raise MigrateError("temporary key lost source TTL")
         return checks
 
-    def commit_temp(self, target: RedisClient, dest_key: bytes, temp_key: bytes) -> None:
+    def commit_temp(self, target: RedisClient, dest_key: bytes, temp_key: bytes, replace: bool = False) -> None:
         with target.connection() as conn:
             exists = parse_uint(conn.command(["EXISTS", dest_key]), "EXISTS destination")
-            if exists and not self.args.replace:
+            use_replace = self.args.replace or replace
+            if exists and not use_replace:
                 conn.command(["DEL", temp_key])
                 raise MigrateError(f"destination key already exists: {key_to_text(dest_key)} (use --replace)")
             if parse_uint(conn.command(["EXISTS", temp_key]), "EXISTS temp") != 1:
                 raise MigrateError(f"temporary key is missing before commit: {key_to_text(temp_key)}")
-            if self.args.replace:
+            if use_replace:
                 conn.command(["RENAME", temp_key, dest_key])
                 return
             renamed = parse_uint(conn.command(["RENAMENX", temp_key, dest_key]), "RENAMENX")
@@ -814,11 +837,11 @@ class BitmapMigrator:
             "key": key_to_text(key),
             "key_b64": key_to_b64(key),
         }
-        already_failed = entry.get("state") == "failed"
         entry["state"] = "failed"
         entry["error"] = error
-        if not already_failed:
+        if entry_id not in self.failed_entries_this_run:
             self.summary["failed"] += 1
+            self.failed_entries_this_run.add(entry_id)
         self.manifest.upsert(entry)
         print(f"FAILED db={db} key={key_to_text(key)}: {error}", file=sys.stderr)
 
@@ -844,6 +867,7 @@ class BitmapMigrator:
             "max_observed_offset": info.max_offset,
             "source_hash": info.source_hash,
             "overwrite_policy": "replace" if self.args.replace else "no-overwrite",
+            "source_writes_frozen": bool(self.args.assume_frozen),
             "cap_policy": self.args.cap_policy,
             "error": None,
         }
