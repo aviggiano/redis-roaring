@@ -1038,6 +1038,65 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
             self.assertEqual(entry["cardinality"], len(bits))
             self.assertGreater(entry["validation"]["ttl_ms"], 0)
 
+    def test_real_reroaring_rdb_snapshot_migrates_to_native_rdb(self):
+        key = "snapshot:reroaring"
+        bits = sorted({0, 7, 63, 64, 511, 4096, 65535})
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            manifest = tmp_path / "manifest.json"
+            source_data = tmp_path / "source"
+            target_data = tmp_path / "target"
+
+            seed_port = free_tcp_port()
+            with RedisProcess(self.source_server_path, seed_port, source_data, self.module_path):
+                source = real_redis_client(seed_port, "source-seed")
+                self.seed_reroaring_int_array(source, key, bits, chunk_size=3)
+                self.assertEqual(source.execute(["R.BITCOUNT", key]), len(bits))
+                self.assertIsInstance(source.execute(["DUMP", key]), bytes)
+                self.assertEqual(source.execute(["SAVE"]), "OK")
+                self.assertTrue((source_data / "dump.rdb").is_file())
+
+            source_port = free_tcp_port()
+            target_port = free_tcp_port()
+            source_proc = RedisProcess(self.source_server_path, source_port, source_data, self.module_path)
+            target_proc = RedisProcess(self.target_server_path, target_port, target_data)
+            with source_proc, target_proc:
+                source = real_redis_client(source_port, "source-rdb")
+                target = real_redis_client(target_port, "target")
+                self.assertEqual(source.execute(["R.BITCOUNT", key]), len(bits))
+
+                rc, stdout, stderr = self.run_migrator(
+                    self.migrator_args(
+                        source_port,
+                        target_port,
+                        manifest,
+                        key,
+                        "--page-size", "64",
+                        "--pipeline-size", "4",
+                    )
+                )
+
+                self.assertEqual(rc, 0)
+                self.assertIn(f"MIGRATED db=0 key={key} count={len(bits)}", stdout)
+                self.assertEqual(stderr, "")
+                self.assert_native_dataset(target, key, bits)
+                self.assertEqual(target.execute(["SAVE"]), "OK")
+                self.assertTrue((target_data / "dump.rdb").is_file())
+
+            reload_port = free_tcp_port()
+            with RedisProcess(self.target_server_path, reload_port, target_data):
+                reloaded = real_redis_client(reload_port, "target-reload")
+                self.assert_native_dataset(reloaded, key, bits)
+
+            data = json.loads(manifest.read_text())
+            entry = data["entries"][0]
+            self.assertEqual(entry["state"], "committed")
+            self.assertEqual(entry["source_type"], "reroaring")
+            self.assertEqual(entry["cardinality"], len(bits))
+            self.assertTrue(entry["source_hash"].startswith("sha256:"))
+            self.assertEqual(entry["validation"]["type"], "bitmap")
+            self.assertEqual(entry["validation"]["cardinality"], len(bits))
+
     def test_real_roaring64_migration_preserves_in_cap_bits(self):
         bits = {0, 63, 4096, 131072}
         with tempfile.TemporaryDirectory() as tmp:
