@@ -59,6 +59,11 @@ The performance tests can take a while, since they run on a real dataset of inte
 
 ## Migrating to Redis native bitmaps
 
+After [redis/redis#15296](https://github.com/redis/redis/issues/15296),
+core Redis supports native Roaring-backed bitmaps. We recommend migrating
+redis-roaring keys to core Redis for long-term upstream support, standard Redis
+persistence and replication behavior, and simpler operational tooling.
+
 The standalone `tools/redis-bitmap-migrate.py` utility migrates `R.*` and
 `R64.*` redis-roaring keys into Redis native bitmap values through public Redis
 and redis-roaring commands. It streams integer ranges from the source, writes
