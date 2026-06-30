@@ -164,7 +164,7 @@ class FakeRedisHandler(socketserver.BaseRequestHandler):
             values = sorted(self.server.bits[key])
             start = int(command[2])
             end = int(command[3])
-            reply = [value for value in values if start <= value <= end]
+            reply = values[start:end + 1]
             if self.server.mutate_after_range and key not in self.server.mutated_range_keys:
                 next_offset = max(values) + 1 if values else 0
                 self.server.bits[key].add(next_offset)
@@ -428,11 +428,11 @@ class RedisBitmapMigrateTests(unittest.TestCase):
             self.assertEqual(data["entries"][0]["cardinality"], 4)
             self.assertEqual(data["entries"][0]["validation"]["type"], "bitmap")
 
-    def test_apply_migrates_sparse_reroaring_key_by_offset_range(self):
+    def test_apply_migrates_sparse_reroaring_key_by_rank_range(self):
         with tempfile.TemporaryDirectory() as tmp, ServerPair(bits={100, 200}) as servers:
             manifest = Path(tmp) / "manifest.json"
             rc, stdout, stderr = self.run_migrator(
-                servers.args(manifest, "--apply", "--assume-frozen", "--page-size", "100")
+                servers.args(manifest, "--apply", "--assume-frozen", "--page-size", "1")
             )
 
             self.assertEqual(rc, 0)
@@ -444,8 +444,8 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 command for command in servers.source.commands
                 if command and command[0].upper() == b"R.RANGEINTARRAY"
             ]
-            self.assertEqual(range_commands[0][2:], [b"100", b"199"])
-            self.assertEqual(range_commands[1][2:], [b"200", b"200"])
+            self.assertEqual(range_commands[0][2:], [b"0", b"0"])
+            self.assertEqual(range_commands[1][2:], [b"1", b"1"])
 
     def test_apply_preserves_empty_source_as_empty_native_bitmap(self):
         with tempfile.TemporaryDirectory() as tmp, ServerPair(bits=set()) as servers:

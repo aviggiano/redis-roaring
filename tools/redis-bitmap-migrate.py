@@ -684,22 +684,23 @@ class BitmapMigrator:
             dst.command(["BITMAP", "CONVERT", build_key, "NATIVE"])
 
             if info.cardinality:
-                range_start = info.min_offset
-                while range_start <= info.max_offset:
-                    range_end = min(info.max_offset, range_start + self.args.page_size - 1)
+                # redis-roaring RANGEINTARRAY arguments are element ranks, not bit offsets.
+                rank_start = 0
+                while rank_start < info.cardinality:
+                    rank_end = min(info.cardinality - 1, rank_start + self.args.page_size - 1)
                     raw_offsets = src.command([
                         f"{info.command_prefix}.RANGEINTARRAY",
                         info.key,
-                        str(range_start),
-                        str(range_end),
+                        str(rank_start),
+                        str(rank_end),
                     ])
                     if not isinstance(raw_offsets, list):
                         raise MigrateError(f"unexpected RANGEINTARRAY reply for {key_to_text(info.key)}")
                     offsets = [parse_uint(offset, "offset") for offset in raw_offsets]
+                    if len(offsets) > self.args.page_size:
+                        raise MigrateError(f"source returned too many offsets for {key_to_text(info.key)}")
                     commands: list[list[Any]] = []
                     for i, offset in enumerate(offsets):
-                        if offset < range_start or offset > range_end:
-                            raise MigrateError(f"source returned offset {offset} outside requested range")
                         if offset > NATIVE_V1_MAX_BIT:
                             raise MigrateError(f"offset {offset} exceeds v1 native bitmap cap")
                         if last_offset is not None and offset <= last_offset:
@@ -713,7 +714,7 @@ class BitmapMigrator:
                         last_offset = offset
                     self.send_in_chunks(dst, commands, self.args.pipeline_size)
                     exported_count += len(offsets)
-                    range_start = range_end + 1
+                    rank_start = rank_end + 1
 
             if exported_count != info.cardinality:
                 raise MigrateError(
