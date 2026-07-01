@@ -35,6 +35,43 @@ jobs:
         submodules: recursive
     - name: Validate manifest
       run: python3 ./scripts/validate_fuzz_manifest.py
+
+  migrator:
+    name: Validate bitmap migrator
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Checkout native Redis
+      uses: actions/checkout@v2
+      with:
+        repository: aviggiano/redis
+        ref: unstable
+        path: native-redis
+        submodules: recursive
+    - name: Compile migrator
+      run: python3 -m py_compile tools/redis-bitmap-migrate.py tests/integration/redis-bitmap-migrate.py
+    - name: Run migrator contract tests
+      run: python3 tests/integration/redis-bitmap-migrate.py
+    - name: Build native Redis unstable
+      run: make -C native-redis -j"$(nproc)"
+    - name: Build redis-roaring module
+      run: |
+        cd src
+        ../deps/CRoaring/amalgamation.sh
+        cd ..
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --target redis-roaring -- -j"$(nproc)"
+    - name: Run real redis-roaring to native Redis migration tests
+      env:
+        REDIS_DOWNLOAD_CROARING_REALDATA: "1"
+        REDIS_NATIVE_SERVER: ${{ github.workspace }}/native-redis/src/redis-server
+        REDIS_ROARING_MODULE: ${{ github.workspace }}/build/libredis-roaring.so
+        REDIS_ROARING_SERVER: ${{ github.workspace }}/native-redis/src/redis-server
+      run: python3 tests/integration/redis-bitmap-migrate.py RealRedisRoaringMigrationTests
+
   test:
     if: github.event_name != 'schedule'
     name: Test project (Redis ${{ matrix.redis-version }})
