@@ -23,8 +23,8 @@ on:
         description: "redis/redis host commit SHA/ref used to load redis-roaring; use a full SHA for publishable numbers"
         default: "unstable"
       redis_roaring_ref:
-        description: "aviggiano/redis-roaring commit SHA/ref to build as the module; use a full SHA for publishable numbers"
-        default: "master"
+        description: "aviggiano/redis-roaring commit SHA/ref to build as the module; empty means the revision this workflow runs from"
+        default: ""
       benchmark_profile:
         description: "Benchmark profile: full, smoke, small-sets, bitsets, or mixed-bitop"
         default: "full"
@@ -63,7 +63,7 @@ jobs:
           echo "BASELINE_REDIS_REF=${{ inputs.baseline_redis_ref }}" >> "$GITHUB_ENV"
           echo "BASELINE_NATIVE_REDIS_REF=${{ inputs.baseline_native_redis_ref }}" >> "$GITHUB_ENV"
           echo "MODULE_HOST_REDIS_REF=${{ inputs.module_host_redis_ref }}" >> "$GITHUB_ENV"
-          echo "REDIS_ROARING_REF=${{ inputs.redis_roaring_ref }}" >> "$GITHUB_ENV"
+          echo "REDIS_ROARING_REF=${{ inputs.redis_roaring_ref || github.sha }}" >> "$GITHUB_ENV"
 
       - name: Checkout baseline
         uses: actions/checkout@v6
@@ -98,7 +98,9 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: aviggiano/redis-roaring
-          ref: ${{ inputs.redis_roaring_ref }}
+          # Default to the revision this workflow runs from so dispatches from
+          # branches benchmark their own harness and module code.
+          ref: ${{ inputs.redis_roaring_ref || github.sha }}
           path: redis-roaring
 
       - name: Record checked-out SHAs
@@ -151,11 +153,15 @@ jobs:
           echo "REDIS_ROARING_MODULE=$module_path" >> "$GITHUB_ENV"
 
       - name: Prepare benchmark directories
+        env:
+          RUNNER_LABEL: ${{ inputs.runner_label }}
+          BENCHMARK_PROFILE: ${{ inputs.benchmark_profile }}
+          REPORT_VIEW: ${{ inputs.report_view }}
         run: |
           mkdir -p "$RUNNER_TEMP/croaring-realdata"
           mkdir -p "$GITHUB_WORKSPACE/bitmap-bench-results"
           {
-            echo "runner_label=${{ inputs.runner_label }}"
+            echo "runner_label=$RUNNER_LABEL"
             echo "baseline_redis_ref_input=$BASELINE_REDIS_REF"
             echo "before_sha=$BEFORE_SHA"
             echo "baseline_native_redis_ref_input=$BASELINE_NATIVE_REDIS_REF"
@@ -167,8 +173,8 @@ jobs:
             echo "redis_roaring_ref_input=$REDIS_ROARING_REF"
             echo "redis_roaring_sha=$REDIS_ROARING_SHA"
             echo "redis_roaring_module=$REDIS_ROARING_MODULE"
-            echo "benchmark_profile=${{ inputs.benchmark_profile }}"
-            echo "report_view=${{ inputs.report_view }}"
+            echo "benchmark_profile=$BENCHMARK_PROFILE"
+            echo "report_view=$REPORT_VIEW"
             uname -a
             lscpu || true
             free -h || true
@@ -176,41 +182,58 @@ jobs:
 
       - name: Run bitmap benchmark compare
         working-directory: after
+        # Dispatch inputs reach the shell only through environment variables
+        # and an argv array; they are never spliced into the script text.
+        env:
+          BENCHMARK_PROFILE: ${{ inputs.benchmark_profile }}
+          REPORT_VIEW: ${{ inputs.report_view }}
+          REQUEST_SCALE: ${{ inputs.request_scale }}
+          RUNS: ${{ inputs.runs }}
+          REALDATA_ARCHIVES: ${{ inputs.realdata_archives }}
+          EXTRA_ARGS: ${{ inputs.extra_args }}
         run: |
-          before_native_args=()
+          bench_args=(
+            --compare-before-src-dir "$GITHUB_WORKSPACE/before/src"
+          )
           if [ -n "$BASELINE_NATIVE_REDIS_REF" ]; then
-            before_native_args=(--compare-before-native-src-dir "$GITHUB_WORKSPACE/before-native/src")
+            bench_args+=(--compare-before-native-src-dir "$GITHUB_WORKSPACE/before-native/src")
           fi
+          bench_args+=(
+            --compare-after-src-dir "$GITHUB_WORKSPACE/after/src"
+            --compare-module-src-dir "$GITHUB_WORKSPACE/module-host/src"
+            --compare-module-path "$REDIS_ROARING_MODULE"
+            --compare-legacy-src-dir "$GITHUB_WORKSPACE/after/src"
+            --compare-out "$GITHUB_WORKSPACE/bitmap-bench-results/bitmap-bench-compare"
+            --module-sha "$REDIS_ROARING_SHA"
+            --benchmark-profile "$BENCHMARK_PROFILE"
+            --report-view "$REPORT_VIEW"
+            --request-scale "$REQUEST_SCALE"
+            --runs "$RUNS"
+            --ping-canary
+            --croaring-realdata-dir "$RUNNER_TEMP/croaring-realdata"
+            --download-croaring-realdata
+            --realdata-archives "$REALDATA_ARCHIVES"
+            --realdata-max-files 10
+          )
+          # extra_args is whitespace-separated; each token becomes one argv
+          # entry with no shell evaluation.
+          read -r -a extra_args <<< "$EXTRA_ARGS"
           python3 "$GITHUB_WORKSPACE/redis-roaring/tools/bitmap-bench.py" \
-            --compare-before-src-dir "$GITHUB_WORKSPACE/before/src" \
-            "${before_native_args[@]}" \
-            --compare-after-src-dir "$GITHUB_WORKSPACE/after/src" \
-            --compare-module-src-dir "$GITHUB_WORKSPACE/module-host/src" \
-            --compare-module-path "$REDIS_ROARING_MODULE" \
-            --compare-legacy-src-dir "$GITHUB_WORKSPACE/after/src" \
-            --compare-out "$GITHUB_WORKSPACE/bitmap-bench-results/bitmap-bench-compare" \
-            --module-sha "$REDIS_ROARING_SHA" \
-            --benchmark-profile "${{ inputs.benchmark_profile }}" \
-            --report-view "${{ inputs.report_view }}" \
-            --request-scale "${{ inputs.request_scale }}" \
-            --runs "${{ inputs.runs }}" \
-            --ping-canary \
-            --croaring-realdata-dir "$RUNNER_TEMP/croaring-realdata" \
-            --download-croaring-realdata \
-            --realdata-archives "${{ inputs.realdata_archives }}" \
-            --realdata-max-files 10 \
-            ${{ inputs.extra_args }}
+            "${bench_args[@]}" "${extra_args[@]}"
 
       - name: Publish benchmark report summary
         if: ${{ always() }}
+        env:
+          BENCHMARK_PROFILE: ${{ inputs.benchmark_profile }}
+          REPORT_VIEW: ${{ inputs.report_view }}
         run: |
           report="$GITHUB_WORKSPACE/bitmap-bench-results/bitmap-bench-compare.md"
           summary_limit=900000
           {
             echo "## Bitmap Benchmark Report"
             echo
-            echo "- Benchmark profile: \`${{ inputs.benchmark_profile }}\`"
-            echo "- Report view: \`${{ inputs.report_view }}\`"
+            echo "- Benchmark profile: \`$BENCHMARK_PROFILE\`"
+            echo "- Report view: \`$REPORT_VIEW\`"
             echo "- Candidate: [redis_pr_native](https://github.com/aviggiano/redis/commit/$AFTER_SHA)"
             echo
             if [ -s "$report" ]; then

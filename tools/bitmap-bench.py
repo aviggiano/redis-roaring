@@ -2650,33 +2650,39 @@ def run_compare(args: argparse.Namespace) -> int:
         add_compare_run("redis_pr_legacy", "legacy", args.compare_legacy_src_dir)
 
     payloads = []
-    with tempfile.TemporaryDirectory(prefix="bitmap-bench-compare-") as tmp:
-        for run in runs:
-            label = run["label"]
-            mode = run["mode"]
-            print(f"\n=== compare run: {label} ({mode}) ===", file=sys.stderr)
-            run_args = argparse.Namespace(**vars(args))
-            run_args.src_dir = run["src_dir"]
-            run_args.mode = mode
-            run_args.mode_label = label
-            run_args.port = run["port"]
-            run_args.module_path = run["module_path"]
-            run_args.compare_before_src_dir = None
-            run_args.compare_before_native_src_dir = None
-            run_args.compare_after_src_dir = None
-            run_args.compare_legacy_src_dir = None
-            run_args.compare_module_src_dir = None
-            run_args.compare_module_path = None
-            run_args.compare_out = None
-            run_args.skip_unsupported_only = True
-            run_args.json_out = str(Path(tmp) / f"{label}.json")
-            run_args.csv_out = None
-            run_args.markdown_out = None
-            bench = RedisBitmapBench(run_args)
-            code = bench.run()
-            if code != 0:
-                return code
-            payloads.append(json.loads(Path(run_args.json_out).read_text(encoding="utf-8")))
+    # Per-target JSONs live next to the combined output, not in a temporary
+    # directory: if a later multi-hour target fails, the completed runs stay
+    # on disk for the workflow to upload and inspect.
+    runs_dir = json_path.parent / f"{json_path.stem}-runs"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    for run in runs:
+        label = run["label"]
+        mode = run["mode"]
+        print(f"\n=== compare run: {label} ({mode}) ===", file=sys.stderr)
+        run_args = argparse.Namespace(**vars(args))
+        run_args.src_dir = run["src_dir"]
+        run_args.mode = mode
+        run_args.mode_label = label
+        run_args.port = run["port"]
+        run_args.module_path = run["module_path"]
+        run_args.compare_before_src_dir = None
+        run_args.compare_before_native_src_dir = None
+        run_args.compare_after_src_dir = None
+        run_args.compare_legacy_src_dir = None
+        run_args.compare_module_src_dir = None
+        run_args.compare_module_path = None
+        run_args.compare_out = None
+        run_args.skip_unsupported_only = True
+        run_args.json_out = str(runs_dir / f"{label}.json")
+        run_args.csv_out = None
+        run_args.markdown_out = None
+        bench = RedisBitmapBench(run_args)
+        code = bench.run()
+        if code != 0:
+            print(f"compare run {label} failed; completed per-run JSONs kept in {runs_dir}",
+                  file=sys.stderr)
+            return code
+        payloads.append(json.loads(Path(run_args.json_out).read_text(encoding="utf-8")))
 
     comparison = compare_payloads(payloads)
     combined = {
