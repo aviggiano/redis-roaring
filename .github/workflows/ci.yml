@@ -51,8 +51,8 @@ jobs:
         ref: unstable
         path: native-redis
         submodules: recursive
-    - name: Compile migrator
-      run: python3 -m py_compile tools/redis-bitmap-migrate.py tests/integration/redis-bitmap-migrate.py
+    - name: Compile migrator and benchmark harness
+      run: python3 -m py_compile tools/redis-bitmap-migrate.py tests/integration/redis-bitmap-migrate.py tools/bitmap-bench.py
     - name: Run migrator contract tests
       run: python3 tests/integration/redis-bitmap-migrate.py
     - name: Build native Redis unstable

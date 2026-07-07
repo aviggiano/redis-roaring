@@ -55,16 +55,16 @@ jobs:
   benchmark:
     runs-on: ${{ inputs.runner_label }}
     timeout-minutes: 360
+    # Requested refs are exposed to every step through the job env mapping so
+    # they never pass through script text (see the note on the benchmark step).
+    env:
+      CORE_REDIS_REF: ${{ inputs.core_redis_ref }}
+      BASELINE_REDIS_REF: ${{ inputs.baseline_redis_ref }}
+      BASELINE_NATIVE_REDIS_REF: ${{ inputs.baseline_native_redis_ref }}
+      MODULE_HOST_REDIS_REF: ${{ inputs.module_host_redis_ref }}
+      REDIS_ROARING_REF: ${{ inputs.redis_roaring_ref || github.sha }}
 
     steps:
-      - name: Resolve requested refs
-        run: |
-          echo "CORE_REDIS_REF=${{ inputs.core_redis_ref }}" >> "$GITHUB_ENV"
-          echo "BASELINE_REDIS_REF=${{ inputs.baseline_redis_ref }}" >> "$GITHUB_ENV"
-          echo "BASELINE_NATIVE_REDIS_REF=${{ inputs.baseline_native_redis_ref }}" >> "$GITHUB_ENV"
-          echo "MODULE_HOST_REDIS_REF=${{ inputs.module_host_redis_ref }}" >> "$GITHUB_ENV"
-          echo "REDIS_ROARING_REF=${{ inputs.redis_roaring_ref || github.sha }}" >> "$GITHUB_ENV"
-
       - name: Checkout baseline
         uses: actions/checkout@v6
         with:
@@ -252,6 +252,10 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload benchmark artifacts
+        # Runs on failure too: the harness persists per-target compare JSONs
+        # under bitmap-bench-results/ precisely so a failed multi-hour run
+        # still leaves its completed passes inspectable.
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: bitmap-bench-results

@@ -498,6 +498,7 @@ class RedisBitmapBench:
         self.results: list[Result] = []
         self.persistence_results: list[Result] = []
         self.environment: dict[str, Any] = {}
+        self._microbench_support: Optional[bool] = None
 
     @staticmethod
     def resolve_binary(src_dir: Path, name: str) -> str:
@@ -1136,6 +1137,18 @@ class RedisBitmapBench:
             workloads = module_workloads
         elif self.args.mode != "native":
             workloads = [w for w in workloads if not w.native_only]
+        probe_dropped = [
+            w.name for w in workloads
+            if w.custom_runner == "run_bitmap_microbench"
+            and not self.server_supports_bitmap_microbench()
+        ]
+        if probe_dropped:
+            print(
+                "skipping workload(s): the target server does not support "
+                f"DEBUG BITMAP-MICROBENCH: {', '.join(sorted(probe_dropped))}",
+                file=sys.stderr,
+            )
+            workloads = [w for w in workloads if w.name not in probe_dropped]
         if not self.args.only:
             return workloads
         wanted = {name.strip() for name in self.args.only.split(",") if name.strip()}
@@ -1556,6 +1569,26 @@ class RedisBitmapBench:
             keys = [self.module_key(key) for key in keys]
         self.set_default_roaring(False, required=False)
         self.client.execute(["DEL", *keys])
+
+    def server_supports_bitmap_microbench(self) -> bool:
+        """DEBUG BITMAP-MICROBENCH left the native Redis tree together with
+        the rest of the benchmark surface (aviggiano/redis#164), so current
+        native builds reject it. Probe once, with a single iteration against
+        the seeded sparse dataset, so default runs skip the workload instead
+        of aborting mid-compare against newer servers."""
+        if self._microbench_support is None:
+            key = self.dataset_keys.get("sparse_native", DATASET_KEYS["sparse_native"])
+            try:
+                self.client.execute(["DEBUG", "BITMAP-MICROBENCH", key, "1"])
+                self._microbench_support = True
+            except BenchError as exc:
+                if "unknown subcommand" in str(exc).lower():
+                    self._microbench_support = False
+                else:
+                    # The subcommand exists but the probe failed for another
+                    # reason; run the workload and let the real error surface.
+                    self._microbench_support = True
+        return self._microbench_support
 
     def run_bitmap_microbench(self, workload: Workload, run_index: int) -> Result:
         key = workload.sample_key
