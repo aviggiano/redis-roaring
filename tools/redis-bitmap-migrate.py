@@ -26,6 +26,13 @@ from typing import Any, Iterator, Optional
 NATIVE_V1_MAX_BIT = 4294967295
 MANIFEST_VERSION = 1
 
+# DUMP/RESTORE payload for an empty native bitmap: RDB_TYPE_BITMAP (29),
+# logical byte length 0, an empty raw string, RDB version 15, and an all-zero
+# checksum footer (zero means "no checksum" and RESTORE accepts it). Restoring
+# this constant creates a native bitmap on the target regardless of its
+# bitmap-default-roaring setting, replacing the removed BITMAP CONVERT command.
+EMPTY_NATIVE_BITMAP_PAYLOAD = bytes.fromhex("1d00000f000000000000000000")
+
 
 class MigrateError(RuntimeError):
     pass
@@ -677,11 +684,11 @@ class BitmapMigrator:
 
         with source.connection() as src, target.connection() as dst:
             dst.command(["DEL", build_key, temp_key])
-            if info.cardinality == 0:
-                dst.command(["SET", build_key, b""])
-            else:
-                dst.command(["SETBIT", build_key, "0", "0"])
-            dst.command(["BITMAP", "CONVERT", build_key, "NATIVE"])
+            # Seed the build key as an empty native bitmap via RESTORE: the
+            # target's configuration cannot influence the resulting type, and
+            # zero-cardinality sources keep a zero logical length. The SETBITs
+            # below mutate the existing native value in place.
+            dst.command(["RESTORE", build_key, "0", EMPTY_NATIVE_BITMAP_PAYLOAD, "REPLACE"])
 
             if info.cardinality:
                 # redis-roaring RANGEINTARRAY arguments are element ranks, not bit offsets.

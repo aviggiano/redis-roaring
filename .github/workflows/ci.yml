@@ -51,8 +51,8 @@ jobs:
         ref: unstable
         path: native-redis
         submodules: recursive
-    - name: Compile migrator
-      run: python3 -m py_compile tools/redis-bitmap-migrate.py tests/integration/redis-bitmap-migrate.py
+    - name: Compile migrator and benchmark harness
+      run: python3 -m py_compile tools/redis-bitmap-migrate.py tests/integration/redis-bitmap-migrate.py tools/bitmap-bench.py
     - name: Run migrator contract tests
       run: python3 tests/integration/redis-bitmap-migrate.py
     - name: Build native Redis unstable
@@ -108,6 +108,10 @@ jobs:
 
     - name: Install dependencies
       run: |
+        # The preinstalled Microsoft apt repos intermittently serve invalid
+        # clearsigned metadata and fail the whole update; no packages here
+        # come from them.
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.sources
         sudo apt-get update
         sudo apt-get install -y lcov
 
@@ -176,6 +180,10 @@ jobs:
 
     - name: Install dependencies
       run: |
+        # The preinstalled Microsoft apt repos intermittently serve invalid
+        # clearsigned metadata and fail the whole update; no packages here
+        # come from them.
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.sources
         sudo apt-get update
         sudo apt-get install -y clang lcov llvm
 
@@ -303,6 +311,10 @@ jobs:
 
     - name: Install Clang and CMake
       run: |
+        # The preinstalled Microsoft apt repos intermittently serve invalid
+        # clearsigned metadata and fail the whole update; no packages here
+        # come from them.
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.sources
         sudo apt-get update
         sudo apt-get install -y clang cmake
 
@@ -423,6 +435,10 @@ jobs:
 
     - name: Install Clang and CMake
       run: |
+        # The preinstalled Microsoft apt repos intermittently serve invalid
+        # clearsigned metadata and fail the whole update; no packages here
+        # come from them.
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.sources
         sudo apt-get update
         sudo apt-get install -y clang cmake
 

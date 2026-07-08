@@ -30,3 +30,4 @@ leak-*
 timeout-*
 slow-unit-*
 oom-*
+__pycache__/

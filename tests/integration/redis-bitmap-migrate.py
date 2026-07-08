@@ -211,8 +211,6 @@ class FakeRedisHandler(socketserver.BaseRequestHandler):
             else:
                 bits.discard(offset)
             return old
-        if name == b"BITMAP":
-            return "OK"
         if name == b"DUMP":
             bits = sorted(self.server.target[key])
             self.server.target_dump_counter += 1
@@ -222,10 +220,13 @@ class FakeRedisHandler(socketserver.BaseRequestHandler):
         if name == b"RESTORE":
             ttl = int(command[2])
             payload = command[3]
-            try:
-                bits, byte_len = self.server.target_dump_payloads[payload]
-            except KeyError as exc:
-                raise RuntimeError("invalid target DUMP payload") from exc
+            if payload == migrate.EMPTY_NATIVE_BITMAP_PAYLOAD:
+                bits, byte_len = set(), 0
+            else:
+                try:
+                    bits, byte_len = self.server.target_dump_payloads[payload]
+                except KeyError as exc:
+                    raise RuntimeError("invalid target DUMP payload") from exc
             self.server.target[key] = set(bits)
             self.server.target_byte_len[key] = byte_len
             options = {part.upper() for part in command[4:]}
@@ -496,9 +497,12 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 command for command in servers.target.commands
                 if command and command[0].upper() == b"RESTORE"
             ]
-            self.assertEqual(len(restore_commands), 1)
-            self.assertEqual(restore_commands[0][2], str(expire_at).encode())
-            self.assertIn(b"ABSTTL", [part.upper() for part in restore_commands[0]])
+            # The first RESTORE seeds the empty native build key; the second
+            # installs the temporary key with the absolute TTL.
+            self.assertEqual(len(restore_commands), 2)
+            self.assertEqual(restore_commands[0][3], migrate.EMPTY_NATIVE_BITMAP_PAYLOAD)
+            self.assertEqual(restore_commands[1][2], str(expire_at).encode())
+            self.assertIn(b"ABSTTL", [part.upper() for part in restore_commands[1]])
 
             data = json.loads(manifest.read_text())
             self.assertEqual(data["entries"][0]["expire_at_ms"], expire_at)
