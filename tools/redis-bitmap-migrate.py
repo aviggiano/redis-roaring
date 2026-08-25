@@ -26,12 +26,13 @@ from typing import Any, Iterator, Optional
 NATIVE_V1_MAX_BIT = 4294967295
 MANIFEST_VERSION = 1
 
-# DUMP/RESTORE payload for an empty native bitmap: RDB_TYPE_BITMAP (29),
-# logical byte length 0, an empty raw string, RDB version 15, and an all-zero
-# checksum footer (zero means "no checksum" and RESTORE accepts it). Restoring
-# this constant creates a native bitmap on the target regardless of its
-# bitmap-default-roaring setting, replacing the removed BITMAP CONVERT command.
-EMPTY_NATIVE_BITMAP_PAYLOAD = bytes.fromhex("1d00000f000000000000000000")
+# DUMP/RESTORE payload for an empty native bitmap: RDB_TYPE_BITMAP (33),
+# logical byte length 0, the 8-byte CRoaring64 portable blob of an empty
+# bitmap, RDB version 15, and an all-zero checksum footer (zero means "no
+# checksum" and RESTORE accepts it). Restoring this constant creates a native
+# bitmap on the target regardless of its bitmap-default-roaring setting,
+# replacing the removed BITMAP CONVERT command.
+EMPTY_NATIVE_BITMAP_PAYLOAD = bytes.fromhex("21000800000000000000000f000000000000000000")
 
 
 class MigrateError(RuntimeError):
