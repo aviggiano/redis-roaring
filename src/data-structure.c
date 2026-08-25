@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <limits.h>
 #include <math.h>
 #include "data-structure.h"
@@ -1060,7 +1061,7 @@ static inline int bitmap_stat_json(const Bitmap* bitmap, char** result) {
   return asprintf(result,
     "{"
     "\"type\":\"bitmap\","
-    "\"cardinality\":\"%llu\","
+    "\"cardinality\":\"%" PRIu64 "\","
     "\"number_of_containers\":\"%u\","
     "\"max_value\":\"%u\","
     "\"min_value\":\"%u\","
@@ -1099,7 +1100,7 @@ static inline int bitmap_stat_plain(const Bitmap* bitmap, char** result) {
 
   return asprintf(result,
     "type: bitmap\n"
-    "cardinality: %llu\n"
+    "cardinality: %" PRIu64 "\n"
     "number of containers: %u\n"
     "max value: %u\n"
     "min value: %u\n"
@@ -1174,22 +1175,22 @@ static inline int bitmap64_stat_json(const Bitmap64* bitmap, char** result) {
   return asprintf(result,
     "{"
     "\"type\":\"bitmap64\","
-    "\"cardinality\":\"%llu\","
-    "\"number_of_containers\":\"%llu\","
-    "\"max_value\":\"%llu\","
-    "\"min_value\":\"%llu\","
+    "\"cardinality\":\"%" PRIu64 "\","
+    "\"number_of_containers\":\"%" PRIu64 "\","
+    "\"max_value\":\"%" PRIu64 "\","
+    "\"min_value\":\"%" PRIu64 "\","
     "\"array_container\":{"
-    "\"number_of_containers\":\"%llu\","
-    "\"container_cardinality\":\"%llu\","
-    "\"container_allocated_bytes\":\"%llu\"},"
+    "\"number_of_containers\":\"%" PRIu64 "\","
+    "\"container_cardinality\":\"%" PRIu64 "\","
+    "\"container_allocated_bytes\":\"%" PRIu64 "\"},"
     "\"bitset_container\":{"
-    "\"number_of_containers\":\"%llu\","
-    "\"container_cardinality\":\"%llu\","
-    "\"container_allocated_bytes\":\"%llu\"},"
+    "\"number_of_containers\":\"%" PRIu64 "\","
+    "\"container_cardinality\":\"%" PRIu64 "\","
+    "\"container_allocated_bytes\":\"%" PRIu64 "\"},"
     "\"run_container\":{"
-    "\"number_of_containers\":\"%llu\","
-    "\"container_cardinality\":\"%llu\","
-    "\"container_allocated_bytes\":\"%llu\"}"
+    "\"number_of_containers\":\"%" PRIu64 "\","
+    "\"container_cardinality\":\"%" PRIu64 "\","
+    "\"container_allocated_bytes\":\"%" PRIu64 "\"}"
     "}",
     roaring64_bitmap_get_cardinality(bitmap),
     stats.n_containers,
@@ -1213,19 +1214,19 @@ static inline int bitmap64_stat_plain(const Bitmap64* bitmap, char** result) {
 
   return asprintf(result,
     "type: bitmap64\n"
-    "cardinality: %llu\n"
-    "number of containers: %llu\n"
-    "max value: %llu\n"
-    "min value: %llu\n"
-    "number of array containers: %llu\n"
-    "\tarray container values: %llu\n"
-    "\tarray container bytes: %llu\n"
-    "bitset  containers: %llu\n"
-    "\tbitset  container values: %llu\n"
-    "\tbitset  container bytes: %llu\n"
-    "run containers: %llu\n"
-    "\trun container values: %llu\n"
-    "\trun container bytes: %llu\n"
+    "cardinality: %" PRIu64 "\n"
+    "number of containers: %" PRIu64 "\n"
+    "max value: %" PRIu64 "\n"
+    "min value: %" PRIu64 "\n"
+    "number of array containers: %" PRIu64 "\n"
+    "\tarray container values: %" PRIu64 "\n"
+    "\tarray container bytes: %" PRIu64 "\n"
+    "bitset  containers: %" PRIu64 "\n"
+    "\tbitset  container values: %" PRIu64 "\n"
+    "\tbitset  container bytes: %" PRIu64 "\n"
+    "run containers: %" PRIu64 "\n"
+    "\trun container values: %" PRIu64 "\n"
+    "\trun container bytes: %" PRIu64 "\n"
     ,
     roaring64_bitmap_get_cardinality(bitmap),
     stats.n_containers,
