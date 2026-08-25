@@ -34,6 +34,9 @@ MANIFEST_VERSION = 1
 # replacing the removed BITMAP CONVERT command.
 EMPTY_NATIVE_BITMAP_PAYLOAD = bytes.fromhex("21000800000000000000000f000000000000000000")
 
+# Scratch key used by the preflight seed probe, removed as soon as it is checked.
+SEED_PROBE_KEY = b"__bitmap_migrate_seed_probe__"
+
 
 class MigrateError(RuntimeError):
     pass
@@ -393,6 +396,37 @@ class BitmapMigrator:
             raise MigrateError("target cluster mode is enabled; this tool does not migrate cluster targets unless --allow-cluster is set")
         if self.args.allow_cluster:
             raise MigrateError("cluster migration is not implemented yet; rerun against standalone masters or omit --allow-cluster")
+        if self.args.apply:
+            self.verify_native_bitmap_seed()
+
+    def verify_native_bitmap_seed(self) -> None:
+        """Check that the target still accepts the empty native bitmap seed.
+
+        Every key is built on top of a RESTORE of EMPTY_NATIVE_BITMAP_PAYLOAD, a
+        constant that encodes the target's RDB type id for native bitmaps and its
+        payload layout. When the native server changes either, every key fails
+        with an opaque "Bad data format", so probe once up front and say what
+        actually needs fixing.
+        """
+        try:
+            self.target.execute(["RESTORE", SEED_PROBE_KEY, "0", EMPTY_NATIVE_BITMAP_PAYLOAD, "REPLACE"])
+        except RedisError as exc:
+            raise MigrateError(
+                f"target rejected the empty native bitmap seed payload ({exc}); "
+                "the native bitmap RDB encoding has changed, so "
+                "EMPTY_NATIVE_BITMAP_PAYLOAD must be regenerated from a DUMP of "
+                "an empty native bitmap on the target"
+            ) from exc
+        try:
+            kind = decode_text(self.target.execute(["TYPE", SEED_PROBE_KEY]))
+            if kind != "bitmap":
+                raise MigrateError(
+                    f"empty native bitmap seed payload restored as type {kind!r} "
+                    "instead of 'bitmap'; EMPTY_NATIVE_BITMAP_PAYLOAD must be "
+                    "regenerated from a DUMP of an empty native bitmap on the target"
+                )
+        finally:
+            self.target.execute(["DEL", SEED_PROBE_KEY])
 
     def cluster_enabled(self, client: RedisClient) -> bool:
         try:

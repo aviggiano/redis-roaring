@@ -496,9 +496,11 @@ class RedisBitmapMigrateTests(unittest.TestCase):
             restore_commands = [
                 command for command in servers.target.commands
                 if command and command[0].upper() == b"RESTORE"
+                and command[1] != migrate.SEED_PROBE_KEY
             ]
             # The first RESTORE seeds the empty native build key; the second
-            # installs the temporary key with the absolute TTL.
+            # installs the temporary key with the absolute TTL. The preflight
+            # seed probe is filtered out above.
             self.assertEqual(len(restore_commands), 2)
             self.assertEqual(restore_commands[0][3], migrate.EMPTY_NATIVE_BITMAP_PAYLOAD)
             self.assertEqual(restore_commands[1][2], str(expire_at).encode())
@@ -1041,6 +1043,32 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
             self.assertEqual(entry["source_type"], "reroaring")
             self.assertEqual(entry["cardinality"], len(bits))
             self.assertGreater(entry["validation"]["ttl_ms"], 0)
+
+    def test_real_stale_seed_payload_fails_preflight_with_actionable_error(self):
+        """A seed payload the target rejects must fail once, not per key."""
+        stale_payload = bytes.fromhex("1d00000f000000000000000000")
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = Path(tmp) / "manifest.json"
+            source_proc, target_proc, source_port, target_port = self.start_pair(tmp)
+            with source_proc, target_proc:
+                source = real_redis_client(source_port, "source")
+                source.execute(["R.SETBIT", "foo", "5", "1"])
+
+                original = migrate.EMPTY_NATIVE_BITMAP_PAYLOAD
+                migrate.EMPTY_NATIVE_BITMAP_PAYLOAD = stale_payload
+                try:
+                    rc, stdout, stderr = self.run_migrator(
+                        self.migrator_args(source_port, target_port, manifest, "foo")
+                    )
+                finally:
+                    migrate.EMPTY_NATIVE_BITMAP_PAYLOAD = original
+
+                self.assertEqual(rc, 1)
+                self.assertEqual(stdout, "")
+                self.assertIn("rejected the empty native bitmap seed payload", stderr)
+                self.assertIn("EMPTY_NATIVE_BITMAP_PAYLOAD", stderr)
+                # The run stops in preflight, before touching any key.
+                self.assertNotIn("FAILED db=0 key=foo", stderr)
 
     def test_real_reroaring_rdb_snapshot_migrates_to_native_rdb(self):
         key = "snapshot:reroaring"
