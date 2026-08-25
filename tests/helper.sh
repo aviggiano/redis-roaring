@@ -21,6 +21,9 @@ function start_redis() {
   local USE_VALGRIND="no"
   local USE_AOF="no"
   local USE_CLUSTER="no"
+  # Rewriting the AOF with an RDB preamble stores module values through the RDB
+  # serializer, so the aof_rewrite callbacks only run when it is disabled.
+  local USE_RDB_PREAMBLE="yes"
   while [[ $# -gt 0 ]]; do
     local PARAM="$1"
     case $PARAM in
@@ -33,6 +36,9 @@ function start_redis() {
         ;;
       --cluster)
         USE_CLUSTER="yes"
+        ;;
+      --no-rdb-preamble)
+        USE_RDB_PREAMBLE="no"
         ;;
     esac
     shift
@@ -66,7 +72,7 @@ function start_redis() {
 
   local REDIS_COMMAND="./deps/redis/src/redis-server --loglevel warning --loadmodule $LIB_PATH --port $REDIS_PORT"
   local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --suppressions=./deps/redis/src/valgrind.sup --error-exitcode=1 --log-file=$LOG_FILE"
-  local AOF_OPTION="--appendonly $USE_AOF"
+  local AOF_OPTION="--appendonly $USE_AOF --aof-use-rdb-preamble $USE_RDB_PREAMBLE"
   local CLUSTER_OPTION=""
   if [ "$USE_VALGRIND" == "no" ]; then
     VALGRIND_COMMAND=""

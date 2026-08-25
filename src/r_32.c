@@ -127,12 +127,21 @@ typedef struct Bitmap_aof_rewrite_callback_params_s {
 
 static bool BitmapAofRewriteCallback(uint32_t offset, void* param) {
   Bitmap_aof_rewrite_callback_params* params = param;
-  RedisModule_EmitAOF(params->aof, "R.SETBIT", "sll", params->key, offset, 1);
+  RedisModule_EmitAOF(params->aof, "R.SETBIT", "sll", params->key, (long long) offset, 1LL);
   return true;
 }
 
 void BitmapAofRewrite(RedisModuleIO* aof, RedisModuleString* key, void* value) {
   Bitmap* bitmap = value;
+
+  /* An empty bitmap has no bits to emit, but the key still exists and must
+   * survive the rewrite: recreate it by setting a bit and clearing it again. */
+  if (roaring_bitmap_get_cardinality(bitmap) == 0) {
+    RedisModule_EmitAOF(aof, "R.SETBIT", "sll", key, 0LL, 1LL);
+    RedisModule_EmitAOF(aof, "R.SETBIT", "sll", key, 0LL, 0LL);
+    return;
+  }
+
   Bitmap_aof_rewrite_callback_params params = {
       .aof = aof,
       .key = key
