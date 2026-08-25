@@ -96,6 +96,11 @@ def is_wrongtype_error(exc: RedisError) -> bool:
     return "WRONGTYPE" in message or "OPERATION AGAINST A KEY" in message
 
 
+def is_bad_payload_error(exc: RedisError) -> bool:
+    message = str(exc).upper()
+    return "BAD DATA FORMAT" in message or "PAYLOAD VERSION OR CHECKSUM" in message
+
+
 def is_unknown_command_error(exc: RedisError) -> bool:
     message = str(exc).upper()
     return "UNKNOWN COMMAND" in message or "ERR UNKNOWN" in message
@@ -408,15 +413,31 @@ class BitmapMigrator:
         with an opaque "Bad data format", so probe once up front and say what
         actually needs fixing.
         """
+        if parse_uint(self.target.execute(["EXISTS", SEED_PROBE_KEY]), "EXISTS probe"):
+            raise MigrateError(
+                f"preflight probe key {key_to_text(SEED_PROBE_KEY)} already exists on "
+                "the target; remove it and rerun so preflight cannot touch real data"
+            )
+
+        # No REPLACE: the key was just shown to be absent, so a BUSYKEY here means
+        # something else created it and the probe must not clobber it.
         try:
-            self.target.execute(["RESTORE", SEED_PROBE_KEY, "0", EMPTY_NATIVE_BITMAP_PAYLOAD, "REPLACE"])
+            self.target.execute(["RESTORE", SEED_PROBE_KEY, "0", EMPTY_NATIVE_BITMAP_PAYLOAD])
         except RedisError as exc:
+            if not is_bad_payload_error(exc):
+                # Permissions, a read-only replica, a racing writer: regenerating the
+                # payload would not help, so report what the target actually said.
+                raise MigrateError(
+                    f"target rejected the empty native bitmap seed probe: {exc}"
+                ) from exc
             raise MigrateError(
                 f"target rejected the empty native bitmap seed payload ({exc}); "
                 "the native bitmap RDB encoding has changed, so "
                 "EMPTY_NATIVE_BITMAP_PAYLOAD must be regenerated from a DUMP of "
                 "an empty native bitmap on the target"
             ) from exc
+
+        # The probe key is ours from here: it did not exist and this RESTORE created it.
         try:
             kind = decode_text(self.target.execute(["TYPE", SEED_PROBE_KEY]))
             if kind != "bitmap":

@@ -45,7 +45,12 @@ function rewrite_aof() {
   rcall_assert "BGREWRITEAOF" "Background append only file rewriting started" "Start the AOF rewrite"
 
   local tries=0
-  while [ "$(./deps/redis/src/redis-cli -p "$REDIS_PORT" INFO persistence | grep -c '^aof_rewrite_in_progress:0')" != "1" ]; do
+  local info=""
+  while true; do
+    info=$(./deps/redis/src/redis-cli -p "$REDIS_PORT" INFO persistence | tr -d '\r')
+    if [ "$(echo "$info" | grep -c '^aof_rewrite_in_progress:0')" == "1" ]; then
+      break
+    fi
     tries=$((tries + 1))
     if [ "$tries" -ge 300 ]; then
       echo "AOF rewrite did not finish" >&2
@@ -53,6 +58,16 @@ function rewrite_aof() {
     fi
     sleep 0.1
   done
+
+  # Reaching progress zero is not enough: a failed rewrite leaves the previous
+  # AOF in place, so the reload below would replay the seed commands and pass
+  # without ever loading the module's rewrite output.
+  local status
+  status=$(echo "$info" | grep '^aof_last_bgrewrite_status:' | cut -d: -f2)
+  if [ "$status" != "ok" ]; then
+    echo "AOF rewrite failed: $status" >&2
+    return 1
+  fi
 
   rcall_assert "PING" "PONG" "Server is responsive after the rewrite"
 }

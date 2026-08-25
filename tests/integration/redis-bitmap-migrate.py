@@ -1070,6 +1070,29 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
                 # The run stops in preflight, before touching any key.
                 self.assertNotIn("FAILED db=0 key=foo", stderr)
 
+    def test_real_existing_probe_key_aborts_preflight_without_touching_it(self):
+        """Preflight must never clobber a target key that shares the probe name."""
+        probe_key = migrate.SEED_PROBE_KEY.decode()
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = Path(tmp) / "manifest.json"
+            source_proc, target_proc, source_port, target_port = self.start_pair(tmp)
+            with source_proc, target_proc:
+                source = real_redis_client(source_port, "source")
+                target = real_redis_client(target_port, "target")
+                source.execute(["R.SETBIT", "foo", "5", "1"])
+                target.execute(["SET", probe_key, "user data"])
+
+                rc, stdout, stderr = self.run_migrator(
+                    self.migrator_args(source_port, target_port, manifest, "foo")
+                )
+
+                self.assertEqual(rc, 1)
+                self.assertEqual(stdout, "")
+                self.assertIn("already exists on the target", stderr)
+                # The pre-existing key is untouched, not restored over and deleted.
+                self.assertEqual(target.execute(["EXISTS", probe_key]), 1)
+                self.assertEqual(target.execute(["GET", probe_key]), b"user data")
+
     def test_real_reroaring_rdb_snapshot_migrates_to_native_rdb(self):
         key = "snapshot:reroaring"
         bits = sorted({0, 7, 63, 64, 511, 4096, 65535})
