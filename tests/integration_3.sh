@@ -17,6 +17,17 @@ function test_setbit_getbit() {
 
   rcall_assert "R64.SETBIT test_setbit_getbit 0" "ERR wrong number of arguments for 'R64.SETBIT' command" "SETBIT with wrong number of arguments"
   rcall_assert "R64.GETBIT key 0 1" "ERR wrong number of arguments for 'R64.GETBIT' command" "GETBIT with wrong number of arguments"
+
+  # Clearing a bit on a key that does not exist yet must honour the value
+  # argument, the same way it does on an existing bitmap.
+  rcall_assert "R64.SETBIT test_setbit_missing_key 5 0" "0" "Clear a bit on a missing key"
+  rcall_assert "EXISTS test_setbit_missing_key" "1" "Clearing a bit on a missing key still creates it"
+  rcall_assert "R64.GETBIT test_setbit_missing_key 5" "0" "Bit stays clear on the created bitmap"
+  rcall_assert "R64.BITCOUNT test_setbit_missing_key" "0" "Created bitmap is empty"
+
+  rcall_assert "R64.SETBIT test_setbit_missing_key_set 5 1" "0" "Set a bit on a missing key"
+  rcall_assert "R64.GETBIT test_setbit_missing_key_set 5" "1" "Bit is set on the created bitmap"
+  rcall_assert "R64.BITCOUNT test_setbit_missing_key_set" "1" "Created bitmap holds the single bit"
 }
 
 function test_getbits() {

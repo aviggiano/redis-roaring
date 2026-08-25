@@ -197,10 +197,16 @@ int R64SetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   bool value;
   ParseBoolOrReturn(ctx, argv[3], "value", value);
 
-  /* Create an empty value object if the key is currently empty. */
+  /* Create an empty value object if the key is currently empty. The offset is
+   * only included when the bit is being set, so that clearing a bit on a
+   * missing key leaves it clear, as it does on an existing bitmap. */
   if (bitmap == BITMAP64_NILL) {
-    uint64_t values[] = { offset };
-    bitmap = bitmap64_from_int_array(1, values);
+    if (value) {
+      uint64_t values[] = { offset };
+      bitmap = bitmap64_from_int_array(1, values);
+    } else {
+      bitmap = bitmap64_alloc();
+    }
     RedisModule_ModuleTypeSetValue(key, Bitmap64Type, bitmap);
     RedisModule_ReplicateVerbatim(ctx);
     return RedisModule_ReplyWithLongLong(ctx, 0);
