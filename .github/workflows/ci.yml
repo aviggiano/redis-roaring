@@ -48,11 +48,14 @@ jobs:
       uses: actions/checkout@v2
       with:
         repository: aviggiano/redis
-        # Pinned so a change in the native fork cannot turn this repository's
-        # CI red on its own. Bump deliberately, re-running the migrator tests:
+        # Deliberately tracks the branch Redis core goes live on, so this job is
+        # the early warning that the native bitmap encoding moved. When it goes
+        # red on a commit that did not touch this repository, that is the signal:
         # the seed payload in tools/redis-bitmap-migrate.py encodes the fork's
-        # RDB type id and layout for native bitmaps.
-        ref: 00bea6dcd415061a41e899e7a6728ef2c54425e0
+        # RDB type id and layout for native bitmaps and needs regenerating. The
+        # migrator's preflight names that remedy explicitly rather than failing
+        # per key with "Bad data format".
+        ref: unstable
         path: native-redis
         submodules: recursive
     - name: Compile migrator and benchmark harness

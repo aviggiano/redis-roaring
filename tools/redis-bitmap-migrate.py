@@ -460,6 +460,13 @@ class BitmapMigrator:
             ) from exc
 
         # The probe key is ours from here: it did not exist and this RESTORE created it.
+        def delete_probe() -> Optional[RedisError]:
+            try:
+                target.execute(["DEL", SEED_PROBE_KEY])
+            except RedisError as exc:
+                return exc
+            return None
+
         try:
             kind = decode_text(target.execute(["TYPE", SEED_PROBE_KEY]))
             if kind == "none":
@@ -474,12 +481,20 @@ class BitmapMigrator:
                     "instead of 'bitmap'; EMPTY_NATIVE_BITMAP_PAYLOAD must be "
                     "regenerated from a DUMP of an empty native bitmap on the target"
                 )
-        finally:
-            try:
-                target.execute(["DEL", SEED_PROBE_KEY])
-            except RedisError:
-                # Never let cleanup replace the diagnosis the probe just produced.
-                pass
+        except BaseException:
+            # A diagnosis is already on its way up; cleanup must not replace it.
+            delete_probe()
+            raise
+
+        # On the success path a failed cleanup is not cosmetic: the probe key is
+        # reserved, so leaving it behind aborts every later run.
+        cleanup_error = delete_probe()
+        if cleanup_error is not None:
+            raise MigrateError(
+                f"preflight could not delete its probe key "
+                f"{key_to_text(SEED_PROBE_KEY)} in db {db} ({cleanup_error}); "
+                "delete it before rerunning"
+            ) from cleanup_error
 
     def target_has_native_bitmaps(self) -> bool:
         """Best-effort check that the target is a build with a native bitmap type."""

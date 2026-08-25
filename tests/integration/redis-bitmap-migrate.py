@@ -79,8 +79,13 @@ class FakeRedisServer(socketserver.ThreadingTCPServer):
         bits=None,
         expire_at_ms=None,
         mutate_after_range=False,
+        deny_commands=None,
     ):
         self.mode = mode
+        self.deny_commands = {
+            name.upper().encode() if isinstance(name, str) else name.upper()
+            for name in (deny_commands or ())
+        }
         self.source_type = source_type
         if bits is None:
             self.bits = {b"foo": {1, 2, 5, 100}}
@@ -173,6 +178,8 @@ class FakeRedisHandler(socketserver.BaseRequestHandler):
         raise RuntimeError(f"unknown source command {name.decode()}")
 
     def target(self, command, name):
+        if name in self.server.deny_commands:
+            raise RuntimeError(f"NOPERM this user has no permissions to run the '{name.decode().lower()}' command")
         key = command[1] if len(command) > 1 else b""
         if name == b"EXISTS":
             return 1 if key in self.server.target else 0
@@ -303,6 +310,7 @@ class ServerPair:
         bits=None,
         expire_at_ms=None,
         mutate_after_range=False,
+        target_deny_commands=None,
     ):
         self.source = FakeRedisServer(
             "source",
@@ -313,7 +321,12 @@ class ServerPair:
             expire_at_ms=expire_at_ms,
             mutate_after_range=mutate_after_range,
         )
-        self.target = FakeRedisServer("target", ("127.0.0.1", 0), FakeRedisHandler)
+        self.target = FakeRedisServer(
+            "target",
+            ("127.0.0.1", 0),
+            FakeRedisHandler,
+            deny_commands=target_deny_commands,
+        )
         self.threads = [
             threading.Thread(target=self.source.serve_forever, daemon=True),
             threading.Thread(target=self.target.serve_forever, daemon=True),
@@ -568,6 +581,23 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 "the preflight probe ran on the default db instead of db 2",
             )
             self.assertGreater(min(probe_positions), min(select_positions))
+
+    def test_preflight_fails_when_it_cannot_delete_its_probe_key(self):
+        """A stranded probe key blocks every later run, so never pass silently."""
+        with tempfile.TemporaryDirectory() as tmp, ServerPair(
+            bits={3, 9}, target_deny_commands=["DEL"]
+        ) as servers:
+            manifest = Path(tmp) / "manifest.json"
+            rc, stdout, stderr = self.run_migrator(
+                servers.args(manifest, "--key", "foo", "--apply", "--assume-frozen")
+            )
+
+            self.assertEqual(rc, 1)
+            self.assertEqual(stdout, "")
+            self.assertIn("could not delete its probe key", stderr)
+            self.assertIn("NOPERM", stderr)
+            # Preflight aborted, so nothing was migrated.
+            self.assertNotIn(b"foo", servers.target.target)
 
     def test_key_file_accepts_binary_key_names(self):
         key = b"bitmap:\xff native"
