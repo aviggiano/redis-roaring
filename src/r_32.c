@@ -239,8 +239,12 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
 
   /* Create an empty value object if the key is currently empty. */
   if (bitmap == BITMAP_NILL) {
-    uint32_t values[] = { offset };
-    bitmap = bitmap_from_int_array(1, values);
+    if (value) {
+      uint32_t values[] = { offset };
+      bitmap = bitmap_from_int_array(1, values);
+    } else {
+      bitmap = bitmap_alloc();
+    }
     RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
     RedisModule_ReplicateVerbatim(ctx);
     return RedisModule_ReplyWithLongLong(ctx, 0);

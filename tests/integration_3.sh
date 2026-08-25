@@ -17,6 +17,10 @@ function test_setbit_getbit() {
 
   rcall_assert "R64.SETBIT test_setbit_getbit 0" "ERR wrong number of arguments for 'R64.SETBIT' command" "SETBIT with wrong number of arguments"
   rcall_assert "R64.GETBIT key 0 1" "ERR wrong number of arguments for 'R64.GETBIT' command" "GETBIT with wrong number of arguments"
+
+  rcall_assert "R64.SETBIT test_setbit_zero_new 5 0" "0" "SETBIT with value 0 on a missing key"
+  rcall_assert "R64.GETBIT test_setbit_zero_new 5" "0" "Bit stays clear after SETBIT 0 on a missing key"
+  rcall_assert "R64.BITCOUNT test_setbit_zero_new" "0" "Bitmap created by SETBIT 0 is empty"
 }
 
 function test_getbits() {
