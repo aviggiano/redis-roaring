@@ -382,8 +382,10 @@ class BitmapMigrator:
         self.failed_entries_this_run: set[str] = set()
 
     def run(self) -> int:
-        self.manifest.save()
+        # Preflight first: a manifest written before it aborts would make the
+        # rerun the error message asks for fail with "manifest already exists".
         self.preflight()
+        self.manifest.save()
         dbs = self.discover_dbs()
         for db in dbs:
             self.migrate_db(db)
@@ -401,10 +403,13 @@ class BitmapMigrator:
             raise MigrateError("target cluster mode is enabled; this tool does not migrate cluster targets unless --allow-cluster is set")
         if self.args.allow_cluster:
             raise MigrateError("cluster migration is not implemented yet; rerun against standalone masters or omit --allow-cluster")
+        # Only --apply, so a dry run still leaves the target untouched. A dry run
+        # therefore cannot report a stale seed payload; see the migration contract.
         if self.args.apply:
-            self.verify_native_bitmap_seed()
+            for db in self.discover_dbs():
+                self.verify_native_bitmap_seed(db)
 
-    def verify_native_bitmap_seed(self) -> None:
+    def verify_native_bitmap_seed(self, db: int) -> None:
         """Check that the target still accepts the empty native bitmap seed.
 
         Every key is built on top of a RESTORE of EMPTY_NATIVE_BITMAP_PAYLOAD, a
@@ -412,23 +417,40 @@ class BitmapMigrator:
         payload layout. When the native server changes either, every key fails
         with an opaque "Bad data format", so probe once up front and say what
         actually needs fixing.
+
+        The probe runs in the database the migration will write to, so it never
+        touches a database the operator did not put in scope.
         """
-        if parse_uint(self.target.execute(["EXISTS", SEED_PROBE_KEY]), "EXISTS probe"):
+        target = self.target.with_db(db)
+        try:
+            exists = parse_uint(target.execute(["EXISTS", SEED_PROBE_KEY]), "EXISTS probe")
+        except RedisError as exc:
+            raise MigrateError(
+                f"target rejected the preflight probe in db {db}: {exc}"
+            ) from exc
+        if exists:
             raise MigrateError(
                 f"preflight probe key {key_to_text(SEED_PROBE_KEY)} already exists on "
-                "the target; remove it and rerun so preflight cannot touch real data"
+                f"the target in db {db}; delete it and rerun (add --resume if a "
+                "manifest was already written) so preflight cannot touch real data"
             )
 
         # No REPLACE: the key was just shown to be absent, so a BUSYKEY here means
         # something else created it and the probe must not clobber it.
         try:
-            self.target.execute(["RESTORE", SEED_PROBE_KEY, "0", EMPTY_NATIVE_BITMAP_PAYLOAD])
+            target.execute(["RESTORE", SEED_PROBE_KEY, "0", EMPTY_NATIVE_BITMAP_PAYLOAD])
         except RedisError as exc:
             if not is_bad_payload_error(exc):
                 # Permissions, a read-only replica, a racing writer: regenerating the
                 # payload would not help, so report what the target actually said.
                 raise MigrateError(
-                    f"target rejected the empty native bitmap seed probe: {exc}"
+                    f"target rejected the empty native bitmap seed probe in db {db}: {exc}"
+                ) from exc
+            if not self.target_has_native_bitmaps():
+                raise MigrateError(
+                    f"target rejected the empty native bitmap seed payload ({exc}) and "
+                    "does not look like a Redis build with a native bitmap type; check "
+                    "that --target-host/--target-port point at the right server"
                 ) from exc
             raise MigrateError(
                 f"target rejected the empty native bitmap seed payload ({exc}); "
@@ -439,7 +461,13 @@ class BitmapMigrator:
 
         # The probe key is ours from here: it did not exist and this RESTORE created it.
         try:
-            kind = decode_text(self.target.execute(["TYPE", SEED_PROBE_KEY]))
+            kind = decode_text(target.execute(["TYPE", SEED_PROBE_KEY]))
+            if kind == "none":
+                raise MigrateError(
+                    f"preflight probe key {key_to_text(SEED_PROBE_KEY)} disappeared in "
+                    f"db {db} before it could be checked; rerun against a target that is "
+                    "not evicting or expiring keys from under the migration"
+                )
             if kind != "bitmap":
                 raise MigrateError(
                     f"empty native bitmap seed payload restored as type {kind!r} "
@@ -447,7 +475,19 @@ class BitmapMigrator:
                     "regenerated from a DUMP of an empty native bitmap on the target"
                 )
         finally:
-            self.target.execute(["DEL", SEED_PROBE_KEY])
+            try:
+                target.execute(["DEL", SEED_PROBE_KEY])
+            except RedisError:
+                # Never let cleanup replace the diagnosis the probe just produced.
+                pass
+
+    def target_has_native_bitmaps(self) -> bool:
+        """Best-effort check that the target is a build with a native bitmap type."""
+        try:
+            reply = self.target.execute(["CONFIG", "GET", "bitmap-default-roaring"])
+        except RedisError:
+            return True
+        return bool(reply)
 
     def cluster_enabled(self, client: RedisClient) -> bool:
         try:

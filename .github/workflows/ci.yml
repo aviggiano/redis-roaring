@@ -59,7 +59,7 @@ jobs:
       run: python3 -m py_compile tools/redis-bitmap-migrate.py tests/integration/redis-bitmap-migrate.py tools/bitmap-bench.py
     - name: Run migrator contract tests
       run: python3 tests/integration/redis-bitmap-migrate.py
-    - name: Build native Redis unstable
+    - name: Build native Redis
       run: make -C native-redis -j"$(nproc)"
     - name: Build redis-roaring module
       run: |

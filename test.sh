@@ -88,7 +88,9 @@ function integration_4() {
 function integration_5() {
   stop_redis
   rm dump.rdb 2>/dev/null || true
+  # appendonlydir is Redis 7+; appendonly.aof is the 6.2 layout.
   rm -rf ./appendonlydir 2>/dev/null || true
+  rm -f appendonly.aof 2>/dev/null || true
 
   # Seed, rewrite the AOF, then reload it from a restarted server. The rewrite
   # runs without an RDB preamble so the module's aof_rewrite callbacks are used.
@@ -108,6 +110,7 @@ function integration_5() {
   ./tests/integration_5.sh verify
   stop_redis
   rm -rf ./appendonlydir 2>/dev/null || true
+  rm -f appendonly.aof 2>/dev/null || true
 
   echo "All integration (5) tests passed"
 }

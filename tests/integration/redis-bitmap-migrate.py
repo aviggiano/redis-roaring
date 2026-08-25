@@ -541,6 +541,34 @@ class RedisBitmapMigrateTests(unittest.TestCase):
             data = json.loads(manifest.read_text())
             self.assertEqual(data["entries"][0]["db"], 2)
 
+    def test_preflight_probe_runs_in_the_requested_db(self):
+        """The seed probe must not write to a database the run was not given."""
+        with tempfile.TemporaryDirectory() as tmp, ServerPair(bits={3, 9}) as servers:
+            manifest = Path(tmp) / "manifest.json"
+            rc, _stdout, stderr = self.run_migrator(
+                servers.args(manifest, "--db", "2", "--key", "foo", "--apply", "--assume-frozen")
+            )
+
+            self.assertEqual(rc, 0)
+            self.assertEqual(stderr, "")
+
+            # Every probe command must come after the SELECT that puts the
+            # connection in db 2, never on the default db 0 connection.
+            probe_positions = [
+                index for index, command in enumerate(servers.target.commands)
+                if len(command) > 1 and command[1] == migrate.SEED_PROBE_KEY
+            ]
+            self.assertTrue(probe_positions, "the preflight probe did not run")
+            select_positions = [
+                index for index, command in enumerate(servers.target.commands)
+                if command[:2] == [b"SELECT", b"2"]
+            ]
+            self.assertTrue(
+                select_positions,
+                "the preflight probe ran on the default db instead of db 2",
+            )
+            self.assertGreater(min(probe_positions), min(select_positions))
+
     def test_key_file_accepts_binary_key_names(self):
         key = b"bitmap:\xff native"
         with tempfile.TemporaryDirectory() as tmp, ServerPair(bits={key: {4, 12}}) as servers:
@@ -1052,6 +1080,7 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
             source_proc, target_proc, source_port, target_port = self.start_pair(tmp)
             with source_proc, target_proc:
                 source = real_redis_client(source_port, "source")
+                target = real_redis_client(target_port, "target")
                 source.execute(["R.SETBIT", "foo", "5", "1"])
 
                 original = migrate.EMPTY_NATIVE_BITMAP_PAYLOAD
@@ -1069,6 +1098,10 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
                 self.assertIn("EMPTY_NATIVE_BITMAP_PAYLOAD", stderr)
                 # The run stops in preflight, before touching any key.
                 self.assertNotIn("FAILED db=0 key=foo", stderr)
+                self.assertEqual(target.execute(["EXISTS", "foo"]), 0)
+                self.assertEqual(
+                    target.execute(["EXISTS", migrate.SEED_PROBE_KEY.decode()]), 0
+                )
 
     def test_real_existing_probe_key_aborts_preflight_without_touching_it(self):
         """Preflight must never clobber a target key that shares the probe name."""
