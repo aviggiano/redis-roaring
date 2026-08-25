@@ -79,8 +79,13 @@ class FakeRedisServer(socketserver.ThreadingTCPServer):
         bits=None,
         expire_at_ms=None,
         mutate_after_range=False,
+        deny_commands=None,
     ):
         self.mode = mode
+        self.deny_commands = {
+            name.upper().encode() if isinstance(name, str) else name.upper()
+            for name in (deny_commands or ())
+        }
         self.source_type = source_type
         if bits is None:
             self.bits = {b"foo": {1, 2, 5, 100}}
@@ -173,6 +178,8 @@ class FakeRedisHandler(socketserver.BaseRequestHandler):
         raise RuntimeError(f"unknown source command {name.decode()}")
 
     def target(self, command, name):
+        if name in self.server.deny_commands:
+            raise RuntimeError(f"NOPERM this user has no permissions to run the '{name.decode().lower()}' command")
         key = command[1] if len(command) > 1 else b""
         if name == b"EXISTS":
             return 1 if key in self.server.target else 0
@@ -303,6 +310,7 @@ class ServerPair:
         bits=None,
         expire_at_ms=None,
         mutate_after_range=False,
+        target_deny_commands=None,
     ):
         self.source = FakeRedisServer(
             "source",
@@ -313,7 +321,12 @@ class ServerPair:
             expire_at_ms=expire_at_ms,
             mutate_after_range=mutate_after_range,
         )
-        self.target = FakeRedisServer("target", ("127.0.0.1", 0), FakeRedisHandler)
+        self.target = FakeRedisServer(
+            "target",
+            ("127.0.0.1", 0),
+            FakeRedisHandler,
+            deny_commands=target_deny_commands,
+        )
         self.threads = [
             threading.Thread(target=self.source.serve_forever, daemon=True),
             threading.Thread(target=self.target.serve_forever, daemon=True),
@@ -418,7 +431,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 servers.args(manifest, "--apply", "--assume-frozen", "--page-size", "2")
             )
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("MIGRATED db=0 key=foo count=4", stdout)
             self.assertEqual(stderr, "")
             self.assertEqual(servers.target.target[b"foo"], {1, 2, 5, 100})
@@ -436,7 +449,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 servers.args(manifest, "--apply", "--assume-frozen", "--page-size", "1")
             )
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("MIGRATED db=0 key=foo count=2", stdout)
             self.assertEqual(stderr, "")
             self.assertEqual(servers.target.target[b"foo"], {100, 200})
@@ -455,7 +468,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 servers.args(manifest, "--apply", "--assume-frozen", "--page-size", "2")
             )
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("MIGRATED db=0 key=foo count=0", stdout)
             self.assertEqual(stderr, "")
             self.assertEqual(servers.target.target[b"foo"], set())
@@ -487,7 +500,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 servers.args(manifest, "--apply", "--assume-frozen")
             )
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("MIGRATED db=0 key=foo count=2", stdout)
             self.assertEqual(stderr, "")
             self.assertEqual(servers.target.target[b"foo"], {7, 9})
@@ -496,9 +509,11 @@ class RedisBitmapMigrateTests(unittest.TestCase):
             restore_commands = [
                 command for command in servers.target.commands
                 if command and command[0].upper() == b"RESTORE"
+                and command[1] != migrate.SEED_PROBE_KEY
             ]
             # The first RESTORE seeds the empty native build key; the second
-            # installs the temporary key with the absolute TTL.
+            # installs the temporary key with the absolute TTL. The preflight
+            # seed probe is filtered out above.
             self.assertEqual(len(restore_commands), 2)
             self.assertEqual(restore_commands[0][3], migrate.EMPTY_NATIVE_BITMAP_PAYLOAD)
             self.assertEqual(restore_commands[1][2], str(expire_at).encode())
@@ -513,7 +528,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
             manifest = Path(tmp) / "manifest.json"
             rc, stdout, stderr = self.run_migrator(servers.args(manifest, "--key", "foo"))
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("DRY-RUN db=0 key=foo type=reroaring count=2", stdout)
             self.assertEqual(stderr, "")
             self.assertEqual(servers.target.target, {})
@@ -529,7 +544,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 servers.args(manifest, "--db", "2", "--key", "foo", "--apply", "--assume-frozen")
             )
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("MIGRATED db=2 key=foo count=2", stdout)
             self.assertEqual(stderr, "")
             self.assertEqual(servers.target.target[b"foo"], {3, 9})
@@ -538,6 +553,51 @@ class RedisBitmapMigrateTests(unittest.TestCase):
 
             data = json.loads(manifest.read_text())
             self.assertEqual(data["entries"][0]["db"], 2)
+
+    def test_preflight_probe_runs_in_the_requested_db(self):
+        """The seed probe must not write to a database the run was not given."""
+        with tempfile.TemporaryDirectory() as tmp, ServerPair(bits={3, 9}) as servers:
+            manifest = Path(tmp) / "manifest.json"
+            rc, _stdout, stderr = self.run_migrator(
+                servers.args(manifest, "--db", "2", "--key", "foo", "--apply", "--assume-frozen")
+            )
+
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
+            self.assertEqual(stderr, "")
+
+            # Every probe command must come after the SELECT that puts the
+            # connection in db 2, never on the default db 0 connection.
+            probe_positions = [
+                index for index, command in enumerate(servers.target.commands)
+                if len(command) > 1 and command[1] == migrate.SEED_PROBE_KEY
+            ]
+            self.assertTrue(probe_positions, "the preflight probe did not run")
+            select_positions = [
+                index for index, command in enumerate(servers.target.commands)
+                if command[:2] == [b"SELECT", b"2"]
+            ]
+            self.assertTrue(
+                select_positions,
+                "the preflight probe ran on the default db instead of db 2",
+            )
+            self.assertGreater(min(probe_positions), min(select_positions))
+
+    def test_preflight_fails_when_it_cannot_delete_its_probe_key(self):
+        """A stranded probe key blocks every later run, so never pass silently."""
+        with tempfile.TemporaryDirectory() as tmp, ServerPair(
+            bits={3, 9}, target_deny_commands=["DEL"]
+        ) as servers:
+            manifest = Path(tmp) / "manifest.json"
+            rc, stdout, stderr = self.run_migrator(
+                servers.args(manifest, "--key", "foo", "--apply", "--assume-frozen")
+            )
+
+            self.assertEqual(rc, 1)
+            self.assertEqual(stdout, "")
+            self.assertIn("could not delete its probe key", stderr)
+            self.assertIn("NOPERM", stderr)
+            # Preflight aborted, so nothing was migrated.
+            self.assertNotIn(b"foo", servers.target.target)
 
     def test_key_file_accepts_binary_key_names(self):
         key = b"bitmap:\xff native"
@@ -549,7 +609,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 servers.args(manifest, "--key-file", str(key_file), "--apply", "--assume-frozen")
             )
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("count=2", stdout)
             self.assertEqual(stderr, "")
             self.assertEqual(servers.target.target[key], {4, 12})
@@ -592,7 +652,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
             manifest = Path(tmp) / "manifest.json"
             rc, stdout, stderr = self.run_migrator(servers.args(manifest, "--cap-policy", "skip"))
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("skipped=1", stdout)
             self.assertIn("SKIP db=0 key=foo", stderr)
             data = json.loads(manifest.read_text())
@@ -628,7 +688,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 servers.args(manifest, "--apply", "--assume-frozen", "--replace")
             )
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("MIGRATED db=0 key=foo count=3", stdout)
             self.assertEqual(stderr, "")
             self.assertEqual(servers.target.target[b"foo"], {1, 2, 5})
@@ -683,7 +743,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 servers.args(manifest, "--resume", "--apply", "--assume-frozen")
             )
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("RESUMED db=0 key=foo from temporary key", stdout)
             self.assertEqual(stderr, "")
             self.assertEqual(servers.target.target[b"foo"], {1, 2, 5, 100})
@@ -698,7 +758,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
             rc, stdout, stderr = self.run_migrator(
                 servers.args(manifest, "--apply", "--allow-live-copy", "--page-size", "100")
             )
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("MIGRATED db=0 key=foo count=2", stdout)
             self.assertEqual(stderr, "")
             self.assertEqual(servers.target.target[b"foo"], {100, 200})
@@ -708,7 +768,7 @@ class RedisBitmapMigrateTests(unittest.TestCase):
                 servers.args(manifest, "--resume", "--apply", "--assume-frozen", "--page-size", "100")
             )
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
             self.assertIn("MIGRATED db=0 key=foo count=3", stdout)
             self.assertEqual(stderr, "")
             self.assertEqual(servers.target.target[b"foo"], {100, 200, 300})
@@ -717,10 +777,21 @@ class RedisBitmapMigrateTests(unittest.TestCase):
             self.assertTrue(data["entries"][0]["source_writes_frozen"])
 
 
+# Ports handed out so far. Binding port 0 and closing the socket reserves
+# nothing, so without this two calls can legitimately return the same port and
+# the second server fails to bind.
+_HANDED_OUT_PORTS: set[int] = set()
+
+
 def free_tcp_port():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
+    for _ in range(50):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+        if port not in _HANDED_OUT_PORTS:
+            _HANDED_OUT_PORTS.add(port)
+            return port
+    raise RuntimeError("could not find an unused TCP port")
 
 
 def redis_roaring_server_path():
@@ -1027,7 +1098,7 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
                     self.migrator_args(source_port, target_port, manifest, "foo")
                 )
 
-                self.assertEqual(rc, 0)
+                self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
                 self.assertIn("MIGRATED db=0 key=foo count=5", stdout)
                 self.assertEqual(stderr, "")
                 self.assert_native_bits(target, "foo", bits, {0, 3, 99, 65535})
@@ -1041,6 +1112,60 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
             self.assertEqual(entry["source_type"], "reroaring")
             self.assertEqual(entry["cardinality"], len(bits))
             self.assertGreater(entry["validation"]["ttl_ms"], 0)
+
+    def test_real_stale_seed_payload_fails_preflight_with_actionable_error(self):
+        """A seed payload the target rejects must fail once, not per key."""
+        stale_payload = bytes.fromhex("1d00000f000000000000000000")
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = Path(tmp) / "manifest.json"
+            source_proc, target_proc, source_port, target_port = self.start_pair(tmp)
+            with source_proc, target_proc:
+                source = real_redis_client(source_port, "source")
+                target = real_redis_client(target_port, "target")
+                source.execute(["R.SETBIT", "foo", "5", "1"])
+
+                original = migrate.EMPTY_NATIVE_BITMAP_PAYLOAD
+                migrate.EMPTY_NATIVE_BITMAP_PAYLOAD = stale_payload
+                try:
+                    rc, stdout, stderr = self.run_migrator(
+                        self.migrator_args(source_port, target_port, manifest, "foo")
+                    )
+                finally:
+                    migrate.EMPTY_NATIVE_BITMAP_PAYLOAD = original
+
+                self.assertEqual(rc, 1)
+                self.assertEqual(stdout, "")
+                self.assertIn("rejected the empty native bitmap seed payload", stderr)
+                self.assertIn("EMPTY_NATIVE_BITMAP_PAYLOAD", stderr)
+                # The run stops in preflight, before touching any key.
+                self.assertNotIn("FAILED db=0 key=foo", stderr)
+                self.assertEqual(target.execute(["EXISTS", "foo"]), 0)
+                self.assertEqual(
+                    target.execute(["EXISTS", migrate.SEED_PROBE_KEY.decode()]), 0
+                )
+
+    def test_real_existing_probe_key_aborts_preflight_without_touching_it(self):
+        """Preflight must never clobber a target key that shares the probe name."""
+        probe_key = migrate.SEED_PROBE_KEY.decode()
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = Path(tmp) / "manifest.json"
+            source_proc, target_proc, source_port, target_port = self.start_pair(tmp)
+            with source_proc, target_proc:
+                source = real_redis_client(source_port, "source")
+                target = real_redis_client(target_port, "target")
+                source.execute(["R.SETBIT", "foo", "5", "1"])
+                target.execute(["SET", probe_key, "user data"])
+
+                rc, stdout, stderr = self.run_migrator(
+                    self.migrator_args(source_port, target_port, manifest, "foo")
+                )
+
+                self.assertEqual(rc, 1)
+                self.assertEqual(stdout, "")
+                self.assertIn("already exists on the target", stderr)
+                # The pre-existing key is untouched, not restored over and deleted.
+                self.assertEqual(target.execute(["EXISTS", probe_key]), 1)
+                self.assertEqual(target.execute(["GET", probe_key]), b"user data")
 
     def test_real_reroaring_rdb_snapshot_migrates_to_native_rdb(self):
         key = "snapshot:reroaring"
@@ -1080,7 +1205,7 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
                     )
                 )
 
-                self.assertEqual(rc, 0)
+                self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
                 self.assertIn(f"MIGRATED db=0 key={key} count={len(bits)}", stdout)
                 self.assertEqual(stderr, "")
                 self.assert_native_dataset(target, key, bits)
@@ -1116,7 +1241,7 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
                     self.migrator_args(source_port, target_port, manifest, "wide")
                 )
 
-                self.assertEqual(rc, 0)
+                self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
                 self.assertIn("MIGRATED db=0 key=wide count=4", stdout)
                 self.assertEqual(stderr, "")
                 self.assert_native_bits(target, "wide", bits, {1, 64, 4097})
@@ -1152,7 +1277,7 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
                     )
                 )
 
-                self.assertEqual(rc, 0)
+                self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
                 self.assertIn(f"MIGRATED db=0 key=census1881 count={len(bits)}", stdout)
                 self.assertEqual(stderr, "")
                 self.assert_native_dataset(target, "census1881", bits)
@@ -1195,7 +1320,7 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
                     )
                 )
 
-                self.assertEqual(rc, 0)
+                self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
                 self.assertEqual(stderr, "")
                 for key, key_bits in datasets.items():
                     self.assertIn(f"MIGRATED db=0 key={key} count={len(key_bits)}", stdout)
@@ -1240,7 +1365,7 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
                     )
                 )
 
-                self.assertEqual(rc, 0)
+                self.assertEqual(rc, 0, f"migrator failed:\n{stderr}")
                 self.assertIn(f"MIGRATED db=0 key=census1881-64 count={len(bits)}", stdout)
                 self.assertEqual(stderr, "")
                 self.assert_native_dataset(target, "census1881-64", bits)

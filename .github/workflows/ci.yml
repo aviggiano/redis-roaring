@@ -48,6 +48,13 @@ jobs:
       uses: actions/checkout@v2
       with:
         repository: aviggiano/redis
+        # Deliberately tracks the branch Redis core goes live on, so this job is
+        # the early warning that the native bitmap encoding moved. When it goes
+        # red on a commit that did not touch this repository, that is the signal:
+        # the seed payload in tools/redis-bitmap-migrate.py encodes the fork's
+        # RDB type id and layout for native bitmaps and needs regenerating. The
+        # migrator's preflight names that remedy explicitly rather than failing
+        # per key with "Bad data format".
         ref: unstable
         path: native-redis
         submodules: recursive
@@ -55,7 +62,7 @@ jobs:
       run: python3 -m py_compile tools/redis-bitmap-migrate.py tests/integration/redis-bitmap-migrate.py tools/bitmap-bench.py
     - name: Run migrator contract tests
       run: python3 tests/integration/redis-bitmap-migrate.py
-    - name: Build native Redis unstable
+    - name: Build native Redis
       run: make -C native-redis -j"$(nproc)"
     - name: Build redis-roaring module
       run: |

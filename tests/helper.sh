@@ -21,6 +21,9 @@ function start_redis() {
   local USE_VALGRIND="no"
   local USE_AOF="no"
   local USE_CLUSTER="no"
+  # Rewriting the AOF with an RDB preamble stores module values through the RDB
+  # serializer, so the aof_rewrite callbacks only run when it is disabled.
+  local USE_RDB_PREAMBLE="yes"
   while [[ $# -gt 0 ]]; do
     local PARAM="$1"
     case $PARAM in
@@ -33,6 +36,15 @@ function start_redis() {
         ;;
       --cluster)
         USE_CLUSTER="yes"
+        ;;
+      --no-rdb-preamble)
+        USE_RDB_PREAMBLE="no"
+        ;;
+      *)
+        # Never silently drop a flag: a typo here would quietly downgrade a test
+        # to whatever the server defaults to.
+        echo "start_redis: unknown option '$PARAM'" >&2
+        return 1
         ;;
     esac
     shift
@@ -65,8 +77,8 @@ function start_redis() {
   export REDIS_PORT
 
   local REDIS_COMMAND="./deps/redis/src/redis-server --loglevel warning --loadmodule $LIB_PATH --port $REDIS_PORT"
-  local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --suppressions=./deps/redis/src/valgrind.sup --error-exitcode=1 --log-file=$LOG_FILE"
-  local AOF_OPTION="--appendonly $USE_AOF"
+  local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --child-silent-after-fork=yes --suppressions=./deps/redis/src/valgrind.sup --error-exitcode=1 --log-file=$LOG_FILE"
+  local AOF_OPTION="--appendonly $USE_AOF --aof-use-rdb-preamble $USE_RDB_PREAMBLE"
   local CLUSTER_OPTION=""
   if [ "$USE_VALGRIND" == "no" ]; then
     VALGRIND_COMMAND=""
@@ -80,7 +92,13 @@ function start_redis() {
   eval "$VALGRIND_COMMAND" "$REDIS_COMMAND" "$AOF_OPTION" "$CLUSTER_OPTION" &
   REDIS_PID=$!
 
+  local READY_TRIES=0
   while [ "$(./deps/redis/src/redis-cli -p "$REDIS_PORT" PING 2>/dev/null)" != "PONG" ]; do
+    READY_TRIES=$((READY_TRIES + 1))
+    if [ "$READY_TRIES" -ge 600 ]; then
+      echo "Redis did not become ready on port $REDIS_PORT" >&2
+      return 1
+    fi
     sleep 0.1
   done
 }

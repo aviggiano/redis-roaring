@@ -105,6 +105,22 @@ it creates a tiny native build key on the target Redis, streams exported offsets
 into that native key with `SETBIT`, obtains the target-generated `DUMP` payload,
 and `RESTORE`s that payload into the manifest temp key before validation.
 
+The build key itself is seeded by restoring a constant empty native bitmap
+payload, so the target's `bitmap-default-roaring` setting cannot change the
+resulting type. That constant encodes the target's RDB type id for native
+bitmaps and its payload layout, so it must be regenerated from a `DUMP` of an
+empty native bitmap whenever either changes. Lower the RDB version field of a
+regenerated payload back to the oldest target version that must keep working:
+`RESTORE` rejects a payload whose version exceeds the target's own.
+
+An `--apply` run probes the constant once per database during preflight and
+fails with that instruction rather than reporting an opaque per-key
+`Bad data format`. The probe writes and immediately deletes the reserved key
+`__bitmap_migrate_seed_probe__` in each database the run will migrate, never in
+a database that is out of scope, and it refuses to run at all if that name is
+already taken rather than overwriting it. A dry run never writes to the target,
+so it cannot detect a stale payload; only `--apply` reports one.
+
 After import, the tool validates the temporary key before finalizing. Finalizing
 uses an atomic rename or replace into the destination key. The tool must preserve
 the source DB index and TTL, preferably as an absolute expire time in the

@@ -85,12 +85,43 @@ function integration_4() {
   echo "All integration (4) tests passed"
 }
 
+function integration_5() {
+  stop_redis
+  rm dump.rdb 2>/dev/null || true
+  # appendonlydir is Redis 7+; appendonly.aof is the 6.2 layout.
+  rm -rf ./appendonlydir 2>/dev/null || true
+  rm -f appendonly.aof 2>/dev/null || true
+
+  # Seed, rewrite the AOF, then reload it from a restarted server. The rewrite
+  # runs without an RDB preamble so the module's aof_rewrite callbacks are used.
+  if [[ "${USE_VALGRIND:-1}" == "1" ]]; then
+    start_redis --valgrind --aof --no-rdb-preamble
+  else
+    start_redis --aof --no-rdb-preamble
+  fi
+  ./tests/integration_5.sh seed
+  stop_redis
+
+  if [[ "${USE_VALGRIND:-1}" == "1" ]]; then
+    start_redis --valgrind --aof --no-rdb-preamble
+  else
+    start_redis --aof --no-rdb-preamble
+  fi
+  ./tests/integration_5.sh verify
+  stop_redis
+  rm -rf ./appendonlydir 2>/dev/null || true
+  rm -f appendonly.aof 2>/dev/null || true
+
+  echo "All integration (5) tests passed"
+}
+
 setup
 unit
 integration_1
 integration_2
 integration_3
 integration_4
+integration_5
 
 echo ""
 echo "************************"

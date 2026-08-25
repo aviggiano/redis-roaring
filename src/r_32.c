@@ -1,4 +1,5 @@
 #include "r_32.h"
+#include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
 #include "rmalloc.h"
@@ -120,24 +121,52 @@ void* BitmapRdbLoad(RedisModuleIO* rdb, int encver) {
   return bitmap;
 }
 
-typedef struct Bitmap_aof_rewrite_callback_params_s {
-  RedisModuleIO* aof;
-  RedisModuleString* key;
-} Bitmap_aof_rewrite_callback_params;
-
-static bool BitmapAofRewriteCallback(uint32_t offset, void* param) {
-  Bitmap_aof_rewrite_callback_params* params = param;
-  RedisModule_EmitAOF(params->aof, "R.SETBIT", "sll", params->key, offset, 1);
-  return true;
-}
+/* Number of values emitted per command when rewriting a bitmap into the AOF. */
+#define BITMAP_AOF_REWRITE_CHUNK 512
 
 void BitmapAofRewrite(RedisModuleIO* aof, RedisModuleString* key, void* value) {
   Bitmap* bitmap = value;
-  Bitmap_aof_rewrite_callback_params params = {
-      .aof = aof,
-      .key = key
-  };
-  roaring_iterate(bitmap, BitmapAofRewriteCallback, &params);
+
+  /* An empty bitmap has no bits to emit, but the key still exists and must
+   * survive the rewrite. Clearing a bit on a key that does not exist creates it
+   * holding an empty bitmap (see RSetBitCommand), which is the state to restore.
+   * A single command keeps this atomic against a truncated AOF. */
+  if (roaring_bitmap_get_cardinality(bitmap) == 0) {
+    RedisModule_EmitAOF(aof, "R.SETBIT", "sll", key, 0LL, 0LL);
+    return;
+  }
+
+  roaring_uint32_iterator_t* iterator = roaring_iterator_create(bitmap);
+  if (iterator == NULL) {
+    RedisModule_LogIOError(aof, "warning", "Failed to iterate a bitmap while rewriting the AOF");
+    return;
+  }
+
+  RedisModuleCtx* ctx = RedisModule_GetContextFromIO(aof);
+  uint32_t values[BITMAP_AOF_REWRITE_CHUNK];
+  RedisModuleString* args[BITMAP_AOF_REWRITE_CHUNK];
+  bool first_chunk = true;
+  uint32_t read;
+
+  /* Emitted in chunks rather than one command per bit, to keep the rewritten
+   * AOF a reasonable size for large bitmaps. */
+  while (!RedisModule_IsIOError(aof) &&
+         (read = roaring_uint32_iterator_read(iterator, values, BITMAP_AOF_REWRITE_CHUNK)) > 0) {
+    for (uint32_t i = 0; i < read; i++) {
+      args[i] = RedisModule_CreateStringPrintf(ctx, "%" PRIu32, values[i]);
+    }
+
+    /* The first chunk creates the key, the following ones append to it. */
+    RedisModule_EmitAOF(aof, first_chunk ? "R.SETINTARRAY" : "R.APPENDINTARRAY",
+                        "sv", key, args, (size_t) read);
+    first_chunk = false;
+
+    for (uint32_t i = 0; i < read; i++) {
+      RedisModule_FreeString(ctx, args[i]);
+    }
+  }
+
+  roaring_uint32_iterator_free(iterator);
 }
 
 size_t BitmapMemUsage(const void* value) {
@@ -237,10 +266,16 @@ int RSetBitCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) {
   bool value;
   ParseBoolOrReturn(ctx, argv[3], "value", value);
 
-  /* Create an empty value object if the key is currently empty. */
+  /* Create an empty value object if the key is currently empty. The offset is
+   * only included when the bit is being set, so that clearing a bit on a
+   * missing key leaves it clear, as it does on an existing bitmap. */
   if (bitmap == BITMAP_NILL) {
-    uint32_t values[] = { offset };
-    bitmap = bitmap_from_int_array(1, values);
+    if (value) {
+      uint32_t values[] = { offset };
+      bitmap = bitmap_from_int_array(1, values);
+    } else {
+      bitmap = bitmap_alloc();
+    }
     RedisModule_ModuleTypeSetValue(key, BitmapType, bitmap);
     RedisModule_ReplicateVerbatim(ctx);
     return RedisModule_ReplyWithLongLong(ctx, 0);
@@ -605,7 +640,7 @@ int RRangeIntArrayCommand(RedisModuleCtx* ctx, RedisModuleString** argv, int arg
   uint32_t range_size = (end - start) + 1;
 
   if (range_size > BITMAP_MAX_RANGE_SIZE) {
-    return ReplyWithErrorFmt(ctx, ERRORMSG_RANGE_LIMIT, BITMAP_MAX_RANGE_SIZE);
+    return ReplyWithErrorFmt(ctx, ERRORMSG_RANGE_LIMIT, (unsigned long long) BITMAP_MAX_RANGE_SIZE);
   }
 
   if (bitmap == BITMAP_NILL) {
