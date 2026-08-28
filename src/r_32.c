@@ -7,6 +7,7 @@
 #include "common.h"
 #include "parse.h"
 #include "bitop_keys.h"
+#include "bitmap_rdb.h"
 #include "cmd_info/command_info.h"
 
 RedisModuleType* BitmapType = NULL;
@@ -114,8 +115,19 @@ void* BitmapRdbLoad(RedisModuleIO* rdb, int encver) {
     RedisModule_LogIOError(rdb, "warning", "Can't load data with version %d", encver);
     return NULL;
   }
-  size_t size;
+  size_t size = 0;
   char* serialized_bitmap = RedisModule_LoadStringBuffer(rdb, &size);
+  if (serialized_bitmap == NULL || RedisModule_IsIOError(rdb)) {
+    if (serialized_bitmap != NULL) {
+      rm_free(serialized_bitmap);
+    }
+    return NULL;
+  }
+  if (!BitmapSerializedArrayFits(serialized_bitmap, size)) {
+    rm_free(serialized_bitmap);
+    RedisModule_LogIOError(rdb, "warning", "Failed to deserialize a corrupt or truncated bitmap");
+    return NULL;
+  }
   /* Deserialize with the size-checked variant: the buffer comes from
    * RESTORE/RDB and is attacker-controlled. The unsafe roaring_bitmap_deserialize
    * trusts the serialized cardinality header and reads that many elements past

@@ -114,8 +114,14 @@ void* Bitmap64RdbLoad(RedisModuleIO* rdb, int encver) {
     RedisModule_LogIOError(rdb, "warning", "Can't load data with version %d", encver);
     return NULL;
   }
-  size_t size;
+  size_t size = 0;
   char* serialized_bitmap = RedisModule_LoadStringBuffer(rdb, &size);
+  if (serialized_bitmap == NULL || RedisModule_IsIOError(rdb)) {
+    if (serialized_bitmap != NULL) {
+      rm_free(serialized_bitmap);
+    }
+    return NULL;
+  }
   /* Size-checked deserialize: the buffer is attacker-controlled (RESTORE/RDB),
    * so it is bounded by the loaded size and returns NULL on a truncated or
    * corrupt payload rather than reading past the buffer. */

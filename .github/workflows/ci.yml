@@ -103,6 +103,38 @@ jobs:
     - name: Test
       run: ./test.sh
 
+  test_32bit:
+    if: github.event_name != 'schedule'
+    name: Test 32-bit RDB bounds validation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Install 32-bit toolchain
+      run: |
+        # These preinstalled repositories intermittently publish invalid
+        # metadata; none of the packages below come from them.
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.sources
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib g++-multilib libc6-dev-i386
+    - name: Build 32-bit unit and module targets
+      run: |
+        cmake -S . -B build-32 \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_C_FLAGS=-m32 \
+          -DCMAKE_CXX_FLAGS=-m32 \
+          -DCMAKE_EXE_LINKER_FLAGS=-m32 \
+          -DCMAKE_SHARED_LINKER_FLAGS=-m32 \
+          -DROARING_DISABLE_X64=ON
+        cmake --build build-32 --target unit redis-roaring -- -j"$(nproc)"
+    - name: Run 32-bit regression tests
+      run: |
+        file build-32/unit | grep 'ELF 32-bit'
+        file build-32/libredis-roaring.so | grep 'ELF 32-bit'
+        ./build-32/unit
+
   coverage:
     if: github.event_name != 'schedule'
     name: Generate and upload coverage
