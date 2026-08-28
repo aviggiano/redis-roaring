@@ -116,7 +116,13 @@ void* Bitmap64RdbLoad(RedisModuleIO* rdb, int encver) {
   }
   size_t size;
   char* serialized_bitmap = RedisModule_LoadStringBuffer(rdb, &size);
+  /* Size-checked deserialize: the buffer is attacker-controlled (RESTORE/RDB),
+   * so it is bounded by the loaded size and returns NULL on a truncated or
+   * corrupt payload rather than reading past the buffer. */
   Bitmap64* bitmap = roaring64_bitmap_portable_deserialize_safe(serialized_bitmap, size);
+  if (bitmap == NULL) {
+    RedisModule_LogIOError(rdb, "warning", "Failed to deserialize a corrupt or truncated bitmap");
+  }
   rm_free(serialized_bitmap);
   return bitmap;
 }

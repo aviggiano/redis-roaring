@@ -115,6 +115,20 @@ function integration_5() {
   echo "All integration (5) tests passed"
 }
 
+function integration_6() {
+  stop_redis
+  rm dump.rdb 2>/dev/null || true
+  if [[ "${USE_VALGRIND:-1}" == "1" ]]; then
+    start_redis --valgrind
+  else
+    start_redis
+  fi
+  REDIS_PORT="$REDIS_PORT" python3 ./tests/integration_6.py
+  stop_redis
+  rm dump.rdb 2>/dev/null || true
+  echo "All integration (6) tests passed"
+}
+
 setup
 unit
 integration_1
@@ -122,6 +136,7 @@ integration_2
 integration_3
 integration_4
 integration_5
+integration_6
 
 echo ""
 echo "************************"
