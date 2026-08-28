@@ -155,6 +155,40 @@ def craft_oob_payload(payload, fake_cardinality):
     return repatch_crc(bytes(tampered))
 
 
+# A native CONTAINER-tagged (0x02) blob whose portable array container holds two
+# UNSORTED uint16 values. roaring_bitmap_deserialize_safe reads it fully in-bounds
+# -- the size check alone accepts it -- but the container violates the sorted
+# invariant, so roaring_bitmap_internal_validate rejects it. This is the case the
+# CRoaring maintainer raised on PR #154: a size-checked deserialize is not enough
+# on untrusted input; the structure must also be validated. Generated against the
+# pinned CRoaring, where deserialize_safe returns non-NULL and internal_validate
+# reports "array elements not strictly increasing". If the vendored CRoaring's
+# portable format ever changes, regenerate this blob.
+_MALFORMED_UNSORTED_BLOB = (
+    b"\x02\x3a\x30\x00\x00\x01\x00\x00\x00\x00\x00\x01\x00\x10\x00\x00\x00\x0a\x00\x05\x00"
+)
+
+
+def craft_malformed_payload(payload):
+    """Splice an in-bounds-but-internally-invalid blob into a valid DUMP and re-sign."""
+    pos = payload.find(_ARRAY_SIG)
+    if pos < 0:
+        raise AssertionError(
+            "ARRAY_UINT32 signature for {0,1,2} not found in the DUMP payload; "
+            "the 32-bit serialization format may have changed -- update this test"
+        )
+    prefix_at = pos - 1
+    # RDB stores the 17-byte module string with a single-byte 6-bit length prefix.
+    if payload[prefix_at] != len(_ARRAY_SIG):
+        raise AssertionError(
+            "expected a one-byte RDB length prefix (%d) before the serialized bitmap, "
+            "got 0x%02x -- update this test" % (len(_ARRAY_SIG), payload[prefix_at])
+        )
+    new_string = struct.pack("<B", len(_MALFORMED_UNSORTED_BLOB)) + _MALFORMED_UNSORTED_BLOB
+    tampered = payload[:prefix_at] + new_string + payload[pos + len(_ARRAY_SIG):]
+    return repatch_crc(tampered)
+
+
 def expect(condition, message):
     if condition:
         print("\x1b[32m✓\x1b[0m %s" % message)
@@ -208,6 +242,15 @@ def main():
         reply = client.command("RESTORE", "oob_bad", 0, moderate)
         expect(is_bad_data_error(reply),
                "Crafted moderate-cardinality payload is also rejected")
+
+        # Beyond the size check: a payload that is fully in-bounds (so the safe
+        # deserialize accepts it) but internally inconsistent -- here an unsorted
+        # array container -- must still be rejected by the post-deserialize
+        # validation, as the CRoaring maintainer noted on PR #154.
+        malformed = craft_malformed_payload(payload)
+        reply = client.command("RESTORE", "oob_bad", 0, malformed)
+        expect(is_bad_data_error(reply),
+               "In-bounds but internally-inconsistent payload is rejected by validation")
 
         # The server must have survived the crafted loads.
         expect(client.command("PING") == b"PONG", "Server is still alive after the crafted RESTOREs")

@@ -123,10 +123,23 @@ void* BitmapRdbLoad(RedisModuleIO* rdb, int encver) {
    * safe variant bounds every read by the loaded size and returns NULL on a
    * truncated or corrupt payload (mirrors Bitmap64RdbLoad). */
   Bitmap* bitmap = roaring_bitmap_deserialize_safe(serialized_bitmap, size);
+  rm_free(serialized_bitmap);
   if (bitmap == NULL) {
     RedisModule_LogIOError(rdb, "warning", "Failed to deserialize a corrupt or truncated bitmap");
+    return NULL;
   }
-  rm_free(serialized_bitmap);
+  /* The size-checked deserialize guarantees no read past the buffer, but it does
+   * not verify that the resulting bitmap is internally consistent. A payload
+   * that stays within size can still describe a malformed bitmap (e.g. an
+   * unsorted or oversized container) that corrupts memory when later operated
+   * on. CRoaring documents that untrusted input must be validated before use, so
+   * reject anything that fails the consistency check. */
+  const char* reason = NULL;
+  if (!roaring_bitmap_internal_validate(bitmap, &reason)) {
+    RedisModule_LogIOError(rdb, "warning", "Rejected an inconsistent bitmap: %s", reason ? reason : "unknown");
+    bitmap_free(bitmap);
+    return NULL;
+  }
   return bitmap;
 }
 
