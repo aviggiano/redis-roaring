@@ -7,6 +7,7 @@
 #include "common.h"
 #include "parse.h"
 #include "bitop_keys.h"
+#include "bitmap_rdb.h"
 #include "cmd_info/command_info.h"
 
 RedisModuleType* BitmapType = NULL;
@@ -114,10 +115,43 @@ void* BitmapRdbLoad(RedisModuleIO* rdb, int encver) {
     RedisModule_LogIOError(rdb, "warning", "Can't load data with version %d", encver);
     return NULL;
   }
-  size_t size;
+  size_t size = 0;
   char* serialized_bitmap = RedisModule_LoadStringBuffer(rdb, &size);
-  Bitmap* bitmap = roaring_bitmap_deserialize(serialized_bitmap);
+  if (serialized_bitmap == NULL || RedisModule_IsIOError(rdb)) {
+    if (serialized_bitmap != NULL) {
+      rm_free(serialized_bitmap);
+    }
+    return NULL;
+  }
+  if (!BitmapSerializedArrayFits(serialized_bitmap, size)) {
+    rm_free(serialized_bitmap);
+    RedisModule_LogIOError(rdb, "warning", "Failed to deserialize a corrupt or truncated bitmap");
+    return NULL;
+  }
+  /* Deserialize with the size-checked variant: the buffer comes from
+   * RESTORE/RDB and is attacker-controlled. The unsafe roaring_bitmap_deserialize
+   * trusts the serialized cardinality header and reads that many elements past
+   * the buffer, so a crafted payload triggers a large out-of-bounds read. The
+   * safe variant bounds every read by the loaded size and returns NULL on a
+   * truncated or corrupt payload (mirrors Bitmap64RdbLoad). */
+  Bitmap* bitmap = roaring_bitmap_deserialize_safe(serialized_bitmap, size);
   rm_free(serialized_bitmap);
+  if (bitmap == NULL) {
+    RedisModule_LogIOError(rdb, "warning", "Failed to deserialize a corrupt or truncated bitmap");
+    return NULL;
+  }
+  /* The size-checked deserialize guarantees no read past the buffer, but it does
+   * not verify that the resulting bitmap is internally consistent. A payload
+   * that stays within size can still describe a malformed bitmap (e.g. an
+   * unsorted or oversized container) that corrupts memory when later operated
+   * on. CRoaring documents that untrusted input must be validated before use, so
+   * reject anything that fails the consistency check. */
+  const char* reason = NULL;
+  if (!roaring_bitmap_internal_validate(bitmap, &reason)) {
+    RedisModule_LogIOError(rdb, "warning", "Rejected an inconsistent bitmap: %s", reason ? reason : "unknown");
+    bitmap_free(bitmap);
+    return NULL;
+  }
   return bitmap;
 }
 

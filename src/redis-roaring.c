@@ -69,6 +69,11 @@ int RedisModule_OnLoad(RedisModuleCtx* ctx, RedisModuleString** argv, int argc) 
     return REDISMODULE_ERR;
   }
 
+  /* Redis normally aborts an RDB load when a module Load* call sees malformed
+   * input. Opt in to recoverable I/O errors so our loaders can reject corrupt
+   * RESTORE/RDB payloads without taking down the server. */
+  RedisModule_SetModuleOptions(ctx, REDISMODULE_OPTIONS_HANDLE_IO_ERRORS);
+
   RedisModule_Log(ctx,
     "notice",
     "RedisRoaring version %d",
