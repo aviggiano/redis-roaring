@@ -25,7 +25,7 @@ RUN set -ex; \
     cp build/libredis-roaring.so /usr/local/lib/; \
     \
     apt-get purge -y --auto-remove $BUILD_DEPS
-ADD http://download.redis.io/redis-stable/redis.conf /usr/local/etc/redis/redis.conf
+COPY deps/redis/redis.conf /usr/local/etc/redis/redis.conf
 RUN sed -i '1i loadmodule /usr/local/lib/libredis-roaring.so' /usr/local/etc/redis/redis.conf; \
     chmod 644 /usr/local/etc/redis/redis.conf; \
     sed -i 's/^bind 127.0.0.1/#bind 127.0.0.1/g' /usr/local/etc/redis/redis.conf; \
