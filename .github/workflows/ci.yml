@@ -119,6 +119,8 @@ jobs:
         sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.sources
         sudo apt-get update
         sudo apt-get install -y gcc-multilib g++-multilib libc6-dev-i386
+    - name: Generate CRoaring headers
+      run: ./deps/CRoaring/amalgamation.sh src
     - name: Build 32-bit unit and module targets
       run: |
         cmake -S . -B build-32 \
