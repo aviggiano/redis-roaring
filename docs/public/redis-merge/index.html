@@ -270,6 +270,10 @@ body.overview .slide.active { border-color: var(--brand-1); }
   #viewport { position: static; display: block; }
   #stage { width: auto; height: auto; transform: none !important; }
   .slide { display: flex !important; position: relative; width: 1280px; height: 720px; page-break-after: always; break-after: page; }
+  /* if printing starts while overview mode is active */
+  body.overview #stage { display: block; }
+  body.overview .slidewrap { width: auto; height: auto; }
+  body.overview .slide { transform: none; border: none; border-radius: 0; cursor: auto; }
 }
 </style>
 </head>
@@ -591,11 +595,11 @@ body.overview .slide.active { border-color: var(--brand-1); }
       <li><strong>Zero breaking changes.</strong> Every bitmap command returns the same values, errors, and edge-case semantics on both representations.</li>
       <li><strong>No new API to learn.</strong> The existing seven command families are the entire public surface.</li>
       <li><strong>Opt-in.</strong> Gated behind <span class="mono hl" style="font-size:.85em">bitmap-default-roaring</span> (default <strong>no</strong>); off means behavior mirrors upstream Redis exactly.</li>
-      <li><strong>Same limits.</strong> Max bit offset stays <span class="mono" style="font-size:.85em">proto-max-bulk-len × 8</span>: 2³² bits at defaults, the historical string-bitmap limit.</li>
+      <li><strong>Same limits.</strong> Offsets stay bounded by <span class="mono" style="font-size:.85em">proto-max-bulk-len × 8</span> bits: at defaults the highest valid offset is 2³² − 1, the historical string-bitmap limit.</li>
     </ul>
     <div class="card" style="align-self:center;">
       <h3><span class="icon">🎯</span> Built for adoption</h3>
-      <p style="margin-top:6px;">Zero breaking changes means existing bitmap workloads adopt compression with a config flip and no code changes. It also gives redis-roaring module users a portability path into core, with one command surface everywhere.</p>
+      <p style="margin-top:6px;">Zero breaking changes means workloads that stay on the bitmap commands adopt compression with a config flip and no code changes. It also gives redis-roaring module users a portability path into core, with one command surface everywhere.</p>
     </div>
   </div>
 </section>
@@ -929,7 +933,7 @@ holding the wrong kind of value</span>
 </section>
 
 <!-- ═══════════════ 29 · SAME API ═══════════════ -->
-<section class="slide" data-notes="The main capability is that nothing changes: everything you already do with bitmaps keeps working. This transcript was measured on the PR build. Flip the config and sparse bitmap workloads get orders of magnitude cheaper with zero application changes; clients, Lua scripts, and modules run unmodified.">
+<section class="slide" data-notes="The main capability is that nothing changes for bitmap-command workloads: everything you already do with the bitmap commands keeps working. This transcript was measured on the PR build. Flip the config and sparse bitmap workloads get orders of magnitude cheaper with no code changes. The caveat to say out loud: code that mixes string commands like GET, APPEND, or STRLEN on the same keys needs an audit first, since those return WRONGTYPE once a key converts.">
   <div class="kicker">Capabilities</div>
   <h2>Same API, new engine</h2>
   <div class="cols">
@@ -949,9 +953,9 @@ holding the wrong kind of value</span>
 <span class="s">"bitmap-roaring"</span></pre>
     </div>
     <ul class="b" style="align-self:center;">
-      <li><strong>Zero application changes.</strong> Same commands, same replies, same errors.</li>
+      <li><strong>Zero changes for bitmap-command workloads.</strong> Same commands, same replies, same errors.</li>
       <li>All seven families: <span class="mono" style="font-size:.8em">SETBIT · GETBIT · BITCOUNT · BITPOS · BITOP · BITFIELD · BITFIELD_RO</span></li>
-      <li>Clients, Lua scripts, and modules keep working <strong>unmodified</strong>.</li>
+      <li>Clients, Lua scripts, and modules keep working <strong>unmodified</strong> on the bitmap surface. Code that mixes string commands (<span class="mono" style="font-size:.8em">GET / APPEND / STRLEN</span>) on the same keys needs an audit first: those return <span class="mono" style="font-size:.8em">WRONGTYPE</span> after conversion.</li>
       <li>Turn it on, and sparse bitmap workloads get <strong>orders of magnitude cheaper</strong>.</li>
     </ul>
   </div>
@@ -1381,7 +1385,9 @@ universe              <span class="n">{0 1 2 3 4 5 6}</span></pre>
   }
 
   function toggleOverview(force) {
-    var on = document.body.classList.toggle('overview', force);
+    var on = force === undefined
+      ? document.body.classList.toggle('overview')
+      : document.body.classList.toggle('overview', force);
     if (on) {
       slides.forEach(function (s) {
         var w = document.createElement('div');
@@ -1430,6 +1436,9 @@ universe              <span class="n">{0 1 2 3 4 5 6}</span></pre>
 
   addEventListener('resize', fit);
   addEventListener('hashchange', fromHash);
+  addEventListener('beforeprint', function () {
+    if (document.body.classList.contains('overview')) toggleOverview(false);
+  });
   fit();
   fromHash();
 })();
