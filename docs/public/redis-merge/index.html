@@ -397,7 +397,7 @@ body.overview .slide.active { border-color: var(--brand-1); }
 <!-- ═══════════════ 7 · CONCISE ═══════════════ -->
 <section class="slide" data-notes="At BelugaDB I implemented CONCISE by hand from the paper (Colantonio & Di Pietro, 2010, Information Processing Letters). Word-aligned RLE: literal words carry 31 raw bits; fill words run-length encode long stretches. CONCISE's addition over WAH is the 'mixed fill': 5 position bits that encode a fill with one odd bit flipped, halving the worst case. Implementing it means mod-31 boundary arithmetic, fill merging, and literal-to-fill promotion, with many edge cases and no reference C implementation. Compression was excellent, but every operation walks the stream; there is no random access.">
   <div class="kicker">Who am I · CONCISE</div>
-  <h2>Some background: CONCISE by hand (circa 2014)</h2>
+  <h2>Some background: CONCISE by hand (circa 2015)</h2>
   <div class="cols">
     <div>
       <ul class="b tight">
@@ -432,7 +432,7 @@ body.overview .slide.active { border-color: var(--brand-1); }
 <!-- ═══════════════ 8 · ROARING PORT / MODULE ═══════════════ -->
 <section class="slide" data-notes="Roaring replaced the RLE-stream idea with a two-level structure you can jump into, which fixed CONCISE's main weakness. The 2014 Roaring paper reports intersections up to 900x faster than WAH/CONCISE-style bitmaps. Porting to Roaring was a large win, and in May 2017 I published redis-roaring: CRoaring behind Redis-style commands. 385 stars today, in production use, benchmarked against census data on every push: parity with native bitmaps for O(1) ops, up to 8x faster for O(N).">
   <div class="kicker">Who am I · redis-roaring</div>
-  <h2>Some background: Porting to CRoaring (circa 2015)</h2>
+  <h2>Some background: Porting to CRoaring (circa 2016)</h2>
   <div class="cols">
     <ul class="b tight">
       <li>Ported the engine from CONCISE to <strong>Roaring bitmaps</strong>: chunked containers instead of one compressed stream. The founding paper reports intersections <strong>up to 900× faster</strong> than WAH/CONCISE-style RLE bitmaps.</li>
