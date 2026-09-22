@@ -99,7 +99,9 @@ jobs:
       env:
         REDIS_VERSION: ${{ matrix.redis-version }}
     - name: Install valgrind
-      run: sudo apt-get install valgrind
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y valgrind
     - name: Test
       run: ./test.sh
 
@@ -618,7 +620,9 @@ jobs:
     - name: Configure
       run: ./configure.sh
     - name: Install valgrind
-      run: sudo apt-get install valgrind
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y valgrind
     - name: Test
       run: ./performance.sh
     - name: Commit performance results

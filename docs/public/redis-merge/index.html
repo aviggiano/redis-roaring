@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roaring Bitmaps in Redis</title>
+<meta name="description" content="Native compressed bitmaps in Redis core: the story of redis/redis#15331">
+<link rel="icon" type="image/svg+xml" href="/logo-mini.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Theme: matches redisroaring.com (VitePress default theme,
+   brand #FF8341 / #FE3437, dark palette)
+   ============================================================ */
+:root {
+  --brand-1: #FF8341;
+  --brand-2: #FE3437;
+  --gradient: linear-gradient(120deg, var(--brand-2) 30%, var(--brand-1));
+  --bg: #1b1b1f;
+  --bg-alt: #161618;
+  --bg-soft: #202127;
+  --divider: rgba(82, 82, 89, .32);
+  --text-1: rgba(255, 255, 245, .86);
+  --text-2: rgba(235, 235, 245, .6);
+  --text-3: rgba(235, 235, 245, .38);
+  --green: #3dd68c;
+  --yellow: #f9b44e;
+  --blue: #65b1ff;
+  --red-soft: #ff6b6d;
+  --code-red: #ff7b72;
+  --code-str: #a5d6ff;
+  --code-num: #79c0ff;
+  --code-fn: #d2a8ff;
+  --code-cmt: #8b949e;
+  --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: var(--font);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   Deck machinery
+   ============================================================ */
+#progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+  background: var(--gradient); z-index: 50; transition: width .25s ease;
+}
+#viewport {
+  position: fixed; inset: 0; display: flex;
+  align-items: center; justify-content: center;
+}
+#stage {
+  width: 1280px; height: 720px; position: relative;
+  transform-origin: center center; flex: none;
+}
+.slide {
+  position: absolute; inset: 0; padding: 64px 92px 70px;
+  display: none; flex-direction: column;
+  background: var(--bg);
+}
+.slide.active { display: flex; }
+.slide.center { justify-content: center; }
+
+/* hidden speaker notes */
+.notes { display: none; }
+#notesPanel {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  background: rgba(22, 22, 24, .97); border-top: 1px solid var(--divider);
+  padding: 14px 28px; font-size: 15px; line-height: 1.55; color: var(--text-2);
+  display: none; max-height: 32vh; overflow: auto;
+}
+body.shownotes #notesPanel { display: block; }
+#notesPanel .nlabel {
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--brand-1); margin-bottom: 4px; font-weight: 700;
+}
+
+/* slide footer */
+.foot {
+  position: absolute; left: 92px; right: 92px; bottom: 26px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; color: var(--text-3);
+}
+
+/* ============================================================
+   Typography & components
+   ============================================================ */
+.kicker {
+  font-size: 15px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; margin-bottom: 12px;
+  background: var(--gradient); -webkit-background-clip: text;
+  background-clip: text; color: transparent; width: fit-content;
+}
+h1 { font-size: 64px; font-weight: 800; line-height: 1.08; letter-spacing: -.02em; }
+h2 { font-size: 39px; font-weight: 800; line-height: 1.15; letter-spacing: -.015em; margin-bottom: 24px; }
+h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+p.lead { font-size: 22px; color: var(--text-2); line-height: 1.5; }
+.grad { background: var(--gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+strong { color: var(--text-1); font-weight: 700; }
+em { color: var(--text-1); }
+
+ul.b { list-style: none; font-size: 20px; line-height: 1.45; color: var(--text-2); }
+ul.b > li { padding-left: 28px; position: relative; margin-bottom: 15px; }
+ul.b > li::before {
+  content: ""; position: absolute; left: 2px; top: .5em;
+  width: 9px; height: 9px; border-radius: 2px; background: var(--gradient);
+}
+ul.b li strong { color: var(--text-1); }
+ul.b.tight > li { margin-bottom: 10px; font-size: 18px; }
+ul.b .sub { font-size: 16px; color: var(--text-3); display: block; margin-top: 3px; }
+
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; flex: 1; min-height: 0; }
+.cols3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 22px; }
+
+.card {
+  background: var(--bg-soft); border: 1px solid var(--divider);
+  border-radius: 12px; padding: 20px 22px;
+}
+.card h3 { display: flex; align-items: center; gap: 10px; }
+.card p { font-size: 16px; color: var(--text-2); line-height: 1.48; }
+.card .icon { font-size: 21px; }
+
+.pill {
+  display: inline-block; padding: 3px 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; letter-spacing: .02em;
+  background: var(--bg-soft); border: 1px solid var(--divider); color: var(--text-2);
+}
+.pill.on { background: rgba(255, 131, 65, .12); border-color: rgba(255, 131, 65, .4); color: var(--brand-1); }
+.pill.ok { background: rgba(61, 214, 140, .1); border-color: rgba(61, 214, 140, .35); color: var(--green); }
+.pill.no { background: rgba(254, 52, 55, .1); border-color: rgba(254, 52, 55, .35); color: var(--red-soft); }
+.pill.was { background: rgba(60, 60, 67, .06); border-color: rgba(60, 60, 67, .35); color: rgba(60, 60, 67, .72); }
+
+/* light panels mark superseded designs (the "old implementation" theme) */
+.card.old { background: #f6f6f7; border-color: rgba(60, 60, 67, .25); }
+.card.old h3, .card.old h3 em { color: #1b1b1f; }
+.card.old p { color: rgba(60, 60, 67, .82); }
+.card.old p strong, .card.old .mono { color: #1b1b1f; }
+.card.old p em { color: rgba(60, 60, 67, .95); }
+.timeline .ev.old p { background: #f6f6f7; border-radius: 8px; padding: 8px 12px; margin-top: 4px; color: rgba(60, 60, 67, .82); }
+.timeline .ev.old p strong { color: #1b1b1f; }
+.timeline .ev.old p em { color: rgba(60, 60, 67, .95); }
+.timeline .ev.old p .mono { color: #1b1b1f; }
+
+/* quote card */
+.quote {
+  background: var(--bg-soft); border-left: 3px solid var(--brand-1);
+  border-radius: 0 10px 10px 0; padding: 14px 18px; font-size: 17px;
+  color: var(--text-1); line-height: 1.45;
+}
+.quote .who { display: block; margin-top: 7px; font-size: 13.5px; color: var(--text-3); font-style: normal; }
+
+/* code windows */
+.code {
+  background: var(--bg-alt); border: 1px solid var(--divider);
+  border-radius: 12px; overflow: hidden; font-family: var(--mono);
+}
+.code .bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 16px; border-bottom: 1px solid var(--divider);
+  font-family: var(--font); font-size: 12.5px; color: var(--text-3);
+}
+.code .bar .dots { display: flex; gap: 6px; }
+.code .bar .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--bg-soft); border: 1px solid var(--divider); }
+.code pre {
+  padding: 15px 20px; font-size: 15.5px; line-height: 1.6;
+  overflow-x: auto; color: var(--text-1);
+}
+.code.sm pre { font-size: 13.5px; line-height: 1.55; }
+.code.xs pre { font-size: 12px; line-height: 1.5; }
+.k { color: var(--code-red); font-weight: 600; }   /* command / keyword */
+.s { color: var(--code-str); }                     /* string */
+.n { color: var(--code-num); }                     /* number */
+.f { color: var(--code-fn); }                      /* function */
+.c { color: var(--code-cmt); font-style: italic; } /* comment */
+.o { color: var(--text-3); }                       /* output / dim */
+.g { color: var(--green); }
+.y { color: var(--yellow); }
+.hl { background: rgba(255, 131, 65, .13); border-radius: 3px; padding: 0 3px; }
+
+/* tables */
+table.t { border-collapse: collapse; width: 100%; font-size: 16.5px; }
+table.t th {
+  text-align: left; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600; padding: 8px 13px; border-bottom: 1px solid var(--divider);
+}
+table.t td { padding: 9px 13px; border-bottom: 1px solid var(--divider); color: var(--text-2); line-height: 1.4; }
+table.t td:first-child { color: var(--text-1); font-weight: 600; }
+table.t tr:last-child td { border-bottom: none; }
+table.t .mono, .mono { font-family: var(--mono); }
+
+/* section divider slides */
+.slide.section { justify-content: center; }
+.slide.section .num {
+  font-size: 145px; font-weight: 900; line-height: 1; letter-spacing: -.04em;
+  background: var(--gradient); -webkit-background-clip: text; background-clip: text;
+  color: transparent; opacity: .92; margin-bottom: 8px;
+}
+.slide.section h1 { font-size: 56px; }
+.slide.section p { margin-top: 18px; font-size: 21px; color: var(--text-2); max-width: 820px; line-height: 1.5; }
+
+/* single-series bar chart */
+.chart { display: flex; flex-direction: column; gap: 12px; }
+.chart .row { display: grid; grid-template-columns: 200px 1fr 150px; gap: 14px; align-items: center; }
+.chart .lbl { font-size: 15.5px; color: var(--text-2); text-align: right; }
+.chart .track { background: var(--bg-soft); border-radius: 6px; height: 24px; position: relative; overflow: hidden; }
+.chart .fill { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: var(--gradient); }
+.chart .fill.flat { background: rgba(235,235,245,.22); }
+.chart .val { font-size: 15px; font-weight: 700; color: var(--text-1); font-family: var(--mono); }
+
+/* paired (string vs roaring) chart */
+.chart2 { display: flex; flex-direction: column; gap: 13px; }
+.chart2 .row { display: grid; grid-template-columns: 185px 1fr 205px; gap: 14px; align-items: center; }
+.chart2 .lbl { font-size: 15px; color: var(--text-2); text-align: right; line-height: 1.25; }
+.chart2 .bars { display: flex; flex-direction: column; gap: 3px; }
+.chart2 .bar1, .chart2 .bar2 { height: 11px; border-radius: 4px; }
+.chart2 .bar1 { background: rgba(235,235,245,.25); }
+.chart2 .bar2 { background: var(--gradient); }
+.chart2 .val { font-size: 14.5px; font-weight: 700; color: var(--text-1); font-family: var(--mono); line-height: 1.3; }
+.chart2 .val .x { color: var(--green); }
+.legend { display: flex; gap: 22px; font-size: 13.5px; color: var(--text-3); margin-bottom: 14px; }
+.legend i { display: inline-block; width: 22px; height: 10px; border-radius: 3px; margin-right: 7px; vertical-align: baseline; }
+
+/* timeline */
+.timeline { position: relative; padding-left: 26px; }
+.timeline::before { content: ""; position: absolute; left: 7px; top: 6px; bottom: 6px; width: 2px; background: var(--divider); }
+.timeline .ev { position: relative; margin-bottom: 15px; }
+.timeline .ev::before {
+  content: ""; position: absolute; left: -25px; top: 5px; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--gradient);
+}
+.timeline .ev.mut::before { background: var(--bg-soft); border: 2px solid var(--text-3); width: 9px; height: 9px; left: -24px; }
+.timeline .d { font-size: 12.5px; font-weight: 700; letter-spacing: .06em; color: var(--brand-1); text-transform: uppercase; }
+.timeline .ev p { font-size: 16.5px; color: var(--text-2); line-height: 1.4; }
+.timeline .ev p strong { color: var(--text-1); }
+
+/* big stat */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.stat { background: var(--bg-soft); border: 1px solid var(--divider); border-radius: 14px; padding: 24px 26px; }
+.stat .v { font-size: 44px; font-weight: 800; letter-spacing: -.02em; background: var(--gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.stat .l { font-size: 15px; color: var(--text-2); margin-top: 6px; line-height: 1.4; }
+
+/* overview mode */
+body.overview #viewport { align-items: flex-start; overflow-y: auto; padding: 28px; }
+body.overview #stage { display: grid; grid-template-columns: repeat(4, 308px); gap: 18px; position: static; width: auto; height: auto; transform: none !important; }
+body.overview .slidewrap { width: 308px; height: 176px; position: relative; }
+body.overview .slide {
+  display: flex; position: relative; width: 1280px; height: 720px;
+  transform: scale(0.2406); transform-origin: top left; cursor: pointer;
+  border: 2px solid var(--divider); border-radius: 20px;
+}
+body.overview .slide.active { border-color: var(--brand-1); }
+#hint {
+  position: fixed; right: 18px; bottom: 14px; z-index: 55;
+  font-size: 12px; color: var(--text-3); user-select: none;
+}
+
+/* print */
+@media print {
+  body { overflow: visible; }
+  #progress, #hint, #notesPanel { display: none !important; }
+  #viewport { position: static; display: block; }
+  #stage { width: auto; height: auto; transform: none !important; }
+  .slide { display: flex !important; position: relative; width: 1280px; height: 720px; page-break-after: always; break-after: page; }
+  /* if printing starts while overview mode is active */
+  body.overview #stage { display: block; }
+  body.overview .slidewrap { width: auto; height: auto; }
+  body.overview .slide { transform: none; border: none; border-radius: 0; cursor: auto; }
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="viewport"><div id="stage">
+
+<!-- ═══════════════ 1 · TITLE ═══════════════ -->
+<section class="slide center" data-notes="Welcome. This talk is about redis/redis#15331: bringing Roaring bitmaps into Redis core as a native compressed representation for the bitmap type. I'll keep the deep internals light and flag where to dig deeper.">
+  <div style="display:flex; align-items:center; gap:56px;">
+    <svg width="185" height="185" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" style="border-radius:44px; box-shadow:0 24px 80px rgba(254,52,55,.35); flex:none;">
+      <g clip-path="url(#B0)"><path d="M0 128C0 57.308 57.308 0 128 0s128 57.308 128 128-57.308 128-128 128S0 198.692 0 128z" fill="url(#A0)"/>
+      <g fill="#fff"><rect x="96.5" y="69.3" width="8.6" height="8.7" rx="1.6"/><rect x="107.3" y="69.3" width="8.6" height="8.7" rx="1.6"/><rect x="118" y="69.3" width="8.6" height="8.7" rx="1.6"/><rect x="128.8" y="69.3" width="8.6" height="8.7" rx="1.6"/><rect x="139.6" y="69.3" width="8.6" height="8.7" rx="1.6"/><rect x="128.8" y="80.1" width="8.6" height="8.7" rx="1.6"/><rect x="96.5" y="80.1" width="8.6" height="8.7" rx="1.6"/><rect x="107.3" y="80.1" width="8.6" height="8.7" rx="1.6"/><rect x="118" y="80.1" width="8.6" height="8.7" rx="1.6"/><rect x="150.3" y="80.1" width="8.6" height="8.7" rx="1.6"/><rect x="161.1" y="80.1" width="8.6" height="8.7" rx="1.6"/><rect x="96.5" y="90.9" width="8.6" height="8.7" rx="1.6"/><rect x="150.3" y="90.9" width="8.6" height="8.7" rx="1.6"/><rect x="161.1" y="90.9" width="8.6" height="8.7" rx="1.6"/><rect x="96.5" y="101.8" width="8.6" height="8.7" rx="1.6"/><rect x="150.3" y="101.8" width="8.6" height="8.7" rx="1.6"/><rect x="161.1" y="101.8" width="8.6" height="8.7" rx="1.6"/><rect x="96.5" y="112.6" width="8.6" height="8.7" rx="1.6"/><rect x="150.3" y="112.6" width="8.6" height="8.7" rx="1.6"/><rect x="96.5" y="123.4" width="8.6" height="8.7" rx="1.6"/><rect x="107.3" y="123.4" width="8.6" height="8.7" rx="1.6"/><rect x="118" y="123.4" width="8.6" height="8.7" rx="1.6"/><rect x="128.8" y="123.4" width="8.6" height="8.7" rx="1.6"/><rect x="139.6" y="123.4" width="8.6" height="8.7" rx="1.6"/><rect x="96.5" y="134.3" width="8.6" height="8.7" rx="1.6"/><rect x="125.6" y="134.3" width="8.6" height="8.7" rx="1.6"/><rect x="136.4" y="134.3" width="8.6" height="8.7" rx="1.6"/><rect x="96.5" y="145.1" width="8.6" height="8.7" rx="1.6"/><rect x="136.4" y="145.1" width="8.6" height="8.7" rx="1.6"/><rect x="147.1" y="145.1" width="8.6" height="8.7" rx="1.6"/><rect x="96.5" y="155.9" width="8.6" height="8.7" rx="1.6"/><rect x="136.4" y="155.9" width="8.6" height="8.7" rx="1.6"/><rect x="147.1" y="155.9" width="8.6" height="8.7" rx="1.6"/><rect x="96.5" y="166.8" width="8.6" height="8.7" rx="1.6"/><rect x="147.1" y="166.8" width="8.6" height="8.7" rx="1.6"/><rect x="157.9" y="166.8" width="8.6" height="8.7" rx="1.6"/><rect x="96.5" y="177.6" width="8.6" height="8.7" rx="1.6"/><rect x="147.1" y="177.6" width="8.6" height="8.7" rx="1.6"/><rect x="157.9" y="177.6" width="8.6" height="8.7" rx="1.6"/></g></g>
+      <defs><linearGradient id="A0" x1="128" y1="0" x2="128" y2="256" gradientUnits="userSpaceOnUse"><stop stop-color="#ff8341"/><stop offset="1" stop-color="#fe3437"/></linearGradient><clipPath id="B0"><rect width="256" height="256" fill="#fff"/></clipPath></defs>
+    </svg>
+    <div>
+      <div class="kicker">redis/redis #15331</div>
+      <h1>Roaring Bitmaps<br>in <span class="grad">Redis</span></h1>
+      <p class="lead" style="margin-top:22px;">Native compressed bitmaps in Redis core:<br>the design, the review, and what it unlocks.</p>
+      <p style="margin-top:32px; font-size:19px; color:var(--text-2);"><strong>Antonio Viggiano</strong> &nbsp;·&nbsp; <span class="mono" style="color:var(--text-3)">redisroaring.com</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 2 · HOOK ═══════════════ -->
+<section class="slide center" data-notes="Set a single bit at offset 4 billion. Today Redis allocates 536,870,944 bytes for it; as a Roaring bitmap the same key costs 313 bytes. That key is artificial, so the stat chips below cite real data: on the census1881 dataset, MEMORY USAGE drops from 917,526 to 526 bytes, 1,744x. And the gains are not only memory: sparse BITCOUNT drops from 67.0 to 3.56 µs (19x) and census1881 BITOP ONE from 950 to 69.6 µs (13.6x). Transcripts measured on the PR build; dataset numbers from the benchmark posted to the PR.">
+  <h2 style="text-align:center; margin-bottom:34px;">The same command, two representations</h2>
+  <div class="cols" style="flex:none; align-items:stretch;">
+    <div class="code">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>Redis today: bitmap as a string</span></div>
+      <pre><span class="o">127.0.0.1:6379&gt;</span> <span class="k">SETBIT</span> clicks <span class="n">4000000000</span> <span class="n">1</span>
+<span class="o">(integer) 0</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">MEMORY USAGE</span> clicks
+<span class="o">(integer)</span> <span class="n">536870944</span>   <span class="c"># 512 MiB</span></pre>
+    </div>
+    <div class="code">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>with bitmap-default-roaring yes</span></div>
+      <pre><span class="o">127.0.0.1:6379&gt;</span> <span class="k">SETBIT</span> clicks <span class="n">4000000000</span> <span class="n">1</span>
+<span class="o">(integer) 0</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">MEMORY USAGE</span> clicks
+<span class="o">(integer)</span> <span class="g">313</span>   <span class="c"># 313 bytes</span></pre>
+    </div>
+  </div>
+  <p class="lead" style="text-align:center; margin-top:28px;">Same command, same reply.</p>
+  <div style="display:flex; gap:22px; margin-top:24px; justify-content:center;">
+    <div class="stat" style="padding:16px 28px; text-align:center;"><div class="v" style="font-size:34px;">1,744×</div><div class="l">less memory on real census data</div></div>
+    <div class="stat" style="padding:16px 28px; text-align:center;"><div class="v" style="font-size:34px;">19×</div><div class="l">faster <span class="mono">BITCOUNT</span> on sparse data</div></div>
+    <div class="stat" style="padding:16px 28px; text-align:center;"><div class="v" style="font-size:34px;">13×</div><div class="l">faster <span class="mono">BITOP</span> on census data</div></div>
+  </div>
+</section>
+
+<!-- ═══════════════ 3 · AGENDA ═══════════════ -->
+<section class="slide" data-notes="Five parts, roughly 45 minutes, then Q&A. Interrupt anytime.">
+  <div class="kicker">Agenda</div>
+  <h2>What we'll cover</h2>
+  <div class="cols3" style="margin-top:8px;">
+    <div class="card"><h3><span class="icon grad" style="font-weight:800">01</span> Who am I</h3><p>Security Researcher, redis-roaring maintainer, Database engineer.</p></div>
+    <div class="card"><h3><span class="icon grad" style="font-weight:800">02</span> The problem</h3><p>Why string bitmaps are expensive for sparse data, and how Roaring bitmaps fix it.</p></div>
+    <div class="card"><h3><span class="icon grad" style="font-weight:800">03</span> Design decisions</h3><p>Type vs encoding, determinism, replication, persistence, and what changed during review.</p></div>
+    <div class="card"><h3><span class="icon grad" style="font-weight:800">04</span> Capabilities</h3><p>What works today, what this unlocks, and a possible v2 command surface.</p></div>
+    <div class="card"><h3><span class="icon grad" style="font-weight:800">05</span> Quality</h3><p>Implementation, testing, fuzzing, bugs found, and benchmark results.</p></div>
+  </div>
+  <p style="margin-top:26px; font-size:17px; color:var(--text-3);">~45 minutes of content · 15 minutes Q&amp;A</p>
+</section>
+
+<!-- ═══════════════ 4 · §01 WHO AM I ═══════════════ -->
+<section class="slide section" data-notes="">
+  <div class="num">01</div>
+  <h1>Who am I</h1>
+  <p>Fuzzing, redis-roaring, BelugaDB.</p>
+</section>
+
+<!-- ═══════════════ 5 · BIO ═══════════════ -->
+<section class="slide" data-notes="Quick background, most recent first: Senior Security Researcher at the Monad Foundation since 2026, applying fuzzing and AI to catch bugs in cryptocurrency projects. Author and maintainer of redis-roaring since 2017, now being upstreamed into Redis core as redis/redis#15331. Co-founded BelugaDB (2014–2017), a high-performance column-oriented analytics data store in C.">
+  <div class="kicker">Who am I</div>
+  <h2>Antonio Viggiano</h2>
+  <ul class="b" style="margin-top:10px;">
+    <li><strong>2026–present</strong> · Senior Security Researcher, <strong>Monad Foundation</strong>.<span class="sub">Applying fuzzing and AI to catch bugs in cryptocurrency projects.</span></li>
+    <li><strong>2017–present</strong> · Author of <strong>redis-roaring</strong>, the Roaring bitmap module for Redis.<span class="sub">Now being upstreamed into Redis core: <span class="mono">redis/redis#15331</span>, the subject of this talk.</span></li>
+    <li><strong>2014–2017</strong> · Co-founder, <strong>BelugaDB</strong>: high-performance, column-oriented analytics data store in C.<span class="sub">Columnar storage, bitmap indexes, real-time segmentation queries over terabytes.</span></li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 6 · BELUGADB ═══════════════ -->
+<section class="slide" data-notes="BelugaDB was an OLAP engine for ad-tech events. Events arrive as JSON payloads, one per row of the table. The canonical query: count clicks from Brazil, which matches rows 0 and 2 and returns 2. Each column value is a set of rows stored as a bitmap over row IDs, and the WHERE clause is boolean logic over those sets: AND intersects, OR unions, NOT complements. With millions of users and thousands of segments, the bitmap representation dominates query cost. This dataset returns at the end of the talk.">
+  <div class="kicker">Who am I · BelugaDB</div>
+  <h2>OLAP queries are bitmap algebra</h2>
+  <div class="cols" style="grid-template-columns: 1.06fr 0.94fr; gap:30px;">
+    <div>
+      <div class="code xs">
+        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>events arrive as JSON, one per row</span></div>
+        <pre>{<span class="s">"country"</span>:<span class="s">"Brazil"</span>,<span class="s">"gender"</span>:<span class="s">"male"</span>,<span class="s">"action"</span>:<span class="s">"click"</span>}
+{<span class="s">"country"</span>:<span class="s">"United States"</span>,<span class="s">"gender"</span>:<span class="s">"female"</span>,<span class="s">"action"</span>:<span class="s">"impression"</span>}
+{<span class="s">"country"</span>:<span class="s">"Brazil"</span>,<span class="s">"gender"</span>:<span class="s">"female"</span>,<span class="s">"action"</span>:<span class="s">"click"</span>}
+{<span class="s">"country"</span>:<span class="s">"United States"</span>,<span class="s">"gender"</span>:<span class="s">"male"</span>,<span class="s">"action"</span>:<span class="s">"click"</span>}
+{<span class="s">"country"</span>:<span class="s">"United States"</span>,<span class="s">"gender"</span>:<span class="s">"female"</span>,<span class="s">"action"</span>:<span class="s">"install"</span>}
+{<span class="s">"country"</span>:<span class="s">"United States"</span>,<span class="s">"gender"</span>:<span class="s">"female"</span>,<span class="s">"action"</span>:<span class="s">"impression"</span>}
+{<span class="s">"country"</span>:<span class="s">"Japan"</span>,<span class="s">"gender"</span>:<span class="s">"male"</span>,<span class="s">"action"</span>:<span class="s">"impression"</span>}
+{<span class="s">"country"</span>:<span class="s">"United States"</span>,<span class="s">"gender"</span>:<span class="s">"female"</span>,<span class="s">"action"</span>:<span class="s">"install"</span>}</pre>
+      </div>
+      <p style="margin-top:14px; font-size:15px; color:var(--text-2);">Each column value becomes a <strong>bitmap over row IDs</strong>; the <span class="mono" style="font-size:.9em">WHERE</span> clause is boolean logic (<span class="mono" style="font-size:.9em">AND</span> / <span class="mono" style="font-size:.9em">OR</span> / <span class="mono" style="font-size:.9em">NOT</span>) over those sets.</p>
+    </div>
+    <div>
+      <table class="t" style="font-size:14px;">
+        <tr><th>row</th><th>country</th><th>gender</th><th>action</th></tr>
+        <tr><td class="mono">0</td><td>Brazil</td><td>male</td><td>click</td></tr>
+        <tr><td class="mono">1</td><td>United States</td><td>female</td><td>impression</td></tr>
+        <tr><td class="mono">2</td><td>Brazil</td><td>female</td><td>click</td></tr>
+        <tr><td class="mono">3</td><td>United States</td><td>male</td><td>click</td></tr>
+        <tr><td class="mono">4</td><td>United States</td><td>female</td><td>install</td></tr>
+        <tr><td class="mono">5</td><td>United States</td><td>female</td><td>impression</td></tr>
+        <tr><td class="mono">6</td><td>Japan</td><td>male</td><td>impression</td></tr>
+        <tr><td class="mono">7</td><td>United States</td><td>female</td><td>install</td></tr>
+      </table>
+      <div class="code sm" style="margin-top:12px;">
+        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>the canonical OLAP query</span></div>
+        <pre><span class="k">SELECT</span> <span class="f">COUNT</span>(*) <span class="k">FROM</span> events
+<span class="k">WHERE</span> country = <span class="s">'Brazil'</span> <span class="k">AND</span> action = <span class="s">'click'</span>
+<span class="g">→ 2</span>   <span class="c"># rows 0 and 2</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 7 · CONCISE ═══════════════ -->
+<section class="slide" data-notes="At BelugaDB I implemented CONCISE by hand from the paper (Colantonio & Di Pietro, 2010, Information Processing Letters). Word-aligned RLE: literal words carry 31 raw bits; fill words run-length encode long stretches. CONCISE's addition over WAH is the 'mixed fill': 5 position bits that encode a fill with one odd bit flipped, halving the worst case. Implementing it means mod-31 boundary arithmetic, fill merging, and literal-to-fill promotion, with many edge cases and no reference C implementation. Compression was excellent, but every operation walks the stream; there is no random access.">
+  <div class="kicker">Who am I · CONCISE</div>
+  <h2>Some background: CONCISE by hand (circa 2015)</h2>
+  <div class="cols">
+    <div>
+      <ul class="b tight">
+        <li><strong>CONCISE</strong>: <em>Compressed 'n' Composable Integer Set</em> (Colantonio &amp; Di Pietro, 2010), from the WAH family of word-aligned RLE bitmaps.</li>
+        <li><strong>Literal words</strong> carry 31 raw bits; <strong>fill words</strong> run-length encode stretches of 0s/1s, plus 5 "position" bits that fold one stray bit into a fill, halving WAH's worst case.</li>
+        <li>Implemented in C from the paper: mod-31 boundary arithmetic, fill merging, literal→fill promotion. <strong>Every AND/OR/NOT is a word-by-word merge</strong> of two compressed streams.</li>
+      </ul>
+      <svg viewBox="0 0 470 96" style="width:100%; height:auto; margin-top:10px;" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+        <rect x="6" y="8" width="20" height="30" rx="4" fill="rgba(255,131,65,.2)" stroke="#FF8341"/><text x="16" y="28" fill="#FF8341" font-size="13" text-anchor="middle" font-family="monospace">1</text>
+        <rect x="28" y="8" width="240" height="30" rx="4" fill="#202127" stroke="rgba(82,82,89,.5)"/><text x="148" y="28" fill="rgba(235,235,245,.6)" font-size="12.5" text-anchor="middle" font-family="monospace">31 literal bits</text>
+        <text x="290" y="28" fill="rgba(235,235,245,.38)" font-size="12">literal word</text>
+        <rect x="6" y="52" width="20" height="30" rx="4" fill="rgba(101,177,255,.15)" stroke="#65b1ff"/><text x="16" y="72" fill="#65b1ff" font-size="13" text-anchor="middle" font-family="monospace">0</text>
+        <rect x="28" y="52" width="22" height="30" rx="4" fill="#202127" stroke="rgba(82,82,89,.5)"/><text x="39" y="72" fill="rgba(235,235,245,.6)" font-size="11" text-anchor="middle" font-family="monospace">0/1</text>
+        <rect x="52" y="52" width="62" height="30" rx="4" fill="#202127" stroke="rgba(82,82,89,.5)"/><text x="83" y="72" fill="rgba(235,235,245,.6)" font-size="11" text-anchor="middle" font-family="monospace">5b flip</text>
+        <rect x="116" y="52" width="152" height="30" rx="4" fill="#202127" stroke="rgba(82,82,89,.5)"/><text x="192" y="72" fill="rgba(235,235,245,.6)" font-size="11" text-anchor="middle" font-family="monospace">25b run length</text>
+        <text x="290" y="72" fill="rgba(235,235,245,.38)" font-size="12">fill word (with the "mixed" bit)</text>
+      </svg>
+    </div>
+    <div style="align-self:center;">
+      <div class="card">
+        <h3><span class="icon">✅</span> What it did well</h3>
+        <p>Excellent compression for sparse and clustered data; set algebra without decompressing.</p>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <h3><span class="icon">⚠️</span> The limitation</h3>
+        <p>No random access: reading bit <i>N</i> means scanning from the start. Operations are branchy, sequential, and cache-unfriendly, and they degrade as the data grows.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 8 · ROARING PORT / MODULE ═══════════════ -->
+<section class="slide" data-notes="Roaring replaced the RLE-stream idea with a two-level structure you can jump into, which fixed CONCISE's main weakness. The 2014 Roaring paper reports intersections up to 900x faster than WAH/CONCISE-style bitmaps. Porting to Roaring was a large win, and in May 2017 I published redis-roaring: CRoaring behind Redis-style commands. 385 stars today, in production use, benchmarked against census data on every push: parity with native bitmaps for O(1) ops, up to 8x faster for O(N).">
+  <div class="kicker">Who am I · redis-roaring</div>
+  <h2>Some background: Porting to CRoaring (circa 2016)</h2>
+  <div class="cols">
+    <ul class="b tight">
+      <li>Ported the engine from CONCISE to <strong>Roaring bitmaps</strong>: chunked containers instead of one compressed stream. The founding paper reports intersections <strong>up to 900× faster</strong> than WAH/CONCISE-style RLE bitmaps.</li>
+      <li><strong>Random access plus vectorized kernels</strong>: large gains on exactly the queries that were slow.</li>
+      <li>May 2017: published <strong>redis-roaring</strong>, a Redis module wrapping CRoaring behind Redis-style commands (<span class="mono" style="font-size:.85em">R.SETBIT</span>, <span class="mono" style="font-size:.85em">R.BITCOUNT</span>, …).</li>
+      <li>385 ★ · in production use · benchmarked on real census data <strong>on every push</strong>: parity on O(1) ops, <strong>up to 8× faster</strong> on O(N) ops.</li>
+    </ul>
+    <div class="card" style="align-self:center;">
+      <h3><span class="icon">💡</span> Why go native</h3>
+      <p style="margin-top:6px;">A module proves the value but lives outside the type system: separate commands (<span class="mono" style="font-size:.9em">R.*</span>), separate keys, its own persistence callbacks. <strong>Making the existing bitmap API compressed</strong> removes all of that: no new API, and existing workloads get cheaper.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 9 · §02 THE PROBLEM ═══════════════ -->
+<section class="slide section" data-notes="">
+  <div class="num">02</div>
+  <h1>The problem</h1>
+  <p>What bitmaps are used for, and why Redis needs compressed bitmaps.</p>
+</section>
+
+<!-- ═══════════════ 10 · BITMAPS TODAY ═══════════════ -->
+<section class="slide" data-notes="Bitmaps in Redis have never been a type; they are plain strings addressed bit-by-bit. GET and SETBIT interoperate, and dense data is optimal. But storage is one byte per 8 bits of ADDRESS SPACE: writing bit N allocates (N/8)+1 bytes whether the other bits are set or not.">
+  <div class="kicker">The problem</div>
+  <h2>Redis bitmaps today: commands over a string</h2>
+  <div class="cols">
+    <ul class="b">
+      <li>There is no bitmap type: <strong>a bitmap is a string</strong>, addressed bit by bit.</li>
+      <li>Seven command families: <span class="mono" style="font-size:.82em">SETBIT · GETBIT · BITCOUNT · BITPOS · BITOP · BITFIELD · BITFIELD_RO</span></li>
+      <li>Writing bit <i>N</i> allocates <strong>(N&gt;&gt;3)+1 bytes</strong>: the string covers the highest offset ever touched.</li>
+      <li>Optimal for dense data; <strong>wasteful for sparse data</strong>.</li>
+    </ul>
+    <div class="code" style="align-self:center;">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>redis-cli</span></div>
+      <pre><span class="o">127.0.0.1:6379&gt;</span> <span class="k">SETBIT</span> b <span class="n">7</span> <span class="n">1</span>
+<span class="o">(integer) 0</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">TYPE</span> b
+<span class="o">string</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">GET</span> b
+<span class="s">"\x01"</span>   <span class="c"># it really is just bytes</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 11 · SPARSE PROBLEM ═══════════════ -->
+<section class="slide" data-notes="The failure mode, with measured numbers. One bit at offset 4 billion: 512 MiB as a string, 313 bytes as roaring. A million random bits across a billion-ID space: 128 MiB vs 3.3 MiB. And census1881, a real dataset from the Roaring benchmark suite: 896 KiB vs 526 bytes. Real ID spaces are sparse: snowflake IDs, sharded ranges, long-tail cohorts. Today people work around it by hashing IDs (lossy) or sharding keys (extra complexity).">
+  <div class="kicker">The problem</div>
+  <h2>The cost of sparse bitmaps</h2>
+  <div class="legend" style="margin-top:2px;"><span><i style="background:rgba(235,235,245,.25)"></i>string bitmap</span><span><i style="background:var(--gradient)"></i>Roaring bitmap</span></div>
+  <div class="chart2" style="margin-bottom:26px;">
+    <div class="row"><div class="lbl">1 bit @ offset 4×10⁹</div><div class="bars"><div class="bar1" style="width:100%"></div><div class="bar2" style="width:0.6%"></div></div><div class="val">512 MiB → <span class="x">313 B</span></div></div>
+    <div class="row"><div class="lbl">1M random bits<br><span style="color:var(--text-3);font-size:.85em">in a 10⁹ ID space</span></div><div class="bars"><div class="bar1" style="width:93%"></div><div class="bar2" style="width:75%"></div></div><div class="val">128 MiB → <span class="x">3.3 MiB</span> <span style="color:var(--text-3)">(39×)</span></div></div>
+    <div class="row"><div class="lbl">census1881<br><span style="color:var(--text-3);font-size:.85em">real dataset</span></div><div class="bars"><div class="bar1" style="width:68%"></div><div class="bar2" style="width:3.1%"></div></div><div class="val">896 KiB → <span class="x">526 B</span> <span style="color:var(--text-3)">(1,744×)</span></div></div>
+  </div>
+  <ul class="b tight">
+    <li>Real ID spaces are sparse: <strong>snowflake IDs, sharded ranges, per-tenant offsets</strong>, long-tail cohorts.</li>
+    <li>Every <span class="mono" style="font-size:.85em">BITOP</span> over sparse inputs materializes another dense string.</li>
+    <li>Workarounds today: hash the IDs (lossy), shard the keys (extra complexity), or avoid bitmaps entirely.</li>
+  </ul>
+  <p style="margin-top:14px; font-size:13.5px; color:var(--text-3);">bar lengths on a log scale · measured: live PR build (rows 1–2) and the three-way benchmark, July 2026 (row 3)</p>
+</section>
+
+<!-- ═══════════════ 12 · WHAT IS ROARING ═══════════════ -->
+<section class="slide" data-notes="Roaring, from Chambi, Lemire, Kaser & Godin (2014): split the value space into 64K-value chunks by the high 16 bits. Each chunk independently picks the container that fits its density: sorted array when sparse (≤4,096 values), 8KiB bitmap when dense, run-length for consecutive spans. The two-level index makes random access a binary search, which fixes CONCISE's weakness.">
+  <div class="kicker">The problem → the fix</div>
+  <h2>Inside a Roaring bitmap</h2>
+  <svg viewBox="0 0 1090 360" style="width:100%; height:auto;" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+    <rect x="290" y="10" width="240" height="46" rx="9" fill="#202127" stroke="rgba(82,82,89,.5)"/>
+    <text x="410" y="39" fill="rgba(255,255,245,.86)" font-size="19" text-anchor="middle" font-family="monospace">value = 0xA1B2·C3D4</text>
+    <rect x="560" y="10" width="150" height="46" rx="9" fill="#202127" stroke="#FF8341"/>
+    <text x="635" y="30" fill="#FF8341" font-size="13" text-anchor="middle" font-weight="700">HIGH 16 BITS</text>
+    <text x="635" y="48" fill="rgba(235,235,245,.6)" font-size="13" text-anchor="middle">picks the chunk</text>
+    <rect x="720" y="10" width="150" height="46" rx="9" fill="#202127" stroke="#FE3437"/>
+    <text x="795" y="30" fill="#FE3437" font-size="13" text-anchor="middle" font-weight="700">LOW 16 BITS</text>
+    <text x="795" y="48" fill="rgba(235,235,245,.6)" font-size="13" text-anchor="middle">position inside it</text>
+    <line x1="530" y1="33" x2="560" y2="33" stroke="rgba(235,235,245,.38)" stroke-width="2"/>
+    <line x1="710" y1="33" x2="720" y2="33" stroke="rgba(235,235,245,.38)" stroke-width="2"/>
+    <line x1="545" y1="66" x2="545" y2="96" stroke="rgba(235,235,245,.38)" stroke-width="2" marker-end="url(#arr)"/>
+    <defs><marker id="arr" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 z" fill="rgba(235,235,245,.38)"/></marker></defs>
+    <g>
+      <rect x="60" y="110" width="300" height="200" rx="14" fill="#202127" stroke="rgba(82,82,89,.5)"/>
+      <text x="210" y="145" fill="rgba(255,255,245,.86)" font-size="21" font-weight="700" text-anchor="middle">Array container</text>
+      <text x="210" y="172" fill="rgba(235,235,245,.6)" font-size="15" text-anchor="middle">sorted uint16[ ] · ≤ 4,096 values</text>
+      <g font-family="monospace" font-size="15" fill="#79C0FF">
+        <text x="210" y="215" text-anchor="middle">[ 12, 774, 8009, 19022 ]</text>
+      </g>
+      <text x="210" y="262" fill="#3dd68c" font-size="15" text-anchor="middle" font-weight="600">sparse chunks</text>
+      <text x="210" y="286" fill="rgba(235,235,245,.38)" font-size="14" text-anchor="middle">2 bytes per member</text>
+    </g>
+    <g>
+      <rect x="395" y="110" width="300" height="200" rx="14" fill="#202127" stroke="rgba(82,82,89,.5)"/>
+      <text x="545" y="145" fill="rgba(255,255,245,.86)" font-size="21" font-weight="700" text-anchor="middle">Bitmap container</text>
+      <text x="545" y="172" fill="rgba(235,235,245,.6)" font-size="15" text-anchor="middle">fixed 8 KiB of raw bits · &gt; 4,096 values</text>
+      <g>
+        <rect x="440" y="196" width="210" height="30" rx="5" fill="#161618" stroke="rgba(82,82,89,.5)"/>
+        <rect x="443" y="199" width="7" height="24" fill="#FF8341"/><rect x="453" y="199" width="4" height="24" fill="#FF8341"/><rect x="462" y="199" width="9" height="24" fill="#FF8341"/><rect x="478" y="199" width="5" height="24" fill="#FF8341"/><rect x="490" y="199" width="12" height="24" fill="#FF8341"/><rect x="509" y="199" width="6" height="24" fill="#FF8341"/><rect x="521" y="199" width="10" height="24" fill="#FF8341"/><rect x="538" y="199" width="4" height="24" fill="#FF8341"/><rect x="549" y="199" width="8" height="24" fill="#FF8341"/><rect x="563" y="199" width="13" height="24" fill="#FF8341"/><rect x="583" y="199" width="5" height="24" fill="#FF8341"/><rect x="594" y="199" width="9" height="24" fill="#FF8341"/><rect x="610" y="199" width="6" height="24" fill="#FF8341"/><rect x="622" y="199" width="11" height="24" fill="#FF8341"/><rect x="639" y="199" width="7" height="24" fill="#FF8341"/>
+      </g>
+      <text x="545" y="262" fill="#3dd68c" font-size="15" text-anchor="middle" font-weight="600">dense chunks</text>
+      <text x="545" y="286" fill="rgba(235,235,245,.38)" font-size="14" text-anchor="middle">word-parallel popcount &amp; boolean ops</text>
+    </g>
+    <g>
+      <rect x="730" y="110" width="300" height="200" rx="14" fill="#202127" stroke="rgba(82,82,89,.5)"/>
+      <text x="880" y="145" fill="rgba(255,255,245,.86)" font-size="21" font-weight="700" text-anchor="middle">Run container</text>
+      <text x="880" y="172" fill="rgba(235,235,245,.6)" font-size="15" text-anchor="middle">[start, length] pairs</text>
+      <g font-family="monospace" font-size="15" fill="#79C0FF">
+        <text x="880" y="215" text-anchor="middle">[ (100, 5000), (60000, 300) ]</text>
+      </g>
+      <text x="880" y="262" fill="#3dd68c" font-size="15" text-anchor="middle" font-weight="600">sequential chunks</text>
+      <text x="880" y="286" fill="rgba(235,235,245,.38)" font-size="14" text-anchor="middle">whole ranges in 4 bytes</text>
+    </g>
+    <text x="545" y="348" fill="rgba(235,235,245,.6)" font-size="17" text-anchor="middle">Each 65,536-value chunk independently picks the cheapest representation, and adapts as data changes.</text>
+  </svg>
+</section>
+
+<!-- ═══════════════ 13 · ADOPTERS ═══════════════ -->
+<section class="slide" data-notes="Roaring is the de-facto standard for compressed bitmaps. This adopters list is from the RoaringBitmap project's own README: Lucene/Elasticsearch/Solr, Druid, ClickHouse, Spark, Hive, Pinot, Doris, InfluxDB, Netflix Atlas, Google Procella (YouTube's SQL engine). Redis integrates CRoaring, the reference C implementation. The format has had years of hardening in production elsewhere.">
+  <div class="kicker">The problem → the fix</div>
+  <h2>Adoption elsewhere</h2>
+  <div class="cols">
+    <ul class="b">
+      <li>Introduced by <strong>Chambi, Lemire, Kaser &amp; Godin</strong> (2014); a cross-language spec with implementations in every major ecosystem.</li>
+      <li><strong>CRoaring</strong>, the reference C implementation: vectorized kernels, a portable serialization format, continuously fuzzed.</li>
+      <li>Redis vendors CRoaring, inheriting a widely deployed and continuously fuzzed format instead of inventing a new one.</li>
+    </ul>
+    <div>
+      <div class="cols3" style="grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="pill" style="text-align:center; padding:9px;">Lucene · Elasticsearch · Solr</div>
+        <div class="pill" style="text-align:center; padding:9px;">Apache Druid</div>
+        <div class="pill" style="text-align:center; padding:9px;">ClickHouse</div>
+        <div class="pill" style="text-align:center; padding:9px;">Apache Spark · Hive</div>
+        <div class="pill" style="text-align:center; padding:9px;">Apache Pinot · Doris · Kylin</div>
+        <div class="pill" style="text-align:center; padding:9px;">InfluxDB</div>
+        <div class="pill" style="text-align:center; padding:9px;">Netflix Atlas</div>
+        <div class="pill" style="text-align:center; padding:9px;">Google Procella (YouTube)</div>
+        <div class="pill" style="text-align:center; padding:9px;">YDB · StarRocks · Redpanda</div>
+        <div class="pill" style="text-align:center; padding:9px;">Iceberg · Pulsar · Flink · …</div>
+      </div>
+      <p style="margin-top:18px; font-size:15.5px; color:var(--text-3);">Roaring bitmaps are the standard structure behind inverted indexes and segmentation engines.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 14 · §03 DESIGN DECISIONS ═══════════════ -->
+<section class="slide section" data-notes="Every design decision was written up as a numbered item, DD-01 through DD-17, posted as one summary comment on the proposal issue, and mirrored into tracker issues that went from 'pending clarification' to 'ready to implement' as maintainers weighed in. This section covers the decisions that define the feature.">
+  <div class="num">03</div>
+  <h1>Design decisions</h1>
+  <p>The decisions that shaped the PR.</p>
+</section>
+
+<!-- ═══════════════ 15 · GOALS ═══════════════ -->
+<section class="slide" data-notes="The first constraint: no breaking changes. Every existing command behaves identically on both representations: same values, same errors, same edge cases. Off by default; with the config off, behavior mirrors upstream exactly. Limits match today's string bitmaps: proto-max-bulk-len × 8 bits, i.e. 2^32 bits at defaults. The point of zero breaking changes is adoption: existing workloads turn compression on with a config flip, and redis-roaring module users get a portability path into core.">
+  <div class="kicker">Design decisions</div>
+  <h2>Goals &amp; guardrails</h2>
+  <div class="cols">
+    <ul class="b">
+      <li><strong>Zero breaking changes.</strong> Every bitmap command returns the same values, errors, and edge-case semantics on both representations.</li>
+      <li><strong>No new API to learn.</strong> The existing seven command families are the entire public surface.</li>
+      <li><strong>Opt-in.</strong> Gated behind <span class="mono hl" style="font-size:.85em">bitmap-default-roaring</span> (default <strong>no</strong>); off means behavior mirrors upstream Redis exactly.</li>
+      <li><strong>Same limits.</strong> Offsets stay bounded by <span class="mono" style="font-size:.85em">proto-max-bulk-len × 8</span> bits: at defaults the highest valid offset is 2³² − 1, the historical string-bitmap limit.</li>
+    </ul>
+    <div class="card" style="align-self:center;">
+      <h3><span class="icon">🎯</span> Built for adoption</h3>
+      <p style="margin-top:6px;">Zero breaking changes means workloads that stay on the bitmap commands adopt compression with a config flip and no code changes. It also gives redis-roaring module users a portability path into core, with one command surface everywhere.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 16 · TYPE NOT ENCODING ═══════════════ -->
+<section class="slide" data-notes="The first fork in the road. The original proposal was a transparent string ENCODING, invisible like listpack to hashtable. But encodings must be invisible, and a compressed bitmap cannot serve GET or APPEND without materializing gigabytes. LiorKogan's first response to the proposal also asked to define a real bitmap data type instead of relying on String. So: a new TYPE. String commands return WRONGTYPE, the same behavior as every other non-string type. The transcript on the right was measured on the PR build.">
+  <div class="kicker">Design decisions · the object model</div>
+  <h2>A type, not an encoding</h2>
+  <div class="cols">
+    <div>
+      <ul class="b tight">
+        <li>Original proposal: a transparent string <strong>encoding</strong> (like listpack → hashtable).</li>
+        <li>But encodings must be invisible, and a compressed bitmap <strong>cannot serve</strong> <span class="mono" style="font-size:.82em">GET / APPEND / SETRANGE</span> without materializing gigabytes.</li>
+        <li>Decision: a new <strong>bitmap object type</strong>. String commands return <span class="mono hl" style="font-size:.82em">WRONGTYPE</span>, the same behavior as every other non-string type.</li>
+      </ul>
+      <div class="quote" style="margin-top:16px;">"Define a 'real' bitmap data type instead of relying on String."<span class="who">LiorKogan</span></div>
+    </div>
+    <div class="code" style="align-self:center;">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>measured on the PR build</span></div>
+      <pre><span class="o">127.0.0.1:6379&gt;</span> <span class="k">TYPE</span> clicks
+<span class="g">bitmap</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">OBJECT ENCODING</span> clicks
+<span class="s">"bitmap-roaring"</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">GET</span> clicks
+<span class="y">(error) WRONGTYPE Operation against a key
+holding the wrong kind of value</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">BITCOUNT</span> clicks
+<span class="o">(integer) 1</span>   <span class="c"># bitmap commands work unchanged</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 17 · PIVOTS ═══════════════ -->
+<section class="slide" data-notes="How to read these panels, here and on the next few slides: the light ones are designs we considered and moved away from; the dark ones are what the PR implements today. Option 1: a transparent string encoding, invisible to users. But a compressed bitmap cannot serve GET or APPEND, and LiorKogan asked for a real bitmap data type. Landed: a first-class type. Option 2: 32-bit roaring with a hard 512 MB cap. After the 64-bit ask the fork migrated wholesale to roaring64; then sundb warned it was easy to trigger extremely large allocations, and the exposed range was bounded back to string parity. Landed: 64-bit internals, proto-max-bulk-len × 8 outside.">
+  <div class="kicker">Design decisions · what changed</div>
+  <h2>Other options we considered</h2>
+  <div class="cols" style="gap:34px; flex:none;">
+    <div>
+      <div class="card old">
+        <h3><span class="icon">🔀</span> A transparent string <em>encoding</em><span class="pill was" style="margin-left:auto;">considered</span></h3>
+        <p style="margin-top:6px;">Invisible to users, like listpack → hashtable. But a compressed bitmap cannot serve <span class="mono" style="font-size:.9em">GET / APPEND</span>, and maintainers asked for a <em>"real bitmap data type"</em>.</p>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <h3><span class="icon">✅</span> A first-class bitmap <em>type</em><span class="pill ok" style="margin-left:auto;">landed</span></h3>
+        <p style="margin-top:6px;"><span class="mono" style="font-size:.9em">WRONGTYPE</span> boundaries, its own RDB id and module API. The determinism rules follow from this.</p>
+      </div>
+    </div>
+    <div>
+      <div class="card old">
+        <h3><span class="icon">📏</span> 32-bit Roaring, hard 512 MB cap<span class="pill was" style="margin-left:auto;">considered</span></h3>
+        <p style="margin-top:6px;">Simple, but no upgrade path for some redis-roaring users; and after the 64-bit ask, unbounded allocations became the concern.</p>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <h3><span class="icon">✅</span> 64-bit internals, bounded surface<span class="pill ok" style="margin-left:auto;">landed</span></h3>
+        <p style="margin-top:6px;"><span class="mono" style="font-size:.9em">roaring64</span> inside; the exposed range stays at string parity (<span class="mono" style="font-size:.9em">proto-max-bulk-len × 8</span>).</p>
+      </div>
+    </div>
+  </div>
+  <div class="quote" style="margin-top:20px;">"I'm ok with 32-bit only, at least as a first step."<span class="who">LiorKogan</span></div>
+  <p style="margin-top:10px; font-size:13.5px; color:var(--text-3);">light panels: designs we considered and moved away from</p>
+</section>
+
+<!-- ═══════════════ 18 · CONVERSION PATHS ═══════════════ -->
+<section class="slide" data-notes="A key only becomes Roaring through well-defined paths, all of them enumerable from the config file. With the config on: bit-writes create Roaring keys, and a write to an existing string bitmap converts it IN PLACE, preserving TTL and module metadata; it stays the same key. Regardless of config: BITOP with at least one Roaring source produces a Roaring destination, which is type-driven and therefore deterministic. Plus RESTORE and replication. And it is one-way: no silent demotion back to string.">
+  <div class="kicker">Design decisions · conversion</div>
+  <h2>How a key becomes Roaring</h2>
+  <table class="t" style="margin-top:4px;">
+    <tr><th>Path</th><th>When</th><th>Notes</th></tr>
+    <tr><td class="mono">SETBIT / BITFIELD write</td><td><span class="pill on">config on</span></td><td>new keys created Roaring; existing string bitmaps convert <strong>in place</strong>, preserving TTL &amp; module metadata</td></tr>
+    <tr><td class="mono">BITOP</td><td><span class="pill ok">any config</span></td><td>≥ 1 Roaring source → Roaring destination (type-driven, deterministic); sources mix freely</td></tr>
+    <tr><td class="mono">RESTORE / MIGRATE</td><td>payload is Roaring</td><td><span class="mono" style="font-size:.9em">DUMP</span> payloads carry the representation</td></tr>
+    <tr><td class="mono">replication / AOF / RDB</td><td>master decides</td><td>replicas never re-derive the decision (next slide)</td></tr>
+  </table>
+  <div style="display:flex; gap:24px; margin-top:22px;">
+    <div class="card" style="flex:1;"><h3><span class="icon">🔒</span> Never implicit</h3><p>With the config off, bitmap writes keep creating plain strings. Every path into the new representation can be enumerated from redis.conf.</p></div>
+    <div class="card" style="flex:1;"><h3><span class="icon">↩️</span> No silent demotion</h3><p>Roaring keys are never demoted back to strings. The type boundary is strict and one-way in v1.</p></div>
+  </div>
+</section>
+
+<!-- ═══════════════ 19 · DETERMINISM ═══════════════ -->
+<section class="slide" data-notes="The highest-risk area of the design, and the principle behind DD-09. If each node re-derived 'should this key be Roaring?' from its own config or allocator state, master and replica would diverge. The key constraint: Redis tolerates nondeterministic ENCODING decisions because they are invisible. A TYPE decision is WRONGTYPE-visible, so a divergent one is observable corruption. Therefore representation transitions are decided once, on the master, and propagated explicitly. They are never re-derived.">
+  <div class="kicker">Design decisions · determinism</div>
+  <h2>The determinism problem</h2>
+  <svg viewBox="0 0 1090 320" style="width:100%; height:auto;" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+    <rect x="20" y="14" width="510" height="284" rx="14" fill="#202127" stroke="rgba(254,52,55,.45)"/>
+    <text x="275" y="50" fill="#ff6b6d" font-size="19" font-weight="700" text-anchor="middle">✗ each node decides locally</text>
+    <rect x="70" y="76" width="170" height="52" rx="10" fill="#161618" stroke="rgba(82,82,89,.5)"/>
+    <text x="155" y="99" fill="rgba(255,255,245,.86)" font-size="15" text-anchor="middle" font-weight="600">master</text>
+    <text x="155" y="118" fill="#3dd68c" font-size="13" text-anchor="middle" font-family="monospace">→ roaring</text>
+    <rect x="310" y="76" width="170" height="52" rx="10" fill="#161618" stroke="rgba(82,82,89,.5)"/>
+    <text x="395" y="99" fill="rgba(255,255,245,.86)" font-size="15" text-anchor="middle" font-weight="600">replica (config off)</text>
+    <text x="395" y="118" fill="#f9b44e" font-size="13" text-anchor="middle" font-family="monospace">→ string</text>
+    <line x1="240" y1="102" x2="310" y2="102" stroke="rgba(235,235,245,.38)" stroke-width="2" marker-end="url(#arr2)"/>
+    <text x="275" y="94" fill="rgba(235,235,245,.38)" font-size="12" text-anchor="middle">SETBIT</text>
+    <text x="275" y="178" fill="rgba(235,235,245,.6)" font-size="15" text-anchor="middle">same command stream,</text>
+    <text x="275" y="200" fill="rgba(235,235,245,.6)" font-size="15" text-anchor="middle">different types on each node</text>
+    <text x="275" y="246" fill="#ff6b6d" font-size="16" text-anchor="middle" font-weight="700">GET works here, WRONGTYPE there</text>
+    <text x="275" y="270" fill="#ff6b6d" font-size="14" text-anchor="middle">= observable divergence = corruption</text>
+    <rect x="560" y="14" width="510" height="284" rx="14" fill="#202127" stroke="rgba(61,214,140,.45)"/>
+    <text x="815" y="50" fill="#3dd68c" font-size="19" font-weight="700" text-anchor="middle">✓ master decides, replicas replay</text>
+    <rect x="610" y="76" width="170" height="52" rx="10" fill="#161618" stroke="rgba(82,82,89,.5)"/>
+    <text x="695" y="99" fill="rgba(255,255,245,.86)" font-size="15" text-anchor="middle" font-weight="600">master</text>
+    <text x="695" y="118" fill="#3dd68c" font-size="13" text-anchor="middle" font-family="monospace">decides once</text>
+    <rect x="850" y="76" width="170" height="52" rx="10" fill="#161618" stroke="rgba(82,82,89,.5)"/>
+    <text x="935" y="99" fill="rgba(255,255,245,.86)" font-size="15" text-anchor="middle" font-weight="600">replica (any config)</text>
+    <text x="935" y="118" fill="#3dd68c" font-size="13" text-anchor="middle" font-family="monospace">obeys the stream</text>
+    <line x1="780" y1="102" x2="850" y2="102" stroke="rgba(235,235,245,.38)" stroke-width="2" marker-end="url(#arr2)"/>
+    <text x="815" y="94" fill="rgba(235,235,245,.38)" font-size="12" text-anchor="middle">explicit</text>
+    <text x="815" y="178" fill="rgba(235,235,245,.6)" font-size="15" text-anchor="middle">the conversion itself is propagated</text>
+    <text x="815" y="200" fill="rgba(235,235,245,.6)" font-size="15" text-anchor="middle">as a command, never re-derived</text>
+    <text x="815" y="246" fill="#3dd68c" font-size="16" text-anchor="middle" font-weight="700">identical state everywhere,</text>
+    <text x="815" y="270" fill="#3dd68c" font-size="14" text-anchor="middle">across replicas, AOF reload, and restarts</text>
+    <defs><marker id="arr2" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 z" fill="rgba(235,235,245,.38)"/></marker></defs>
+  </svg>
+  <p style="margin-top:12px; font-size:17px; color:var(--text-2); text-align:center;">Nondeterminism is acceptable for invisible <strong>encoding</strong> decisions, never for <span class="mono" style="font-size:.85em">WRONGTYPE</span>-visible <strong>type</strong> decisions.</p>
+</section>
+
+<!-- ═══════════════ 20 · BITCONVERT ═══════════════ -->
+<section class="slide" data-notes="The mechanism: an internal command, BITCONVERT. It is invisible to clients: COMMAND INFO returns nil, calling it yields 'unknown command', and only the replication link and AOF loading can execute it. When a write triggers a conversion, the master propagates BITCONVERT plus the original command inside MULTI/EXEC, so they apply atomically. The order differs by trigger: SETBIT/BITFIELD convert then write; BITOP computes first, so it writes then converts. An empty BITOP result deletes the destination and propagates bare, so a conversion can never recreate a deleted key. The stream on the right is the exact sequence asserted byte-for-byte by the test suite against the AOF and the live replication stream.">
+  <div class="kicker">Design decisions · propagation</div>
+  <h2>What actually crosses the wire</h2>
+  <div class="cols">
+    <div>
+      <ul class="b tight">
+        <li>New <strong>internal command</strong>: <span class="mono hl" style="font-size:.82em">BITCONVERT key</span>, flagged <span class="mono" style="font-size:.8em">INTERNAL</span>; regular clients get <em>unknown command</em>.</li>
+        <li>Conversion and triggering write are wrapped in <strong><span class="mono" style="font-size:.82em">MULTI/EXEC</span></strong> and apply atomically.</li>
+        <li><span class="mono" style="font-size:.82em">SETBIT</span>/<span class="mono" style="font-size:.82em">BITFIELD</span>: <strong>convert, then write</strong>. <span class="mono" style="font-size:.82em">BITOP</span>: <strong>write, then convert</strong>.</li>
+        <li>Replicas and AOF <strong>replay the stream verbatim</strong>; a replica with the config off still builds the Roaring key.</li>
+        <li>Writes to already-Roaring keys propagate as <strong>plain commands</strong>: zero overhead at steady state.</li>
+      </ul>
+    </div>
+    <div class="code">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>replication / AOF stream, asserted by the test suite</span></div>
+      <pre><span class="c"># SETBIT that creates or converts a key</span>
+<span class="k">MULTI</span>
+<span class="k">BITCONVERT</span> clicks
+<span class="k">SETBIT</span> clicks <span class="n">65536</span> <span class="n">1</span>
+<span class="k">EXEC</span>
+
+<span class="c"># BITOP: compute once, then convert dest</span>
+<span class="k">MULTI</span>
+<span class="k">BITOP</span> <span class="s">OR</span> dest src1 src2
+<span class="k">BITCONVERT</span> dest
+<span class="k">EXEC</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 21 · REPLICATION SAGA ═══════════════ -->
+<section class="slide" data-notes="The replication mechanism took five designs in about a month, most of it in five days of August. RESTORE payloads with KEEPMETADATA: correct, but moticless called the metadata-merge flag 'fragile in the long run', since generic RESTORE gains a second meaning any future caller could abuse. His counter-proposal, propagating the DECISION as an in-place CONVERT command, is the seed of the final design. Duplicate command BITOP_ROARING: oranagra's one appearance in the whole review, asking to prefer an argument over a duplicate command. BITOPMODE one-shot marker: stateful and fragile. Inline ROARING keyword: a review bot found that a destination key literally NAMED 'ROARING' becomes unaddressable; sundb: 'no, it's not acceptable'. Final: propagate two plain commands in MULTI/EXEC.">
+  <div class="kicker">Design decisions · what changed</div>
+  <h2>Other propagation designs we considered</h2>
+  <div class="timeline" style="margin-top:0;">
+    <div class="ev mut old"><span class="d">1 · RESTORE … REPLACE KEEPMETADATA</span><p>Ship the converted value as a blob. Deterministic, but moticless: <em>"KEEPMETADATA is very fine-tuned to this use case and may be fragile in the long run."</em></p></div>
+    <div class="ev mut old"><span class="d">2 · internal BITCONVERT + BITOP_ROARING</span><p>Propagate the <em>decision</em>, not the bytes; in-place conversion preserves TTL &amp; metadata implicitly. But it duplicated <span class="mono" style="font-size:.85em">BITOP</span> as a second command.</p></div>
+    <div class="ev mut old"><span class="d">3 · BITOPMODE one-shot marker</span><p>oranagra: <em>"better to add an optional argument to the command… rather than create an additional command with identical syntax."</em> A stateful marker command, fragile in its own way.</p></div>
+    <div class="ev mut old"><span class="d">4 · inline BITOP &lt;op&gt; ROARING dest</span><p>A review bot found the flaw: a destination key literally named <span class="mono hl" style="font-size:.85em">ROARING</span> becomes unaddressable. sundb: <em>"no, it's not acceptable."</em></p></div>
+    <div class="ev"><span class="d">5 · BITOP + BITCONVERT in MULTI/EXEC ✓</span><p><strong>Two plain commands:</strong> no new grammar, no parsing ambiguity, replayable anywhere. The simplest design of the five, and the one that held.</p></div>
+  </div>
+  <p style="margin-top:8px; font-size:13.5px; color:var(--text-3);">light panels: designs we considered and moved away from</p>
+</section>
+
+<!-- ═══════════════ 22 · SAGA EPILOGUE ═══════════════ -->
+<section class="slide" data-notes="One hour after the final design merged, an automated review-fix PR, fixing unrelated bot findings, silently re-introduced the just-rejected duplicate command. sundb's entire review: 'Why this command come back again?'. We reverted it byte-identical to the agreed design. Two lessons for this audience: coding agents were very productive on a change this size (hundreds of fork PRs), but they need design-level review, not just correctness review; and a maintainer who reads every line catches design regressions that CI cannot. CI was green the whole time.">
+  <div class="kicker">Design decisions · what changed</div>
+  <h2>Challenges of AI-assisted code</h2>
+  <div class="cols">
+    <div class="timeline" style="align-self:center;">
+      <div class="ev"><span class="d">Aug 21</span><p>Final replication design merges: <strong>BITOP + BITCONVERT</strong>, duplicate command deleted.</p></div>
+      <div class="ev mut"><span class="d">Aug 21, one hour later</span><p>An <strong>automated review-fix PR</strong> for unrelated bot findings silently <strong>re-adds the rejected command</strong>. CI stays green.</p></div>
+      <div class="ev mut"><span class="d">Aug 22</span><p>sundb's review: <em>"Why this command come back again?"</em></p></div>
+      <div class="ev"><span class="d">Aug 23</span><p>Reverted byte-identical to the agreed design; replay contract locked in by tests.</p></div>
+    </div>
+    <div style="align-self:center;">
+      <div class="card">
+        <h3><span class="icon">🤖</span> Lessons</h3>
+        <p>Coding agents were highly productive on this project, and they need <strong>design-level review</strong>, not just green CI. Tests verify code, not design intent. The regression was caught by a maintainer reading the diff, not by any automated check.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 23 · CONFIG ═══════════════ -->
+<section class="slide" data-notes="The config ended as one boolean. We started with four knobs: enabled, auto-convert, min-bytes, min-saving. Thresholds are heuristics the server re-evaluates, which reintroduces nondeterminism (they depended on allocator sizes) and cannot be explained in one sentence. Then a two-mode enum. Then LiorKogan proposed the final name himself: bitmap-default-roaring, and sundb agreed to removing the thresholds. One boolean, no heuristics, deterministic by construction. The conf text on the left is the shipped redis.conf, trimmed.">
+  <div class="kicker">Design decisions · configuration</div>
+  <h2>One boolean, zero heuristics</h2>
+  <div class="cols">
+    <div class="code sm">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>redis.conf (shipped text, trimmed)</span></div>
+      <pre><span class="c"># This flag controls whether bitmap write commands
+# default to Roaring bitmaps:
+#
+# * no (the default): bitmap writes keep creating
+#   plain strings. Roaring bitmaps enter the keyspace
+#   when BITOP runs with at least one Roaring source,
+#   via RESTORE or replication, or by loading an RDB
+#   or AOF that already contains them.
+# * yes: bitmap write commands create new keys as
+#   Roaring bitmaps, and a write against an existing
+#   string value converts it to a Roaring bitmap first.</span>
+<span class="k">bitmap-default-roaring</span> <span class="s">no</span></pre>
+    </div>
+    <div style="align-self:center;">
+      <h3 style="margin-bottom:14px;">Configuration options we considered</h3>
+      <div class="card old" style="padding:12px 16px;">
+        <p><span class="pill was">considered</span>&nbsp; <span class="mono" style="font-size:13px;">bitmap-roaring-{enabled, auto-convert, min-bytes, min-saving}</span></p>
+        <p style="margin-top:5px; font-size:14px;">four knobs; threshold heuristics; allocator-dependent = nondeterministic</p>
+      </div>
+      <div class="card old" style="padding:12px 16px; margin-top:10px;">
+        <p><span class="pill was">considered</span>&nbsp; <span class="mono" style="font-size:13px;">bitmap-native-mode {explicit | implicit}</span></p>
+        <p style="margin-top:5px; font-size:14px;">two modes, one meaningful value</p>
+      </div>
+      <div class="card" style="padding:12px 16px; margin-top:10px;">
+        <p><span class="pill ok">landed</span>&nbsp; <span class="mono" style="font-size:13px;">bitmap-default-roaring {yes|no}</span></p>
+        <p style="margin-top:5px; font-size:14px; color:var(--text-2);">explainable in one sentence; the name was LiorKogan's suggestion</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 24 · RDB / DUMP ═══════════════ -->
+<section class="slide" data-notes="Persistence: a Roaring key serializes as CRoaring's portable format, the cross-language spec every Roaring library reads, prefixed by the logical byte length. The length must be carried because Roaring stores only SET bits; string-length semantics (trailing zeros, BITCOUNT ranges, BITOP result length) cannot be recovered from set bits alone. New RDB type id (33) and an RDB version bump mean old tools fail cleanly instead of misreading. The trade-off: RDB parsers and backup tooling must learn the format. It is documented and versioned, and every CRoaring-compatible language can decode the blob.">
+  <div class="kicker">Design decisions · persistence</div>
+  <h2>Persistence: the portable format</h2>
+  <div class="cols">
+    <ul class="b tight">
+      <li>Roaring keys persist as <strong>CRoaring's portable serialization</strong>: a cross-language spec, not a Redis-private blob.</li>
+      <li>Prefixed by the <strong>logical byte length</strong>. Roaring stores only <em>set</em> bits, so "string length" semantics (trailing zeros, ranges) must be carried alongside.</li>
+      <li>Dedicated RDB type id (<span class="mono" style="font-size:.85em">RDB_TYPE_BITMAP</span>) plus a version bump: old tools <strong>fail cleanly</strong> instead of misreading.</li>
+      <li>Same encoding everywhere: RDB, <span class="mono" style="font-size:.85em">DUMP/RESTORE</span>, full sync, AOF preamble.</li>
+      <li><span class="pill no">trade-off</span> RDB consumers can no longer treat bitmaps as byte arrays; the format is documented &amp; versioned.</li>
+    </ul>
+    <svg viewBox="0 0 460 250" style="width:100%; height:auto; align-self:center;" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+      <rect x="10" y="30" width="440" height="70" rx="12" fill="#202127" stroke="rgba(82,82,89,.5)"/>
+      <text x="30" y="58" fill="rgba(235,235,245,.6)" font-size="14">RDB entry</text>
+      <rect x="30" y="66" width="120" height="24" rx="5" fill="rgba(255,131,65,.15)" stroke="#FF8341"/>
+      <text x="90" y="83" fill="#FF8341" font-size="12.5" text-anchor="middle" font-family="monospace">type = BITMAP</text>
+      <rect x="158" y="66" width="120" height="24" rx="5" fill="rgba(101,177,255,.12)" stroke="#65b1ff"/>
+      <text x="218" y="83" fill="#65b1ff" font-size="12.5" text-anchor="middle" font-family="monospace">logical length</text>
+      <rect x="286" y="66" width="144" height="24" rx="5" fill="rgba(61,214,140,.12)" stroke="#3dd68c"/>
+      <text x="358" y="83" fill="#3dd68c" font-size="12.5" text-anchor="middle" font-family="monospace">portable blob</text>
+      <line x1="358" y1="100" x2="358" y2="140" stroke="rgba(235,235,245,.38)" stroke-width="2" marker-end="url(#arr3)"/>
+      <defs><marker id="arr3" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 z" fill="rgba(235,235,245,.38)"/></marker></defs>
+      <rect x="180" y="148" width="270" height="66" rx="12" fill="#202127" stroke="rgba(82,82,89,.5)"/>
+      <text x="315" y="176" fill="rgba(255,255,245,.86)" font-size="14.5" text-anchor="middle">readable by any CRoaring-compatible</text>
+      <text x="315" y="197" fill="rgba(255,255,245,.86)" font-size="14.5" text-anchor="middle">library: Java, Go, Rust, Python, C…</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ═══════════════ 25 · RDB ROUND TRIP ═══════════════ -->
+<section class="slide" data-notes="The persistence format changed twice. It started portable. sundb asked whether that makes payloads opaque to librdb and third-party tooling, a fair concern, so it moved to raw materialized bytes + LZF: RDB stays 'just strings'. Then moticless found the blocker: saving materializes the full logical range, and the length-fits-in-proto-max assumption does NOT hold on replicated paths. A single set bit at offset 2^40 would need ~128 GiB materialized at SAVE time. The same day, it switched back to portable, this time with the logical length carried beside the blob, documented and versioned. Lesson: a compressed type must stay compact on EVERY path.">
+  <div class="kicker">Design decisions · what changed</div>
+  <h2>Other persistence formats we considered</h2>
+  <svg viewBox="0 0 1090 205" style="width:100%; height:auto; margin-top:6px;" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+    <rect x="20" y="40" width="270" height="90" rx="14" fill="#f6f6f7" stroke="rgba(60,60,67,.35)"/>
+    <text x="155" y="76" fill="#1b1b1f" font-size="18" font-weight="700" text-anchor="middle">CRoaring portable</text>
+    <text x="155" y="102" fill="rgba(60,60,67,.7)" font-size="13" text-anchor="middle">compressed on disk, cross-language</text>
+    <rect x="410" y="40" width="270" height="90" rx="14" fill="#f6f6f7" stroke="rgba(60,60,67,.35)"/>
+    <text x="545" y="76" fill="#1b1b1f" font-size="18" font-weight="700" text-anchor="middle">raw bytes + LZF</text>
+    <text x="545" y="102" fill="rgba(60,60,67,.7)" font-size="13" text-anchor="middle">RDB stays plain, but dense again</text>
+    <rect x="800" y="40" width="270" height="90" rx="14" fill="#202127" stroke="#3dd68c"/>
+    <text x="935" y="76" fill="#3dd68c" font-size="18" font-weight="700" text-anchor="middle">portable + length ✓</text>
+    <text x="935" y="102" fill="rgba(235,235,245,.6)" font-size="13" text-anchor="middle">documented, versioned, final</text>
+    <line x1="290" y1="98" x2="410" y2="98" stroke="rgba(235,235,245,.38)" stroke-width="2" marker-end="url(#arr4)"/>
+    <line x1="680" y1="98" x2="800" y2="98" stroke="rgba(235,235,245,.38)" stroke-width="2" marker-end="url(#arr4)"/>
+    <text x="350" y="60" fill="rgba(235,235,245,.6)" font-size="12.5" text-anchor="middle">"opaque to librdb</text>
+    <text x="350" y="77" fill="rgba(235,235,245,.6)" font-size="12.5" text-anchor="middle">&amp; tooling?"</text>
+    <text x="740" y="60" fill="rgba(235,235,245,.6)" font-size="12.5" text-anchor="middle">1 bit @ 2⁴⁰ =</text>
+    <text x="740" y="77" fill="rgba(235,235,245,.6)" font-size="12.5" text-anchor="middle">128 GiB to save</text>
+    <defs><marker id="arr4" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 z" fill="rgba(235,235,245,.38)"/></marker></defs>
+  </svg>
+  <div class="cols" style="flex:none; margin-top:18px;">
+    <div class="card"><h3><span class="icon">💥</span> The blocker that turned it back</h3><p>Saving raw bytes materializes the <em>full logical range</em>, and on replicated paths the "length ≤ proto-max" assumption does not hold. One set bit at offset 2⁴⁰ means <strong>~128 GiB materialized at save time</strong>.</p></div>
+    <div class="card"><h3><span class="icon">📐</span> The lesson</h3><p>A compressed type must stay compact on <strong>every path</strong>: command replies, replication, RDB, DUMP. And a serialization format is a commitment to external tooling, not just to Redis.</p></div>
+  </div>
+</section>
+
+<!-- ═══════════════ 26 · BOUNDED EDGES ═══════════════ -->
+<section class="slide" data-notes="Two places where compression changes the worst case. First, BITOP NOT of a sparse bitmap is a decompression bomb: the complement of one far bit is nearly everything. The naive fix, a flat 512MB cap, was rejected by sundb because plain strings can legitimately hold dense values that big. The landed algorithm bounds what NOT would have to CREATE: count the missing 64K-bit chunks the complement needs and reject beyond 65,536 of them. The check costs O(resident containers), not O(logical length). Second, dense materialization of a roaring key is confined to a debug path that still respects proto-max-bulk-len.">
+  <div class="kicker">Design decisions · bounded edges</div>
+  <h2>Bounded worst cases</h2>
+  <div class="cols">
+    <div>
+      <h3 style="margin-bottom:10px;">💣 <span class="mono">BITOP NOT</span> amplification</h3>
+      <div class="code sm">
+        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>src/bitroar.h, the shipped bound</span></div>
+        <pre><span class="c">/* BITOP NOT fills every missing 2^16-bit Roaring
+ * chunk in the logical range. Bound that allocation
+ * amplification rather than the source's byte length:
+ * dense sources above 512 MiB can remain cheap to
+ * complement, while a sparse source cannot make one
+ * command materialize an unbounded number of chunks. */</span>
+<span class="k">#define</span> <span class="f">BITROAR_BITOP_NOT_MAX_MISSING_CHUNKS</span> (<span class="n">1ULL</span> &lt;&lt; <span class="n">16</span>)</pre>
+      </div>
+      <p style="margin-top:12px; font-size:15.5px; color:var(--text-2);">A flat 512 MB cap was <strong>rejected</strong>, since strings can legitimately hold that. The bound targets what <span class="mono" style="font-size:.9em">NOT</span> would have to <em>create</em>, and costs O(resident containers) to check.</p>
+    </div>
+    <div>
+      <div class="card">
+        <h3><span class="icon">🚪</span> Dense reads are debug-only</h3>
+        <p style="margin-top:6px;">Dense materialization of a Roaring key is confined to a <strong>debug path</strong> (<span class="mono" style="font-size:.9em">DEBUG BITMAP-RAW</span>), and even that respects <span class="mono" style="font-size:.9em">proto-max-bulk-len</span>. A sparse bitmap cannot produce a huge reply through a normal command.</p>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <h3><span class="icon">📏</span> 64-bit capable, string-parity bounded</h3>
+        <p style="margin-top:6px;">Internals are 64-bit (<span class="mono" style="font-size:.9em">roaring64</span>), but the exposed offset range stays <strong>exactly what string bitmaps allow</strong>. Raising the limit is a separate, deliberate decision.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 27 · NOT IN V1 ═══════════════ -->
+<section class="slide" style="background: linear-gradient(180deg, rgba(254,52,55,.09), rgba(255,131,65,.03) 45%, var(--bg) 70%);" data-notes="A reset moment for the room: the guiding rule of the whole PR, stated big. Ship the smallest reviewable change that delivers the value; every extra knob multiplies the review and test matrix. What v1 deliberately leaves out: no public conversion command (the config covers every conversion path; replication uses the internal BITCONVERT primitive), no thresholds or heuristics, no new roaring-only commands (a separate proposal), no 64-bit surface, no demotion.">
+  <div class="kicker">Design decisions · scope</div>
+  <h2 style="font-size:46px; margin-bottom:10px;">What v1 <span class="grad">deliberately</span> leaves out</h2>
+  <p style="font-size:17px; color:var(--text-2); margin-bottom:18px;">Guiding rule: <strong>ship the smallest reviewable change that delivers the value.</strong> Every extra knob multiplies the review and test matrix.</p>
+  <table class="t" style="margin-top:0;">
+    <tr><th>Cut</th><th>Why</th></tr>
+    <tr><td class="mono">BITMAP CONVERT <span style="color:var(--text-3)">(public)</span></td><td>covered by the config; replication uses the internal <span class="mono" style="font-size:.9em">BITCONVERT</span> primitive</td></tr>
+    <tr><td>conversion thresholds / heuristics</td><td>threshold decisions depend on allocator state and cannot be replayed deterministically</td></tr>
+    <tr><td>new roaring-only commands</td><td><span class="mono" style="font-size:.9em">BITJACCARD</span>, bulk integer load, …: real value, better as a separate proposal</td></tr>
+    <tr><td>64-bit offsets at the surface</td><td>internals ready; raising the limit is its own compatibility discussion</td></tr>
+    <tr><td>demotion (roaring → string)</td><td>a one-way boundary keeps the model explainable; revisit with evidence</td></tr>
+  </table>
+</section>
+
+<!-- ═══════════════ 28 · §05 CAPABILITIES ═══════════════ -->
+<section class="slide section" data-notes="">
+  <div class="num">04</div>
+  <h1>Capabilities</h1>
+  <p>What works today, what it unlocks, and candidate extensions.</p>
+</section>
+
+<!-- ═══════════════ 29 · SAME API ═══════════════ -->
+<section class="slide" data-notes="The main capability is that nothing changes for bitmap-command workloads: everything you already do with the bitmap commands keeps working. This transcript was measured on the PR build. Flip the config and sparse bitmap workloads get orders of magnitude cheaper with no code changes. The caveat to say out loud: code that mixes string commands like GET, APPEND, or STRLEN on the same keys needs an audit first, since those return WRONGTYPE once a key converts.">
+  <div class="kicker">Capabilities</div>
+  <h2>Same API, new engine</h2>
+  <div class="cols">
+    <div class="code">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>measured on the PR build</span></div>
+      <pre><span class="o">127.0.0.1:6379&gt;</span> <span class="k">CONFIG SET</span> bitmap-default-roaring <span class="s">yes</span>
+<span class="o">OK</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">SETBIT</span> seen <span class="n">65536</span> <span class="n">1</span>
+<span class="o">(integer) 0</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">GETBIT</span> seen <span class="n">65536</span>
+<span class="o">(integer) 1</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">BITCOUNT</span> seen
+<span class="o">(integer) 1</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">BITPOS</span> seen <span class="n">1</span>
+<span class="o">(integer) 65536</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">OBJECT ENCODING</span> seen
+<span class="s">"bitmap-roaring"</span></pre>
+    </div>
+    <ul class="b" style="align-self:center;">
+      <li><strong>Zero changes for bitmap-command workloads.</strong> Same commands, same replies, same errors.</li>
+      <li>All seven families: <span class="mono" style="font-size:.8em">SETBIT · GETBIT · BITCOUNT · BITPOS · BITOP · BITFIELD · BITFIELD_RO</span></li>
+      <li>Clients, Lua scripts, and modules keep working <strong>unmodified</strong> on the bitmap surface. Code that mixes string commands (<span class="mono" style="font-size:.8em">GET / APPEND / STRLEN</span>) on the same keys needs an audit first: those return <span class="mono" style="font-size:.8em">WRONGTYPE</span> after conversion.</li>
+      <li>Turn it on, and sparse bitmap workloads get <strong>orders of magnitude cheaper</strong>.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ 30 · MEMORY ═══════════════ -->
+<section class="slide" data-notes="Memory, on real datasets from the benchmark run posted to the PR in July: MEMORY USAGE on both sides, live allocator numbers, directly comparable. Sparse real datasets: hundreds to ~1,700x smaller. Clustered: ~39x. Dense data gets no win (0.6% larger), which is by design: bitmap containers are raw bits plus a small header, so compression that cannot help costs almost nothing. Compression also survives persistence and replication.">
+  <div class="kicker">Capabilities · memory</div>
+  <h2>Memory usage on real datasets</h2>
+  <div class="legend" style="margin-top:0;"><span><i style="background:rgba(235,235,245,.25)"></i>string bitmap</span><span><i style="background:var(--gradient)"></i>Roaring bitmap</span><span style="margin-left:auto; font-size:12.5px;">MEMORY USAGE, live allocator · log scale</span></div>
+  <div class="chart2">
+    <div class="row"><div class="lbl">census1881</div><div class="bars"><div class="bar1" style="width:92%"></div><div class="bar2" style="width:42%"></div></div><div class="val">896 KiB → <span class="x">526 B</span> <span style="color:var(--text-3)">(1,744×)</span></div></div>
+    <div class="row"><div class="lbl">wikileaks-noquotes</div><div class="bars"><div class="bar1" style="width:81%"></div><div class="bar2" style="width:40%"></div></div><div class="val">192 KiB → <span class="x">384 B</span> <span style="color:var(--text-3)">(512×)</span></div></div>
+    <div class="row"><div class="lbl">synthetic sparse</div><div class="bars"><div class="bar1" style="width:100%"></div><div class="bar2" style="width:68%"></div></div><div class="val">3.0 MiB → <span class="x">25 KiB</span> <span style="color:var(--text-3)">(122×)</span></div></div>
+    <div class="row"><div class="lbl">synthetic clustered</div><div class="bars"><div class="bar1" style="width:88%"></div><div class="bar2" style="width:63%"></div></div><div class="val">512 KiB → <span class="x">13 KiB</span> <span style="color:var(--text-3)">(39×)</span></div></div>
+    <div class="row"><div class="lbl">weather_sept_85</div><div class="bars"><div class="bar1" style="width:82%"></div><div class="bar2" style="width:66%"></div></div><div class="val">224 KiB → <span class="x">20 KiB</span> <span style="color:var(--text-3)">(11×)</span></div></div>
+    <div class="row"><div class="lbl">synthetic dense</div><div class="bars"><div class="bar1" style="width:80%"></div><div class="bar2" style="width:80.2%"></div></div><div class="val">160 KiB → 161 KiB <span style="color:var(--yellow)">(+0.6%)</span></div></div>
+  </div>
+  <ul class="b tight" style="margin-top:20px;">
+    <li><strong>Sparse:</strong> pay per member, not per address. <strong>Dense:</strong> ≈ parity; the overhead when compression cannot help is small.</li>
+    <li>Compression <strong>survives RDB, AOF, replication, and MIGRATE</strong>.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════ 31 · BITOP / OLAP CALLBACK ═══════════════ -->
+<section class="slide" data-notes="The dataset here is the ad-tech table from the BelugaDB slide, and it ships as an actual test in the PR: 'Roaring bitmap BITOP supports OLAP columnar index user stories', modeled on Apache Druid's columnar segment docs. Row 0 is the Brazilian male clicker from the canonical query. The query shown is the test's own: female users who clicked but did not install. The interesting part is the NOT: complementing a bitmap needs a universe to bound it, otherwise the complement includes bits outside the ingested rows (the test asserts bit 7 appears in the raw complement and is gone after the universe AND). That universe pattern is what motivated the SETFULL discussion, and range fills cover it on the v2 list. BITOP mixes representations freely and runs container-to-container on compressed data.">
+  <div class="kicker">Capabilities · algebra</div>
+  <h2>The BelugaDB workload, now a test in Redis core</h2>
+  <div class="cols">
+    <div>
+      <div class="code sm">
+        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>tests/unit/bitroar.tcl · the BelugaDB dataset as a test</span></div>
+        <pre><span class="c"># The ad-tech dataset from the start of the talk,
+# one bitmap per value:</span>
+country:brazil        <span class="n">{0 1}</span>
+country:united-states <span class="n">{2 3 4 5 6}</span>
+gender:male           <span class="n">{0 3}</span>
+gender:female         <span class="n">{1 2 4 5 6}</span>
+metric:clicks         <span class="n">{0 1 3}</span>
+metric:impressions    <span class="n">{2 5}</span>
+metric:installs       <span class="n">{4 6}</span>
+universe              <span class="n">{0 1 2 3 4 5 6}</span></pre>
+      </div>
+      <p style="margin-top:12px; font-size:15px; color:var(--text-2);"><span class="mono" style="font-size:.9em">BITOP</span> mixes string and Roaring operands freely. All 8 operators:<br><span class="mono" style="font-size:.85em">AND · OR · XOR · NOT · DIFF · DIFF1 · ANDOR · ONE</span></p>
+    </div>
+    <div>
+      <div class="code sm">
+        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>the test's query: "who clicked but did not install?"</span></div>
+        <pre><span class="k">BITOP</span> <span class="s">NOT</span> raw metric:installs
+<span class="c"># a NOT must be bounded by the universe</span>
+<span class="k">BITOP</span> <span class="s">AND</span> not-installs universe raw
+<span class="k">BITOP</span> <span class="s">AND</span> result gender:female metric:clicks
+          not-installs
+<span class="c"># result = {1}: the Brazilian female clicker</span></pre>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <h3><span class="icon">🌐</span> The universe pattern</h3>
+        <p>Complement queries ("users NOT from the US") need a bitmap of all valid rows to bound the <span class="mono" style="font-size:.9em">NOT</span>. Building that universe efficiently is what motivated the <span class="mono" style="font-size:.9em">SETFULL</span> discussion; range fills cover it on the v2 list.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 32 · USE CASES ═══════════════ -->
+<section class="slide" data-notes="Where this lands for users. Segmentation and audience engines: a bitmap per attribute, audiences are BITOP expressions. Retention: a bitmap per day, cohort questions are one command. Feature flags over real, sparse ID spaces, without hashing IDs. Dedup at billions-scale. Compressed adjacency and posting lists. And every existing bitmap deployment that over-provisions memory for sparse keys gets cheaper by flipping a config.">
+  <div class="kicker">Capabilities · use cases</div>
+  <h2>What this unlocks</h2>
+  <div class="cols3" style="margin-top:6px;">
+    <div class="card"><h3><span class="icon">🎯</span> Segmentation</h3><p>A bitmap per attribute; audiences are <span class="mono" style="font-size:.9em">BITOP</span> expressions. Ad-tech, CDPs, recommendation filters.</p></div>
+    <div class="card"><h3><span class="icon">📅</span> Retention &amp; cohorts</h3><p>A bitmap per day/event. DAU/MAU, funnels, "active on day 1 AND day 30": one command each.</p></div>
+    <div class="card"><h3><span class="icon">🚩</span> Feature rollout</h3><p>Flags over real (sparse, snowflake) user-ID spaces, without hashing IDs to keep keys small.</p></div>
+    <div class="card"><h3><span class="icon">🧹</span> Dedup / seen-sets</h3><p>"Have I processed this ID?" at billions-scale, with tiny footprints and set semantics.</p></div>
+    <div class="card"><h3><span class="icon">🕸️</span> Adjacency &amp; indexes</h3><p>Compressed posting lists and edge sets; intersect-heavy search and graph workloads.</p></div>
+    <div class="card"><h3><span class="icon">♻️</span> Existing workloads</h3><p>Every bitmap deployment that over-provisions memory for sparse keys: flip a config.</p></div>
+  </div>
+</section>
+
+<!-- ═══════════════ 33 · OBSERVABILITY ═══════════════ -->
+<section class="slide" data-notes="The operational surface. TYPE says bitmap, OBJECT ENCODING says bitmap-roaring. Keyspace notifications: a NEW class 'b' for bitmap events (setbit, and 'set' for BITOP destinations). Conversion emits type_changed under class 'c', which is deliberately EXCLUDED from 'A'; subscribers must opt in explicitly. Modules: REDISMODULE_KEYTYPE_BITMAP, NOTIFY_BITMAP. Conversion is IN-PLACE: value installed first, then type_changed, then the command's event; TTL and module metadata preserved, no 'overwritten' event, no unlink callbacks. Plus DEBUG BITMAP-RAW as the bounded escape hatch, digest support, a bitmap-size histogram in INFO KEYSIZES, and a new 'bitmap' ACL category.">
+  <div class="kicker">Capabilities · operations</div>
+  <h2>Observability &amp; the module contract</h2>
+  <div class="cols">
+    <ul class="b tight">
+      <li><span class="mono" style="font-size:.82em">TYPE</span> → <span class="mono hl" style="font-size:.82em">bitmap</span> · <span class="mono" style="font-size:.82em">OBJECT ENCODING</span> → <span class="mono hl" style="font-size:.82em">bitmap-roaring</span>: always inspectable.</li>
+      <li><strong>Keyspace notifications:</strong> new class <span class="mono hl" style="font-size:.82em">b</span> for bitmap events; conversion fires <span class="mono" style="font-size:.82em">type_changed</span> under class <span class="mono" style="font-size:.82em">c</span>, deliberately <em>not</em> in <span class="mono" style="font-size:.82em">A</span>, so listeners opt in.</li>
+      <li><strong>Modules:</strong> <span class="mono" style="font-size:.82em">REDISMODULE_KEYTYPE_BITMAP</span> + <span class="mono" style="font-size:.82em">NOTIFY_BITMAP</span>; conversion is <strong>in-place</strong>: TTL &amp; metadata preserved, no <span class="mono" style="font-size:.82em">overwritten</span> event, no unlink callbacks.</li>
+      <li><strong>Ops toolbox:</strong> <span class="mono" style="font-size:.82em">DEBUG BITMAP-RAW</span> (bounded), <span class="mono" style="font-size:.82em">DEBUG DIGEST</span>, bitmap-size histogram in <span class="mono" style="font-size:.82em">INFO KEYSIZES</span>, new <span class="mono" style="font-size:.82em">bitmap</span> ACL category.</li>
+    </ul>
+    <div class="code sm" style="align-self:center;">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>watching conversions</span></div>
+      <pre><span class="o">127.0.0.1:6379&gt;</span> <span class="k">CONFIG SET</span> notify-keyspace-events <span class="s">Kbc</span>
+<span class="o">OK</span>   <span class="c"># b = bitmap events, c = type_changed</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">SUBSCRIBE</span> __keyevent@0__:type_changed
+<span class="c"># fires when a string converts to a Roaring bitmap</span>
+
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">DEBUG</span> BITMAP-RAW clicks
+<span class="s">"\x00\x00..."</span>  <span class="c"># bounded by proto-max-bulk-len</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 34 · FUTURE SURFACE ═══════════════ -->
+<section class="slide" data-notes="v2 direction, distilled from ten years of module usage. These are proposals, not commitments. Worth adding: bulk integer load/read (the fastest way to build a set, and the natural read model), batch membership, server-side Jaccard similarity, range fills that run containers make nearly free. Where Redis patterns already cover it: extend BITPOS with REV instead of MIN/MAX commands; BITOP DIFF already exists; GETBIT already is CONTAINS. Deliberately excluded: 0/1-string dumps that defeat compression and manual OPTIMIZE (the server's job). SETFULL-style universe creation, the pattern from the OLAP test, is covered by BITSETRANGE.">
+  <div class="kicker">Capabilities · the road ahead</div>
+  <h2>A v2 surface, informed by the module</h2>
+  <div class="cols">
+    <div>
+      <h3 style="color:var(--green); margin-bottom:10px;">Worth proposing</h3>
+      <table class="t">
+        <tr><td class="mono" style="font-size:14.5px;">BITSETARRAY / BITAPPENDARRAY</td><td>bulk-load a set as integers in one round trip</td></tr>
+        <tr><td class="mono" style="font-size:14.5px;">BITGETARRAY / BITRANGEARRAY</td><td>read members as integers, paginated</td></tr>
+        <tr><td class="mono" style="font-size:14.5px;">BITGETBITS</td><td>batch <span class="mono" style="font-size:.95em">GETBIT</span>: N memberships, 1 call</td></tr>
+        <tr><td class="mono" style="font-size:14.5px;">BITJACCARD</td><td>server-side similarity (|A∩B| / |A∪B|)</td></tr>
+        <tr><td class="mono" style="font-size:14.5px;">BITSETRANGE</td><td>fill [start, end]; run containers make it ~O(1)</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3 style="color:var(--text-2); margin-bottom:10px;">Extend</h3>
+      <table class="t">
+        <tr><td class="mono" style="font-size:14.5px;">BITPOS … REV</td><td>covers MIN / MAX with existing grammar</td></tr>
+        <tr><td class="mono" style="font-size:14.5px;">BITOP DIFF</td><td>already exists; no BITDIFF needed</td></tr>
+        <tr><td class="mono" style="font-size:14.5px;">GETBIT</td><td>already <em>is</em> CONTAINS</td></tr>
+      </table>
+      <div class="card" style="margin-top:14px;">
+        <h3><span class="icon">🗑️</span> Deliberately excluded</h3>
+        <p>0/1-string dumps (defeat compression) and manual <span class="mono" style="font-size:.9em">OPTIMIZE</span> (the server's job). <span class="mono" style="font-size:.9em">SETFULL</span>-style universe creation is covered by <span class="mono" style="font-size:.9em">BITSETRANGE</span>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 35 · §06 UNDER THE HOOD ═══════════════ -->
+<section class="slide section" data-notes="">
+  <div class="num">05</div>
+  <h1>Under the hood</h1>
+  <p>A quick tour of the implementation.</p>
+</section>
+
+<!-- ═══════════════ 36 · ARCHITECTURE ═══════════════ -->
+<section class="slide" data-notes="Shape of the change: one new module, bitroar.c/.h, about 3,100 hand-written lines, owns the Roaring object: create, convert, read, write, serialize, defrag. bitops.c dispatches per representation; the string paths stay byte-identical to upstream. CRoaring 4.7.2 is vendored; 79% of the diff's line count is the library. The object header had no free encoding values, so the encoding field widened from 4 to 5 bits, paid for by narrowing refcount from 23 to 22. Max refcount drops from ~8.4M to ~4.2M, still far more than needed. Memory accounting is O(1) per write via CRoaring's memory hooks, so MEMORY USAGE is a real live-heap number. SIMD kernels are deliberately off in v1: correctness first, revisit with benchmarks.">
+  <div class="kicker">Under the hood</div>
+  <h2>Shape of the implementation</h2>
+  <div class="cols">
+    <ul class="b tight">
+      <li><span class="mono hl" style="font-size:.82em">src/bitroar.c / bitroar.h</span> owns the Roaring object: create, convert, read, write, serialize, defrag. <strong>~3.1k hand-written lines</strong>; string paths in <span class="mono" style="font-size:.82em">bitops.c</span> stay byte-identical to upstream.</li>
+      <li><strong>CRoaring 4.7.2 vendored</strong> (<span class="mono" style="font-size:.82em">roaring64</span>): 79% of the diff is the library, compiled with hidden symbol visibility.</li>
+      <li><strong>Object header:</strong> encoding field 4 → 5 bits, refcount 23 → 22 bits. One bit traded for an unambiguous encoding namespace.</li>
+      <li><strong>O(1) memory accounting</strong> per write via CRoaring's memory hooks, so <span class="mono" style="font-size:.82em">MEMORY USAGE</span> reports real live-heap data.</li>
+      <li>Expiry, eviction, keyspace, cluster, and defrag <strong>see a normal object</strong>.</li>
+    </ul>
+    <div class="code sm" style="align-self:center;">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>bitops.c · dispatch, in spirit</span></div>
+      <pre><span class="k">if</span> (<span class="f">isBitmapObject</span>(o)) {
+    <span class="c">/* container-aware Roaring path */</span>
+    <span class="k">return</span> <span class="f">bitroarSetBit</span>(o, offset, value);
+}
+<span class="c">/* legacy path: byte-for-byte the same
+   code upstream Redis runs today */</span>
+<span class="k">return</span> <span class="f">stringSetBit</span>(o, offset, value);</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 37 · INTERNALS ═══════════════ -->
+<section class="slide" data-notes="Two real excerpts for the engineers. Left: the SETBIT transition path in bitops.c, the code that produces the MULTI / BITCONVERT / SETBIT / EXEC stream from the propagation slide. The comments carry the determinism argument: queue the conversion first so replicas replay the same order; conversion callbacks may replace or delete the key, so continue from a fresh lookup; and deliberately never consult bitmap-default-roaring a second time. Elsewhere in the file the rule is stated outright: the representation decision must stay a pure function of replicated logical state, never re-derived from node-local configuration. Right: the deserialization path that every RDB load, RESTORE, and full sync goes through: length bounds, exact-size framing, CRoaring's safe deserializer, internal structure validation, and a check that the highest set bit fits the declared logical length. It runs unconditionally, not only under sanitize-dump-payload. Spoken aside if asked about the object header: the encoding field widened 4 to 5 bits, paid for by refcount 23 to 22.">
+  <div class="kicker">Under the hood · source</div>
+  <h2>Two excerpts from the diff</h2>
+  <div class="cols">
+    <div>
+      <div class="code xs">
+        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>src/bitops.c · setbitCommand (condensed)</span></div>
+        <pre><span class="k">if</span> (transition) {
+    <span class="c">/* Queue the conversion first, then perform that same
+     * transition locally. The triggering SETBIT is queued
+     * after conversion callbacks but before its own
+     * notifications below. */</span>
+    <span class="f">bitroarPropagateConvert</span>(c, c-&gt;argv[<span class="n">1</span>]);
+    <span class="f">bitroarConvertKey</span>(c, c-&gt;argv[<span class="n">1</span>], o, link);
+
+    <span class="c">/* Conversion callbacks may replace or delete the key.
+     * Replay observes those effects before SETBIT too, so
+     * continue from a fresh lookup and deliberately do not
+     * apply bitmap-default-roaring a second time. */</span>
+    link = <span class="n">NULL</span>;
+    o = <span class="f">lookupKeyWriteWithLink</span>(c-&gt;db, c-&gt;argv[<span class="n">1</span>], &amp;link);
+    ...
+    <span class="f">bitroarPropagateCurrentCommand</span>(c);
+}</pre>
+      </div>
+      <p style="margin-top:12px; font-size:15px; color:var(--text-2);"><span class="mono" style="font-size:.9em">SETBIT</span> queues <span class="mono" style="font-size:.9em">BITCONVERT</span> first, so replicas replay the exact same transition.</p>
+    </div>
+    <div>
+      <div class="code xs">
+        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>src/bitroar.c · bitroarCreateFromPortable (condensed)</span></div>
+        <pre><span class="f">robj</span> *<span class="f">bitroarCreateFromPortable</span>(<span class="k">const</span> <span class="k">unsigned char</span> *buf,
+                                <span class="k">size_t</span> len, <span class="k">uint64_t</span> byte_len) {
+    <span class="k">if</span> (byte_len &gt; BITROAR_MAX_BYTES) <span class="k">return</span> <span class="n">NULL</span>;
+    <span class="k">if</span> (<span class="f">roaring64_bitmap_portable_deserialize_size</span>(buf, len) != len)
+        <span class="k">return</span> <span class="n">NULL</span>;
+
+    roaring = <span class="f">roaring64_bitmap_portable_deserialize_safe</span>(buf, len);
+    <span class="k">if</span> (roaring == <span class="n">NULL</span>) <span class="k">return</span> <span class="n">NULL</span>;
+
+    <span class="k">const char</span> *reason = <span class="n">NULL</span>;
+    <span class="k">if</span> (!<span class="f">roaring64_bitmap_internal_validate</span>(roaring, &amp;reason) ||
+        (!<span class="f">roaring64_bitmap_is_empty</span>(roaring) &amp;&amp;
+         (<span class="f">roaring64_bitmap_maximum</span>(roaring) &gt;&gt; <span class="n">3</span>) &gt;= byte_len))
+    {
+        <span class="f">roaring64_bitmap_free</span>(roaring);
+        <span class="k">return</span> <span class="n">NULL</span>;   <span class="c">/* rejected, never loaded */</span>
+    }
+    ...</pre>
+      </div>
+      <p style="margin-top:12px; font-size:15px; color:var(--text-2);">Every RDB, <span class="mono" style="font-size:.9em">RESTORE</span>, and replica load runs the full validation chain.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 38 · §07 SECURITY & PERF ═══════════════ -->
+<section class="slide section" data-notes="">
+  <div class="num">06</div>
+  <h1>Security &amp; performance</h1>
+  <p>Testing, fuzzing, the bugs found along the way, and benchmark results.</p>
+</section>
+
+<!-- ═══════════════ 39 · TESTING / ORACLE ═══════════════ -->
+<section class="slide" data-notes="The compatibility bar is 'indistinguishable', and the tests treat the string implementation as the spec. Two layers. The oracle suite runs every scenario twice, config off and config on, and replies must match exactly; only TYPE differs. On top of that, a randomized differential fuzz: random raw strings loaded as BOTH string keys and roaring keys, all 8 BITOP operators run in both worlds, comparing replies, destination bytes, and source immutability. 206 bitmap test blocks across four suites, plus replication-stream assertions, full-resync digests, corrupt payloads, defrag, cluster MIGRATE. The core file hit 93.8% line coverage in July.">
+  <div class="kicker">Security &amp; performance · testing</div>
+  <h2>Testing against the string implementation</h2>
+  <div class="cols">
+    <div>
+      <svg viewBox="0 0 480 225" style="width:100%; height:auto;" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+        <rect x="150" y="10" width="180" height="44" rx="10" fill="#202127" stroke="rgba(82,82,89,.5)"/>
+        <text x="240" y="37" fill="rgba(255,255,245,.86)" font-size="14.5" text-anchor="middle">same op stream</text>
+        <line x1="200" y1="54" x2="120" y2="92" stroke="rgba(235,235,245,.38)" stroke-width="2" marker-end="url(#arr5)"/>
+        <line x1="280" y1="54" x2="360" y2="92" stroke="rgba(235,235,245,.38)" stroke-width="2" marker-end="url(#arr5)"/>
+        <rect x="20" y="96" width="200" height="44" rx="10" fill="#202127" stroke="rgba(82,82,89,.5)"/>
+        <text x="120" y="123" fill="rgba(235,235,245,.6)" font-size="14" text-anchor="middle" font-family="monospace">config off → string</text>
+        <rect x="260" y="96" width="200" height="44" rx="10" fill="#202127" stroke="#FF8341"/>
+        <text x="360" y="123" fill="#FF8341" font-size="14" text-anchor="middle" font-family="monospace">config on → roaring</text>
+        <line x1="120" y1="140" x2="216" y2="182" stroke="rgba(235,235,245,.38)" stroke-width="2" marker-end="url(#arr5)"/>
+        <line x1="360" y1="140" x2="264" y2="182" stroke="rgba(235,235,245,.38)" stroke-width="2" marker-end="url(#arr5)"/>
+        <rect x="130" y="176" width="220" height="40" rx="10" fill="rgba(61,214,140,.1)" stroke="#3dd68c"/>
+        <text x="240" y="201" fill="#3dd68c" font-size="14.5" text-anchor="middle" font-weight="700">every reply must match</text>
+        <defs><marker id="arr5" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 z" fill="rgba(235,235,245,.38)"/></marker></defs>
+      </svg>
+      <p style="margin-top:12px; font-size:15px; color:var(--text-2);"><strong>The string implementation is the specification.</strong> The oracle suite runs every scenario in both modes; only <span class="mono" style="font-size:.9em">TYPE</span> may differ.</p>
+    </div>
+    <ul class="b tight" style="align-self:center;">
+      <li><strong>Differential fuzz:</strong> random strings loaded as <em>both</em> representations; all 8 <span class="mono" style="font-size:.82em">BITOP</span> ops compared on replies, dest bytes, and source immutability.</li>
+      <li><strong>206 bitmap test blocks</strong> across four suites (<span class="mono" style="font-size:.82em">bitroar</span>, <span class="mono" style="font-size:.82em">bitroar-oracle</span>, <span class="mono" style="font-size:.82em">bitops</span>, <span class="mono" style="font-size:.82em">bitfield</span>).</li>
+      <li><strong>Infrastructure parity:</strong> replication-stream assertions, full-resync digests, corrupt dumps, defrag, cluster <span class="mono" style="font-size:.82em">MIGRATE</span>, keyspace events, AOF.</li>
+      <li><strong>93.8% line coverage</strong> on the core implementation file (Codecov, July 2026).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ 40 · FUZZING ═══════════════ -->
+<section class="slide" data-notes="Threat model: the highest-risk input is a hostile serialized payload, via RESTORE, RDB load, or the replication stream. Defense: validation is UNCONDITIONAL, not gated on sanitize-dump-payload. Exact-length framing, CRoaring's safe deserializer, internal structure validation, and a consistency check that the highest set bit fits the declared logical length. The corrupt-dump fuzzer seeds five Roaring shapes and flips bytes INSIDE the portable blob; the server must reject, never crash. The module repo runs ten libFuzzer targets under ASan/UBSan with a manifest that maps every command to a fuzzer, enforced in CI. The practice is also being upstreamed: a core fuzzing scaffold is proposed as its own PR, since sundb asked for it separately ('fuzz is an independent feature'). Additional hardening: Redis exports symbols for modules, which leaked 551 CRoaring symbols; the library is now compiled hidden, with a fail-closed post-link verifier.">
+  <div class="kicker">Security &amp; performance · fuzzing</div>
+  <h2>Fuzzing the deserialization paths</h2>
+  <div class="cols">
+    <ul class="b tight">
+      <li><strong>Threat model:</strong> hostile serialized payloads via <span class="mono" style="font-size:.82em">RESTORE</span>, RDB load, or the replication stream.</li>
+      <li><strong>Validation is unconditional:</strong> exact-length framing, safe deserializer, CRoaring <span class="mono" style="font-size:.82em">internal_validate</span>, and highest-bit-fits-length, on <em>every</em> load, not just <span class="mono" style="font-size:.82em">sanitize-dump-payload</span>.</li>
+      <li><strong>Corrupt-dump fuzzer:</strong> seeds 5 Roaring shapes and flips bytes <em>inside</em> the portable blob; the server must reject, never crash. Run with sanitize both on and off.</li>
+      <li><strong>Module repo:</strong> 10 libFuzzer targets (ASan+UBSan); a manifest maps <em>every command</em> to a fuzzer, enforced in CI + daily cron.</li>
+      <li><strong>Upstreaming the practice:</strong> a core fuzzing scaffold for Redis itself, proposed as its own PR.</li>
+    </ul>
+    <div class="code sm" style="align-self:center;">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>the required behavior</span></div>
+      <pre><span class="c"># hostile payload, any sanitize setting</span>
+<span class="o">127.0.0.1:6379&gt;</span> <span class="k">RESTORE</span> k <span class="n">0</span> <span class="s">"\x21...corrupted..."</span>
+<span class="y">(error) ERR Bad data format</span>
+<span class="c"># the payload is rejected, not parsed</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 41 · BUGS FOUND ═══════════════ -->
+<section class="slide" data-notes="Four bugs, each caught before shipping. (1) A review-requested restructure of BITOP moved operand cleanup after the keyspace store; self-targeting BITOP AND k k on an empty native key freed an operand still about to be read. Caught the same day, regression test added. (2) The conversion event once fired after the object pointer was invalidated, serializing NULL and crashing. Rule extracted: dump before you notify. Caught by the local test battery before any push. (3) Defrag: relocating CRoaring's bitset did pointer arithmetic against freed storage; fixed with offset-first relocation, verified under ASan/UBSan. Separately, CRoaring's ART node table deliberately leaves slot 0 uninitialized, so defrag walks are bounded to typecodes 1..5; feeding slot 0 to the allocator means uninitialized pointers. (4) Reviewing the vendored library found a CRoaring bug: the non-atomic refcount decrement compared the POINTER instead of the value, so the last reference was never reported released. Fixed upstream in CRoaring #859, August 2026. Redis itself was unaffected, since roaring64 has no copy-on-write.">
+  <div class="kicker">Security &amp; performance · findings</div>
+  <h2>Bugs found during development</h2>
+  <div class="cols" style="gap:24px;">
+    <div>
+      <div class="card"><h3><span class="icon">🐛</span> BITOP self-target use-after-free</h3><p>A review-requested restructure moved operand cleanup <em>after</em> the keyspace store; <span class="mono" style="font-size:.86em">BITOP AND k k</span> on an empty Roaring key freed an operand still in use. Caught the same day; regression test added.</p></div>
+      <div class="card" style="margin-top:13px;"><h3><span class="icon">💥</span> Event-ordering segfault</h3><p>Conversion once serialized the value <em>after</em> the notification path invalidated the pointer, calling <span class="mono" style="font-size:.86em">createDumpPayload(NULL)</span>. Rule extracted: <strong>dump before you notify</strong>. Caught by the local test battery before any push.</p></div>
+    </div>
+    <div>
+      <div class="card"><h3><span class="icon">🧟</span> Defrag pointer bugs</h3><p>Bitset relocation computed an offset <em>from freed storage</em>; fixed offset-first, verified under ASan/UBSan. And CRoaring's ART node table leaves slot 0 uninitialized <em>by design</em>, so defrag walks are bounded to typecodes 1–5; otherwise the defrag allocator receives uninitialized pointers.</p></div>
+      <div class="card" style="margin-top:13px;"><h3><span class="icon">⬆️</span> Fixed upstream in CRoaring</h3><p>Review of the vendored library found the non-atomic refcount decrement comparing the <em>pointer</em> instead of the value, so the last reference was never released. <strong>Fixed upstream in CRoaring #859</strong> (Aug 2026). Redis itself was unaffected.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 42 · BENCH LATENCY ═══════════════ -->
+<section class="slide" data-notes="The three-way benchmark posted to the PR in July: string baseline vs core Roaring vs the module, same runner, five samples per workload, real datasets. On census1881: point ops at parity (GETBIT 33.6 vs 34.3 µs), counting 1.9x faster, algebra 5 to 13x faster, since compressed containers mean less memory traffic. The cohort geomeans across all workloads: point/count/scan at 0.455x of string latency, algebra at 0.305x. Versus the module: near parity on commands, and AOF rewrite is 21x faster because persistence is integrated.">
+  <div class="kicker">Security &amp; performance · benchmarks</div>
+  <h2>Latency on real data (census1881)</h2>
+  <div class="chart" style="margin:4px 0 18px;">
+    <div class="row"><div class="lbl mono" style="font-size:14.5px;">GETBIT</div><div class="track"><div class="fill" style="width:7.5%"></div></div><div class="val">1.02× <span style="color:var(--text-3);font-weight:400">34→34 µs</span></div></div>
+    <div class="row"><div class="lbl mono" style="font-size:14.5px;">BITPOS</div><div class="track"><div class="fill" style="width:8.3%"></div></div><div class="val">1.1× <span style="color:var(--text-3);font-weight:400">40→35 µs</span></div></div>
+    <div class="row"><div class="lbl mono" style="font-size:14.5px;">BITCOUNT</div><div class="track"><div class="fill" style="width:14%"></div></div><div class="val">1.9× <span style="color:var(--text-3);font-weight:400">68→36 µs</span></div></div>
+    <div class="row"><div class="lbl mono" style="font-size:14.5px;">BITOP AND</div><div class="track"><div class="fill" style="width:38%"></div></div><div class="val">5.2× <span style="color:var(--text-3);font-weight:400">355→68 µs</span></div></div>
+    <div class="row"><div class="lbl mono" style="font-size:14.5px;">BITOP XOR</div><div class="track"><div class="fill" style="width:76%"></div></div><div class="val">10.3× <span style="color:var(--text-3);font-weight:400">714→69 µs</span></div></div>
+    <div class="row"><div class="lbl mono" style="font-size:14.5px;">BITOP OR</div><div class="track"><div class="fill" style="width:93%"></div></div><div class="val">12.6× <span style="color:var(--text-3);font-weight:400">860→68 µs</span></div></div>
+    <div class="row"><div class="lbl mono" style="font-size:14.5px;">BITOP ONE</div><div class="track"><div class="fill" style="width:100%"></div></div><div class="val">13.6× <span style="color:var(--text-3);font-weight:400">950→70 µs</span></div></div>
+  </div>
+  <div style="display:flex; gap:22px;">
+    <div class="card" style="flex:1; padding:14px 18px;"><p><strong>Geomean across all workloads</strong> (vs string): point/count/scan <strong class="grad">0.455×</strong> · algebra <strong class="grad">0.305×</strong> the latency.</p></div>
+    <div class="card" style="flex:1; padding:14px 18px;"><p><strong>vs the module:</strong> ≈ parity on commands, and <strong>21× faster AOF rewrite</strong>. Moving from the module to core does not cost performance.</p></div>
+  </div>
+  <p style="margin-top:12px; font-size:13.5px; color:var(--text-3);">bars = speedup factor, core Roaring vs string · three-way benchmark posted on the PR, July 2026 · real dataset, 5 samples/workload</p>
+</section>
+
+<!-- ═══════════════ 43 · HONEST LOSSES ═══════════════ -->
+<section class="slide" data-notes="The regressions, from the same benchmark run; posted to the PR alongside the wins. The one that matters is mixed string/roaring BITOP: conversion runs inside the measured path, so it is 30-40x slower until the keys are converted. Once the config is on (or keys are bulk-converted) it disappears, and a batch conversion path is a natural next step. The rest are one-off or corner cases: DUMP/RESTORE of sparse native keys runs at roughly a quarter of string speed, but these are load and migration operations with known serialization headroom; building a sparse key bit-by-bit is one-off ingest, and the proposed bulk-load command removes it; the dense all-native BITOP AND gap is microseconds and near run variance, on data compression does not target; and dense data gets no memory win, which is parity by design.">
+  <div class="kicker">Security &amp; performance · regressions</div>
+  <h2>Where it is slower</h2>
+  <table class="t" style="margin-top:2px;">
+    <tr><th>Workload</th><th>vs string</th><th>Context</th></tr>
+    <tr><td>mixed string ↔ roaring <span class="mono" style="font-size:.9em">BITOP</span></td><td style="color:var(--red-soft); font-weight:700;">30–40× slower</td><td><strong>the one that matters:</strong> conversion runs inside the measured path; disappears once keys are converted, and a batch-conversion path is a natural next step</td></tr>
+    <tr><td><span class="mono" style="font-size:.9em">DUMP/RESTORE</span> sparse native</td><td style="color:var(--yellow); font-weight:700;">≈26% perf</td><td>one-off load and migration operations; known serialization headroom</td></tr>
+    <tr><td>sparse key built via <span class="mono" style="font-size:.9em">SETBIT</span></td><td style="color:var(--yellow); font-weight:700;">≈16% perf</td><td>one-off ingest; the proposed bulk-load command removes it</td></tr>
+    <tr><td>dense all-native <span class="mono" style="font-size:.9em">BITOP AND</span></td><td style="color:var(--yellow); font-weight:700;">23 vs 7 µs</td><td>µs-scale and near run variance; not the workload compression targets</td></tr>
+    <tr><td>dense data memory</td><td style="color:var(--yellow); font-weight:700;">+0.6%</td><td>parity by design; compression cannot help dense data</td></tr>
+  </table>
+  <p style="margin-top:22px; font-size:17.5px; color:var(--text-2);">Mostly transition and one-off costs; the mixed case is the one to plan for.</p>
+</section>
+
+<!-- ═══════════════ 44 · STATUS ═══════════════ -->
+<section class="slide" data-notes="Where things stand as of today. June 2: proposal issue. June 11: draft PR. July 18: ready for review. July 20: three-way benchmark posted. August: replication design and persistence format settle. Today: 328 of 331 review threads resolved, CI green; the current task is rebasing over upstream conflicts, then final review rounds. The docs PR is open and ready for review against the 8.12 feature branch; Redis 8.12 is the target. Thanks in particular to sundb (142 review submissions), and to LiorKogan, moticless, and oranagra for the design engagement.">
+  <div class="kicker">Wrapping up</div>
+  <h2>Where we are</h2>
+  <div class="cols">
+    <div class="timeline">
+      <div class="ev mut"><span class="d">Jun 2</span><p><strong>redis/redis#15296</strong>: proposal issue opened</p></div>
+      <div class="ev mut"><span class="d">Jun 11</span><p><strong>#15331 opens as draft</strong></p></div>
+      <div class="ev mut"><span class="d">Jul 18–20</span><p>Ready for review · three-way benchmark posted</p></div>
+      <div class="ev mut"><span class="d">Aug</span><p>Replication model &amp; persistence format settle · CRoaring fix lands upstream</p></div>
+      <div class="ev"><span class="d">Now</span><p><strong>328 / 331 threads resolved</strong> · CI green · rebasing over upstream conflicts · docs PR ready for review · targeting <strong>Redis 8.12</strong></p></div>
+    </div>
+    <div>
+      <ul class="b tight">
+        <li><strong>Open:</strong> resolve upstream merge conflicts, final maintainer review rounds.</li>
+        <li><strong>Docs:</strong> <span class="mono" style="font-size:.82em">redis/docs#3715</span>, ready for review on the 8.12 feature branch.</li>
+        <li><strong>Benchmarks:</strong> bitmap write-path specs landed in <span class="mono" style="font-size:.82em">redis-benchmarks-specification</span>.</li>
+        <li><strong>v2 conversation:</strong> the roaring-only command surface, after v1 ships.</li>
+      </ul>
+      <div class="card" style="margin-top:16px;"><h3><span class="icon">🙏</span> Thanks</h3><p>To <strong>sundb</strong> (142 review submissions), <strong>LiorKogan</strong>, <strong>moticless</strong>, and <strong>oranagra</strong>: their review shaped the design.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 45 · TAKEAWAYS ═══════════════ -->
+<section class="slide" data-notes="Three things to remember. One: same API, compressed engine. Flip a boolean and sparse bitmaps get orders of magnitude cheaper; the numbers are measured. Two: determinism drove the design. Types are visible, so the master decides once and everyone else replays BITCONVERT; nothing is re-derived. Three: review made this better. Seventeen tracked decisions, several reversed, five replication designs before the final one.">
+  <div class="kicker">Wrapping up</div>
+  <h2>Three things to remember</h2>
+  <div class="cols3" style="margin-top:14px; grid-template-columns: 1fr 1fr 1fr;">
+    <div class="card" style="padding:28px 26px;">
+      <div style="font-size:42px; font-weight:900;" class="grad">1</div>
+      <h3 style="margin-top:10px;">Same API, compressed engine</h3>
+      <p style="margin-top:6px;">No new commands. Flip <span class="mono" style="font-size:.86em">bitmap-default-roaring</span> and a sparse key drops from <strong>512 MiB to 313 bytes</strong>, measured.</p>
+    </div>
+    <div class="card" style="padding:28px 26px;">
+      <div style="font-size:42px; font-weight:900;" class="grad">2</div>
+      <h3 style="margin-top:10px;">Determinism is the design</h3>
+      <p style="margin-top:6px;">Types are visible, so conversions are decided once and propagated explicitly as <span class="mono" style="font-size:.86em">BITCONVERT</span>, never re-derived on replicas.</p>
+    </div>
+    <div class="card" style="padding:28px 26px;">
+      <div style="font-size:42px; font-weight:900;" class="grad">3</div>
+      <h3 style="margin-top:10px;">Review made it better</h3>
+      <p style="margin-top:6px;">17 tracked decisions, several reversed during review. Five replication designs before the final one. The result is simpler than the first draft.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 46 · THANKS ═══════════════ -->
+<section class="slide center" data-notes="Thank you. Questions?">
+  <div style="text-align:center;">
+    <div class="kicker" style="margin:0 auto 18px;">Thank you</div>
+    <h1 style="font-size:72px;">Questions<span class="grad">?</span></h1>
+    <p class="lead" style="margin-top:30px;">redis/redis <strong>#15331</strong> &nbsp;·&nbsp; <span class="mono" style="font-size:.9em;">redisroaring.com</span> &nbsp;·&nbsp; <span class="mono" style="font-size:.9em;">github.com/aviggiano</span></p>
+    <p style="margin-top:44px; font-size:17px; color:var(--text-3);">Antonio Viggiano · Roaring Bitmaps in Redis</p>
+  </div>
+</section>
+
+</div></div>
+
+<div id="notesPanel"><div class="nlabel">Speaker notes</div><div id="notesText"></div></div>
+<div id="hint">← → navigate · O overview · N notes</div>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var stage = document.getElementById('stage');
+  var progress = document.getElementById('progress');
+  var notesText = document.getElementById('notesText');
+  var cur = 0;
+
+  // footer on content slides
+  slides.forEach(function (s, i) {
+    if (i === 0 || i === slides.length - 1) return;
+    var f = document.createElement('div');
+    f.className = 'foot';
+    f.innerHTML = '<span>Roaring Bitmaps in Redis · redis/redis#15331</span><span>' + (i + 1) + ' / ' + slides.length + '</span>';
+    s.appendChild(f);
+  });
+
+  function fit() {
+    if (document.body.classList.contains('overview')) return;
+    var s = Math.min(innerWidth / 1280, innerHeight / 720);
+    stage.style.transform = 'scale(' + s + ')';
+  }
+
+  function show(i, push) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === cur); });
+    progress.style.width = ((cur + 1) / slides.length * 100) + '%';
+    notesText.textContent = slides[cur].getAttribute('data-notes') || '(no notes)';
+    if (push !== false) location.replace('#/' + (cur + 1));
+  }
+
+  function fromHash() {
+    var m = location.hash.match(/^#\/(\d+)/);
+    show(m ? parseInt(m[1], 10) - 1 : 0, false);
+  }
+
+  function toggleOverview(force) {
+    var on = force === undefined
+      ? document.body.classList.toggle('overview')
+      : document.body.classList.toggle('overview', force);
+    if (on) {
+      slides.forEach(function (s) {
+        var w = document.createElement('div');
+        w.className = 'slidewrap';
+        s.parentNode.insertBefore(w, s);
+        w.appendChild(s);
+      });
+    } else {
+      slides.forEach(function (s) {
+        var w = s.parentNode;
+        if (w.classList && w.classList.contains('slidewrap')) {
+          w.parentNode.insertBefore(s, w);
+          w.parentNode.removeChild(w);
+        }
+      });
+      fit();
+    }
+    show(cur);
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(cur + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') { show(0); }
+    else if (e.key === 'End') { show(slides.length - 1); }
+    else if (e.key === 'o' || e.key === 'O') { toggleOverview(); }
+    else if (e.key === 'n' || e.key === 'N') { document.body.classList.toggle('shownotes'); }
+    else if (e.key === 'Escape' && document.body.classList.contains('overview')) { toggleOverview(false); }
+  });
+
+  slides.forEach(function (s, i) {
+    s.addEventListener('click', function () {
+      if (document.body.classList.contains('overview')) { toggleOverview(false); show(i); }
+    });
+  });
+
+  // touch swipe
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1));
+    tx = null;
+  }, { passive: true });
+
+  addEventListener('resize', fit);
+  addEventListener('hashchange', fromHash);
+  addEventListener('beforeprint', function () {
+    if (document.body.classList.contains('overview')) toggleOverview(false);
+  });
+  fit();
+  fromHash();
+})();
+</script>
+</body>
+</html>
