@@ -1021,13 +1021,13 @@ holding the wrong kind of value</span>
 </section>
 
 <!-- ═══════════════ 32 · BITOP / OLAP CALLBACK ═══════════════ -->
-<section class="slide" data-notes="This is the same eight-row events dataset as slide 7, including Israel at row 6. Each attribute value maps to row IDs; the female user who clicked but did not install is row 2. The matching update to the Redis regression test is proposed in https://github.com/aviggiano/redis/pull/337 (base: aviggiano/redis:unstable). Eight rows fill one byte, so the test clears bit 8 of the installs bitmap before NOT to extend its logical length into a second byte. Raw NOT then includes bit 8; intersecting with universe removes it. This preserves the out-of-universe regression while keeping the visible set members unchanged. That universe pattern motivated the SETFULL discussion; range fills cover it on the v2 list.">
+<section class="slide" data-notes="This is the same eight-row events dataset as slide 7, including Israel at row 6. Each attribute value maps to row IDs; the female user who clicked but did not install is row 2. The matching update to the Redis regression test landed in https://github.com/aviggiano/redis/pull/337 (merged into aviggiano/redis:unstable on October 5, 2026). Eight rows fill one byte, so the test clears bit 8 of the installs bitmap before NOT to extend its logical length into a second byte. Raw NOT then includes bit 8; intersecting with universe removes it. This preserves the out-of-universe regression while keeping the visible set members unchanged. That universe pattern motivated the SETFULL discussion; range fills cover it on the v2 list.">
   <div class="kicker">Capabilities · algebra</div>
   <h2>The BelugaDB workload, now a test in Redis core</h2>
   <div class="cols">
     <div>
       <div class="code sm">
-        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>tests/unit/bitroar.tcl · the same events as slide 7</span></div>
+        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>tests/unit/bitroar.tcl · fork PR #337 merged</span></div>
         <pre><span class="c"># The ad-tech dataset from the start of the talk,
 # one bitmap per value:</span>
 country:brazil        <span class="n">{0 2}</span>
@@ -1045,7 +1045,9 @@ universe              <span class="n">{0 1 2 3 4 5 6 7}</span></pre>
     <div>
       <div class="code sm">
         <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span>the test's query: "female users who clicked but did not install"</span></div>
-        <pre><span class="k">BITOP</span> <span class="s">NOT</span> raw metric:installs
+        <pre><span class="c"># Extend the length beyond the universe</span>
+<span class="k">SETBIT</span> metric:installs <span class="n">8</span> <span class="n">0</span>
+<span class="k">BITOP</span> <span class="s">NOT</span> raw metric:installs
 <span class="c"># a NOT must be bounded by the universe</span>
 <span class="k">BITOP</span> <span class="s">AND</span> not-installs universe raw
 <span class="k">BITOP</span> <span class="s">AND</span> result gender:female metric:clicks
