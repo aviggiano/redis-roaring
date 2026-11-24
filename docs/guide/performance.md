@@ -1,6 +1,6 @@
-# Performance
+# Historical benchmarks
 
-Tested using CRoaring's `census1881` dataset on the travis build [552223545](https://travis-ci.org/aviggiano/redis-roaring/builds/552223545):
+These results compare the standalone module with uncompressed, string-backed Redis bitmaps. The benchmark used CRoaring's `census1881` dataset in [Travis build 552223545](https://travis-ci.org/aviggiano/redis-roaring/builds/552223545).
 
 | OP              | TIME/OP (us) | ST.DEV. (us) |
 | --------------- | ------------ | ------------ |

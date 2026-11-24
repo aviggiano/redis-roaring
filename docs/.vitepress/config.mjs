@@ -8,7 +8,7 @@ const BASE_URL = "/";
 export default defineConfig({
   title: "Redis Roaring",
   lang: "en-US",
-  description: "Roaring Bitmaps for Redis",
+  description: "Roaring bitmaps are built into Redis 8.12. Find native Redis documentation and migrate from the redis-roaring module.",
   base: BASE_URL,
   head: [
     [
@@ -29,8 +29,9 @@ export default defineConfig({
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [
+      { text: "Migrate", link: "/guide/migrate-to-redis" },
       { text: "Guide", link: "/guide/what-is-roaring-bitmap" },
-      { text: "Commands", link: "/commands" },
+      { text: "Module commands", link: "/commands/" },
     ],
 
     sidebar: [
@@ -38,21 +39,25 @@ export default defineConfig({
         text: "Guide",
         items: [
           {
-            text: "What Is Roaring Bitmap",
+            text: "Migrate from redis-roaring",
+            link: "/guide/migrate-to-redis",
+          },
+          {
+            text: "What is a Roaring bitmap?",
             link: "/guide/what-is-roaring-bitmap",
           },
           {
-            text: "Getting Started",
+            text: "Module installation",
             link: "/guide/getting-started",
           },
           {
-            text: "Performance",
+            text: "Historical benchmarks",
             link: "/guide/performance",
           },
         ],
       },
       {
-        text: "Commands",
+        text: "Module commands",
         collapsed: true,
         items: [
           { text: "Introduction", link: "/commands/" },

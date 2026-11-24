@@ -1,14 +1,12 @@
 redis-roaring [![Coverage Status](https://coveralls.io/repos/github/aviggiano/redis-roaring/badge.svg?branch=master)](https://coveralls.io/github/aviggiano/redis-roaring?branch=master) [![CI/CD](https://github.com/aviggiano/redis-roaring/actions/workflows/ci.yml/badge.svg)](https://github.com/aviggiano/redis-roaring/actions/workflows/ci.yml) [![Static Badge](https://img.shields.io/badge/documentation-passing-blue)](https://redisroaring.com)
 ===========
-Roaring Bitmaps for Redis
+[Redis 8.12](https://github.com/redis/redis/releases/tag/8.12.0) adds native Roaring bitmaps to Redis Open Source. For new deployments, [use native Redis bitmaps](https://redis.io/docs/latest/develop/data-types/strings/bitmaps/#roaring-compressed-bitmaps) on Redis 8.12 or later. If you already use the module, [migrate from redis-roaring](docs/guide/migrate-to-redis.md).
+
+**redis-roaring is in maintenance mode.** Maintenance focuses on critical fixes and migration support.
 
 ## Intro
 
-This project uses the [CRoaring](https://github.com/RoaringBitmap/CRoaring) library to implement roaring bitmap commands for Redis.
-These commands can have the same performance as redis' native bitmaps for *O(1)* operations and be [up to 8x faster](#performance) for *O(N)*
-calls, according to microbenchmarks, while consuming less memory than their uncompressed counterparts (benchmark pending).
-
-Pull requests are welcome.
+redis-roaring is a standalone Redis module that implements Roaring bitmap commands using [CRoaring](https://github.com/RoaringBitmap/CRoaring).
 
 ## Dependencies
 
@@ -35,18 +33,20 @@ All core roaring bitmap commands work on Redis 6.0+.
 
 ## Getting started
 
+Use these instructions to build the standalone module for an existing deployment.
+
 ```
 $ git clone https://github.com/aviggiano/redis-roaring.git
 $ cd redis-roaring/
-$ configure.sh
-$ cd dist 
-$ ./redis-server ./redis.conf  
+$ ./configure.sh
+$ cd dist
+$ ./redis-server ./redis.conf
 ```
 then you can open another terminal and use `./redis-cli` to connect to the redis server
 
 ## Docker
 
-It is also possible to run this project as a docker container.
+Run the standalone module in a container with Docker.
 
 ```bash
 docker run -p 6379:6379 aviggiano/redis-roaring:latest
@@ -59,37 +59,7 @@ The performance tests can take a while, since they run on a real dataset of inte
 
 ## Migrating to Redis native bitmaps
 
-After [redis/redis#15296](https://github.com/redis/redis/issues/15296),
-core Redis supports native Roaring-backed bitmaps. We recommend migrating
-redis-roaring keys to core Redis for long-term upstream support, standard Redis
-persistence and replication behavior, and simpler operational tooling.
-
-The standalone `tools/redis-bitmap-migrate.py` utility migrates `R.*` and
-`R64.*` redis-roaring keys into Redis native bitmap values through public Redis
-and redis-roaring commands. It streams integer ranges from the source, writes
-native bitmap values on the target, validates temporary keys, and records a
-durable JSON manifest. It does not depend on Redis core internals or
-redis-roaring private payload layouts.
-
-By default the tool performs a dry run:
-
-```bash
-python3 tools/redis-bitmap-migrate.py \
-  --source-host 127.0.0.1 --source-port 6379 \
-  --target-host 127.0.0.1 --target-port 6380 \
-  --manifest redis-bitmap-migrate-manifest.json
-```
-
-To write destination keys, run a final pass while source writes are frozen and
-acknowledge that with `--apply --assume-frozen`.
-
-```bash
-python3 tools/redis-bitmap-migrate.py \
-  --source-host 127.0.0.1 --source-port 6379 \
-  --target-host 127.0.0.1 --target-port 6380 \
-  --manifest redis-bitmap-migrate-manifest.json \
-  --apply --assume-frozen
-```
+The [migration guide](docs/guide/migrate-to-redis.md) covers application command changes, dry runs, and copying `R.*` and `R64.*` bitmap keys with [`tools/redis-bitmap-migrate.py`](tools/redis-bitmap-migrate.py).
 
 Run the migrator contract tests with:
 
@@ -113,13 +83,13 @@ See [docs/fuzzing.md](docs/fuzzing.md) for complete documentation.
 
 ## API
 
-**📖 Complete Documentation**: For detailed command documentation including syntax, parameters, examples, and usage notes, see [docs/commands/index.md](docs/commands/index.md)
+See the [module command reference](docs/commands/index.md) for syntax, parameters, and examples.
 
 The following operations are supported
 
 - `R.SETBIT` (same as [SETBIT](https://redis.io/commands/setbit))
 - `R.GETBIT` (same as [GETBIT](https://redis.io/commands/getbit))
-- `R.BITOP` (same as [BITOP](https://redis.io/commands/bitop))
+- `R.BITOP` (performs bitwise operations and returns the number of set bits in the result)
 - `R.BITCOUNT` (same as [BITCOUNT](https://redis.io/commands/bitcount) without `start` and `end` parameters)
 - `R.BITPOS` (same as [BITPOS](https://redis.io/commands/bitpos) without `start` and `end` parameters)
 - `R.SETINTARRAY` (create a roaring bitmap from an integer array)
@@ -176,7 +146,7 @@ $ redis-cli
 
 ## Performance
 
-Tested using CRoaring's `census1881` dataset. Performance tests are run automatically on every push to master branch.
+These benchmarks compare the standalone module with uncompressed, string-backed Redis bitmaps on CRoaring's `census1881` dataset. Performance tests run automatically on pushes to the master branch.
 
 <!-- BEGIN_PERFORMANCE -->
 |               OP |     TIME/OP (us) |     ST.DEV. (us) |

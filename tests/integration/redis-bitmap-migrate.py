@@ -1029,14 +1029,13 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
             "--target-host", "127.0.0.1",
             "--target-port", str(target_port),
             "--manifest", str(manifest),
-            "--apply",
-            "--assume-frozen",
             "--socket-timeout", "2",
             *extra,
         ]
 
     def assert_native_bits(self, client, key, set_bits, clear_bits, expected_count=None):
         self.assertEqual(migrate.decode_text(client.execute(["TYPE", key])), "bitmap")
+        self.assertEqual(client.execute(["OBJECT", "ENCODING", key]), b"bitmap-roaring")
         if expected_count is None:
             expected_count = len(set_bits)
         self.assertEqual(client.execute(["BITCOUNT", key]), expected_count)
@@ -1091,8 +1090,8 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
                 target = real_redis_client(target_port, "target")
                 for bit in sorted(bits):
                     source.execute(["R.SETBIT", "foo", str(bit), "1"])
-                source.execute(["PEXPIRE", "foo", "60000"])
-                source_ttl = source.execute(["PTTL", "foo"])
+                source_expire_at = migrate.now_ms() + 60_000
+                source.execute(["PEXPIREAT", "foo", source_expire_at])
 
                 rc, stdout, stderr = self.run_migrator(
                     self.migrator_args(source_port, target_port, manifest, "foo")
@@ -1102,16 +1101,98 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
                 self.assertIn("MIGRATED db=0 key=foo count=5", stdout)
                 self.assertEqual(stderr, "")
                 self.assert_native_bits(target, "foo", bits, {0, 3, 99, 65535})
-                target_ttl = target.execute(["PTTL", "foo"])
-                self.assertGreater(target_ttl, 0)
-                self.assertLessEqual(target_ttl, source_ttl + 1000)
+                target_expire_at = target.execute(["PEXPIRETIME", "foo"])
+                # Redis 6.2 approximates the absolute deadline using PTTL.
+                self.assertAlmostEqual(target_expire_at, source_expire_at, delta=1_000)
 
             data = json.loads(manifest.read_text())
             entry = data["entries"][0]
             self.assertEqual(entry["state"], "committed")
             self.assertEqual(entry["source_type"], "reroaring")
             self.assertEqual(entry["cardinality"], len(bits))
+            self.assertEqual(entry["expire_at_ms"], target_expire_at)
             self.assertGreater(entry["validation"]["ttl_ms"], 0)
+
+    def test_real_dry_run_then_apply_at_migrator_offset_limit(self):
+        max_offset = 4_294_967_295
+        with tempfile.TemporaryDirectory() as tmp:
+            dry_run_manifest = Path(tmp) / "dry-run.json"
+            apply_manifest = Path(tmp) / "apply.json"
+            source_proc, target_proc, source_port, target_port = self.start_pair(tmp)
+            with source_proc, target_proc:
+                source = real_redis_client(source_port, "source")
+                target = real_redis_client(target_port, "target")
+                source.execute(["R.SETBIT", "empty", 0, 0])
+                source.execute(["R.SETINTARRAY", "edge", 1, 65, max_offset])
+                source.execute(["R64.SETBIT", "edge64", max_offset, 1])
+                source.execute(["R64.SETBIT", "above-cap", max_offset + 1, 1])
+                source.execute(["SET", "other", "source-only"])
+
+                rc, stdout, stderr = self.run_migrator(
+                    self.migrator_scan_args(
+                        source_port, target_port, dry_run_manifest, "--cap-policy", "skip"
+                    )
+                )
+                self.assertEqual(rc, 0, f"dry run failed:\n{stderr}")
+                self.assertIn("planned=3", stdout)
+                self.assertIn("SKIP db=0 key=above-cap", stderr)
+                self.assertEqual(target.execute(["DBSIZE"]), 0)
+
+                rc, stdout, stderr = self.run_migrator(
+                    self.migrator_scan_args(
+                        source_port, target_port, apply_manifest,
+                        "--cap-policy", "skip", "--apply", "--assume-frozen",
+                    )
+                )
+                self.assertEqual(rc, 0, f"apply failed:\n{stderr}")
+                self.assertIn("migrated=3", stdout)
+                self.assertIn("SKIP db=0 key=above-cap", stderr)
+                self.assertEqual(target.execute(["DBSIZE"]), 3)
+                self.assertEqual(target.execute(["EXISTS", "above-cap", "other"]), 0)
+                self.assertEqual(source.execute(["TYPE", "edge"]), "reroaring")
+                self.assertEqual(source.execute(["TYPE", "edge64"]), "roaring64")
+
+                self.assert_native_bits(target, "empty", [], [0])
+                self.assertEqual(target.execute(["BITPOS", "empty", 0]), -1)
+                self.assertEqual(target.execute(["BITRANGEINTARRAY", "empty", 0, -1, "BIT"]), [])
+                self.assert_native_bits(target, "edge", [1, 65, max_offset], [0, 66])
+                self.assert_native_bits(target, "edge64", [max_offset], [0, max_offset - 1])
+
+                page = target.execute(["BITRANGEINTARRAY", "edge", 0, -1, "BIT", "LIMIT", 2])
+                self.assertEqual(page, [1, 65])
+                self.assertEqual(
+                    target.execute(["BITRANGEINTARRAY", "edge", page[-1] + 1, -1, "BIT", "LIMIT", 2]),
+                    [max_offset],
+                )
+
+            for manifest, state in [(dry_run_manifest, "dry_run"), (apply_manifest, "committed")]:
+                with self.subTest(manifest=manifest.name):
+                    entries = json.loads(manifest.read_text())["entries"]
+                    self.assertEqual(
+                        {entry["key"]: entry["state"] for entry in entries},
+                        {"empty": state, "edge": state, "edge64": state, "above-cap": "skipped"},
+                    )
+
+    def test_real_roaring64_above_cap_fails_without_writing_destination(self):
+        key = "above-cap"
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = Path(tmp) / "manifest.json"
+            source_proc, target_proc, source_port, target_port = self.start_pair(tmp)
+            with source_proc, target_proc:
+                source = real_redis_client(source_port, "source")
+                target = real_redis_client(target_port, "target")
+                source.execute(["R64.SETBIT", key, 4_294_967_296, 1])
+
+                rc, _, stderr = self.run_migrator(
+                    self.migrator_args(source_port, target_port, manifest, key)
+                )
+
+                self.assertEqual(rc, 1)
+                self.assertIn("source max offset 4294967296 exceeds v1 native bitmap cap", stderr)
+                self.assertEqual(target.execute(["DBSIZE"]), 0)
+
+            entry = json.loads(manifest.read_text())["entries"][0]
+            self.assertEqual(entry["state"], "failed")
 
     def test_real_stale_seed_payload_fails_preflight_with_actionable_error(self):
         """A seed payload the target rejects must fail once, not per key."""
@@ -1313,6 +1394,8 @@ class RealRedisRoaringMigrationTests(unittest.TestCase):
                         source_port,
                         target_port,
                         manifest,
+                        "--apply",
+                        "--assume-frozen",
                         "--pattern", "census1881:*",
                         "--target-prefix", "native:",
                         "--page-size", "64",

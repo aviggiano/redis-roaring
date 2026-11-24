@@ -31,38 +31,8 @@ native bitmap values, validating them, and committing them safely.
 
 ## Tool Usage
 
-From a checkout of `aviggiano/redis-roaring`, the reference tool can be run as
-follows.
-
-The tool defaults to a dry run and writes a durable JSON manifest:
-
-```
-python3 tools/redis-bitmap-migrate.py \
-  --source-host 127.0.0.1 --source-port 6379 \
-  --target-host 127.0.0.1 --target-port 6380 \
-  --manifest redis-bitmap-migrate-manifest.json
-```
-
-To perform writes, run it during a maintenance window or another verified final
-pass and acknowledge that source writes are frozen:
-
-```
-python3 tools/redis-bitmap-migrate.py \
-  --source-host 127.0.0.1 --source-port 6379 \
-  --target-host 127.0.0.1 --target-port 6380 \
-  --manifest redis-bitmap-migrate-manifest.json \
-  --apply --assume-frozen
-```
-
-Useful safety switches:
-
-- `--replace` allows overwriting destination keys; the default is no-overwrite.
-- `--cap-policy skip` records above-cap `roaring64` keys as skipped instead of
-  failing the run.
-- `--resume` resumes from an existing manifest.
-- `--all-dbs` discovers DB indexes from `INFO keyspace`; otherwise `--db`
-  defaults to DB 0 and may be repeated.
-- `--key`, `--key-file`, and `--pattern` restrict the source key set.
+Follow the [migration guide](../guide/migrate-to-redis.md) for the Redis 8.12+
+workflow and example commands.
 
 ## Correctness Model
 
@@ -75,9 +45,10 @@ The default correctness story is a maintenance-window migration:
 5. Atomically rename or replace the destination key.
 6. Let the target Redis save a clean native RDB afterward.
 
-An initial copy followed by a final write freeze is allowed. A dual-write or
-change-tracking flow is allowed only when it ends with a verified final pass.
-Best-effort live `SCAN` by itself is not a correctness guarantee.
+The recommended workflow freezes source writes before copying keys. An initial
+live copy requires independent reconciliation of deletes and type changes.
+The final scan only sees keys still present on the source, so it can leave stale
+bitmap keys on the target.
 
 ## Export Requirements
 
@@ -91,7 +62,7 @@ The implemented tool uses bounded and probed redis-roaring commands:
 each command result with `--page-size`, detects export failures or concurrent
 cardinality changes, and records enough source state for validation and resume.
 
-The v1 native bitmap contract is capped at max bit offset `4294967295`, which
+The migrator is capped at max bit offset `4294967295`, which
 corresponds to a logical length of 512 MiB. Above-cap `roaring64` inputs default
 to failure. An explicit `skip` policy is allowed only when the manifest records
 the skipped key and reports it loudly. There is no silent truncation and no v1
@@ -161,7 +132,7 @@ Validation cannot rely only on `BITCOUNT`. The minimum validation set is:
 - boundary `GETBIT` checks around the first and last set offsets; for
   cardinality 0 these checks are skipped, and when the last set bit is
   `4294967295` the post-max check is omitted or clamped because
-  `4294967296` is outside the v1 native bitmap range;
+  `4294967296` is outside the migrator's supported range;
 - deterministic sampled `GETBIT` checks;
 - `BITPOS` parity where it applies, including `BITPOS 1 == -1` and
   `BITPOS 0 == -1` for an empty native bitmap;
