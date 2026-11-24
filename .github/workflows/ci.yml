@@ -241,7 +241,7 @@ jobs:
         # come from them.
         sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.sources
         sudo apt-get update
-        sudo apt-get install -y clang lcov llvm
+        sudo apt-get install -y clang llvm
 
     - name: Initialize submodules
       run: |
@@ -306,14 +306,18 @@ jobs:
     - name: Generate coverage report
       run: |
         cd build-fuzz-cov
-        llvm-profdata merge -sparse fuzz-${{ matrix.fuzzer }}-*.profraw -o fuzz-${{ matrix.fuzzer }}.profdata
-        llvm-cov export ./tests/fuzz/${{ matrix.fuzzer }} \
-          -instr-profile=fuzz-${{ matrix.fuzzer }}.profdata \
+        fuzzer=./tests/fuzz/${{ matrix.fuzzer }}
+        profile=fuzz-${{ matrix.fuzzer }}.profdata
+        ignored_sources='/usr/.*|.*/deps/.*|.*/tests/.*'
+        llvm-profdata merge -sparse fuzz-${{ matrix.fuzzer }}-*.profraw -o "$profile"
+        llvm-cov export "$fuzzer" \
+          -instr-profile="$profile" \
           -format=lcov \
-          -ignore-filename-regex='/usr/.*|.*/deps/.*|.*/tests/.*' \
+          -ignore-filename-regex="$ignored_sources" \
           > ../fuzz-coverage-${{ matrix.fuzzer }}.info
-        cd ..
-        lcov --list fuzz-coverage-${{ matrix.fuzzer }}.info
+        llvm-cov report "$fuzzer" \
+          -instr-profile="$profile" \
+          -ignore-filename-regex="$ignored_sources"
 
     # Temporarily disabled - parallel builds not working with Coveralls
     # - name: Upload fuzzing coverage to Coveralls
