@@ -82,10 +82,14 @@ jobs:
         REDIS_NATIVE_SERVER: ${{ github.workspace }}/native-redis/src/redis-server
         REDIS_ROARING_MODULE: ${{ github.workspace }}/build/libredis-roaring.so
       run: |
+        test -x "$REDIS_NATIVE_SERVER"
+        test -f "$REDIS_ROARING_MODULE"
+        test -d "$REDIS_CROARING_REALDATA_DIR"
         for redis_dir in redis-6.2.14 redis-7.0.15; do
           echo "Testing migration from $redis_dir"
-          REDIS_ROARING_SERVER="$PWD/$redis_dir/src/redis-server" \
-            python3 tests/integration/redis-bitmap-migrate.py RealRedisRoaringMigrationTests
+          export REDIS_ROARING_SERVER="$PWD/$redis_dir/src/redis-server"
+          test -x "$REDIS_ROARING_SERVER"
+          python3 tests/integration/redis-bitmap-migrate.py RealRedisRoaringMigrationTests
         done
 
   test:

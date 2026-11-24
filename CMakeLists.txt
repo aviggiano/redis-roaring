@@ -31,6 +31,11 @@ include_directories(
 )
 
 add_subdirectory(${CROARING_PATH} EXCLUDE_FROM_ALL)
+
+# The pinned hiredis release declares CMake 3.0, which CMake 4 no longer supports.
+if(NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+  set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
 add_subdirectory(${HIREDIS_PATH} EXCLUDE_FROM_ALL)
 
 # Enable testing

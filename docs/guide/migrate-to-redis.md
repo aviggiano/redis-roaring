@@ -34,10 +34,12 @@ leaves Redis keys untouched.
 python3 tools/redis-bitmap-migrate.py \
   --source-host 127.0.0.1 --source-port 6379 \
   --target-host 127.0.0.1 --target-port 6380 \
-  --manifest redis-bitmap-plan.json
+  --manifest redis-bitmap-plan.json --keep-going
 ```
 
-Review the manifest and resolve failures before applying. The migrator accepts
+`--keep-going` continues the inventory after a per-key error. The dry run
+still exits with a failure status if any key fails. Review the manifest and
+resolve failures before applying. The migrator accepts
 set-bit offsets through `4,294,967,295` with Redis's default
 `proto-max-bulk-len`. A lower target setting can reduce the limit. An `R64.*`
 key above the migrator's cap fails by default. Use `--cap-policy skip` only
@@ -45,8 +47,10 @@ if you have another plan for those keys. The manifest records each skipped key.
 
 ## 2. Apply with source writes frozen
 
-Rehearse an apply against staging to verify target writes. For the production
-copy, stop application writes to the source before running this command.
+Rehearse an apply against staging to verify target writes. Use fresh manifest
+paths for each rehearsal and for the production migration. For the production
+copy, stop application writes to the source before running this command and
+keep them paused through verification and cutover.
 `--assume-frozen` records that you have already stopped writes.
 
 ```sh
@@ -60,7 +64,7 @@ python3 tools/redis-bitmap-migrate.py \
 The migrator validates each temporary bitmap before moving it into place.
 If a destination key already exists, the default is to report a collision
 and preserve the destination. To retry an interrupted apply, add `--resume`
-with the same apply manifest, endpoints and key scope. Keep source writes
+with the same apply manifest, endpoints, and options. Keep source writes
 frozen for the retry.
 
 ## 3. Update and verify your application
@@ -71,9 +75,16 @@ Use the native Redis commands for migrated keys. Review callers of both
 | Module command family | Redis 8.12+ |
 | --- | --- |
 | `SETBIT`, `GETBIT`, `BITCOUNT` | Use the unprefixed command. |
+| `BITPOS` | Use `BITPOS`. For an existing empty bitmap, a search for `0` returns `-1` in native Redis and `0` in the module. |
 | `GETINTARRAY` | Use `BITRANGEINTARRAY key 0 -1` to list the set-bit offsets. |
 | `RANGEINTARRAY` | Use `BITRANGEINTARRAY` with bit or byte offsets. See the pagination example below. |
 | `BITOP` | Redis returns the result's length in bytes. Use `BITCOUNT destkey` if the application needs the number of set bits. |
+
+Native `BITOP NOT` flips all bits through the end of the source's logical byte
+length. The module flips through the highest set bit by default and accepts an
+optional last offset. Native `BITOP` also clears any existing destination TTL
+when it writes a result. Update callers that rely on the module's flip range
+or on the destination retaining its TTL.
 
 The module's range commands page by rank among set bits. With native
 `BITRANGEINTARRAY`, start with `BITRANGEINTARRAY key 0 -1 BIT LIMIT 1000`.
