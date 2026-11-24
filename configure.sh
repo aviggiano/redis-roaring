@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 function configure_submodules()
 {
   git submodule init

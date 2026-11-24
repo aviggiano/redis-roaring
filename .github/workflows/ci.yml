@@ -41,43 +41,56 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         submodules: recursive
-    - name: Checkout native Redis
-      uses: actions/checkout@v2
+    - name: Checkout Redis 8.12.0 target
+      uses: actions/checkout@v4
       with:
-        repository: aviggiano/redis
-        # Deliberately tracks the branch Redis core goes live on, so this job is
-        # the early warning that the native bitmap encoding moved. When it goes
-        # red on a commit that did not touch this repository, that is the signal:
-        # the seed payload in tools/redis-bitmap-migrate.py encodes the fork's
-        # RDB type id and layout for native bitmaps and needs regenerating. The
-        # migrator's preflight names that remedy explicitly rather than failing
-        # per key with "Bad data format".
-        ref: unstable
+        repository: redis/redis
+        ref: 8.12.0
         path: native-redis
-        submodules: recursive
+    - name: Checkout Redis 6.2.14 source
+      uses: actions/checkout@v4
+      with:
+        repository: redis/redis
+        ref: 6.2.14
+        path: redis-6.2.14
+    - name: Checkout Redis 7.0.15 source
+      uses: actions/checkout@v4
+      with:
+        repository: redis/redis
+        ref: 7.0.15
+        path: redis-7.0.15
     - name: Compile migrator and benchmark harness
       run: python3 -m py_compile tools/redis-bitmap-migrate.py tests/integration/redis-bitmap-migrate.py tools/bitmap-bench.py
     - name: Run migrator contract tests
-      run: python3 tests/integration/redis-bitmap-migrate.py
-    - name: Build native Redis
-      run: make -C native-redis -j"$(nproc)"
+      run: python3 tests/integration/redis-bitmap-migrate.py RedisBitmapMigrateTests
+    - name: Build Redis servers
+      run: |
+        for redis_dir in native-redis redis-6.2.14 redis-7.0.15; do
+          make -C "$redis_dir/src" -j"$(nproc)" MALLOC=libc OPTIMIZATION=-O1 redis-server
+        done
     - name: Build redis-roaring module
       run: |
-        cd src
-        ../deps/CRoaring/amalgamation.sh
-        cd ..
+        ./deps/CRoaring/amalgamation.sh src
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
         cmake --build build --target redis-roaring -- -j"$(nproc)"
     - name: Run real redis-roaring to native Redis migration tests
       env:
-        REDIS_DOWNLOAD_CROARING_REALDATA: "1"
+        REDIS_CROARING_REALDATA_DIR: ${{ github.workspace }}/deps/CRoaring/benchmarks/realdata/census1881
         REDIS_NATIVE_SERVER: ${{ github.workspace }}/native-redis/src/redis-server
         REDIS_ROARING_MODULE: ${{ github.workspace }}/build/libredis-roaring.so
-        REDIS_ROARING_SERVER: ${{ github.workspace }}/native-redis/src/redis-server
-      run: python3 tests/integration/redis-bitmap-migrate.py RealRedisRoaringMigrationTests
+      run: |
+        test -x "$REDIS_NATIVE_SERVER"
+        test -f "$REDIS_ROARING_MODULE"
+        test -d "$REDIS_CROARING_REALDATA_DIR"
+        for redis_dir in redis-6.2.14 redis-7.0.15; do
+          echo "Testing migration from $redis_dir"
+          export REDIS_ROARING_SERVER="$PWD/$redis_dir/src/redis-server"
+          test -x "$REDIS_ROARING_SERVER"
+          python3 tests/integration/redis-bitmap-migrate.py RealRedisRoaringMigrationTests
+        done
 
   test:
     if: github.event_name != 'schedule'
@@ -228,7 +241,7 @@ jobs:
         # come from them.
         sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.sources
         sudo apt-get update
-        sudo apt-get install -y clang lcov llvm
+        sudo apt-get install -y clang llvm
 
     - name: Initialize submodules
       run: |
@@ -293,14 +306,18 @@ jobs:
     - name: Generate coverage report
       run: |
         cd build-fuzz-cov
-        llvm-profdata merge -sparse fuzz-${{ matrix.fuzzer }}-*.profraw -o fuzz-${{ matrix.fuzzer }}.profdata
-        llvm-cov export ./tests/fuzz/${{ matrix.fuzzer }} \
-          -instr-profile=fuzz-${{ matrix.fuzzer }}.profdata \
+        fuzzer=./tests/fuzz/${{ matrix.fuzzer }}
+        profile=fuzz-${{ matrix.fuzzer }}.profdata
+        ignored_sources='/usr/.*|.*/deps/.*|.*/tests/.*'
+        llvm-profdata merge -sparse fuzz-${{ matrix.fuzzer }}-*.profraw -o "$profile"
+        llvm-cov export "$fuzzer" \
+          -instr-profile="$profile" \
           -format=lcov \
-          -ignore-filename-regex='/usr/.*|.*/deps/.*|.*/tests/.*' \
+          -ignore-filename-regex="$ignored_sources" \
           > ../fuzz-coverage-${{ matrix.fuzzer }}.info
-        cd ..
-        lcov --list fuzz-coverage-${{ matrix.fuzzer }}.info
+        llvm-cov report "$fuzzer" \
+          -instr-profile="$profile" \
+          -ignore-filename-regex="$ignored_sources"
 
     # Temporarily disabled - parallel builds not working with Coveralls
     # - name: Upload fuzzing coverage to Coveralls
@@ -669,7 +686,7 @@ jobs:
   docs_build:
     runs-on: ubuntu-latest
     name: Build Docs
-    if: github.ref == 'refs/heads/master'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -682,6 +699,7 @@ jobs:
           cache: npm
           cache-dependency-path: docs/package-lock.json
       - name: Setup Pages
+        if: github.ref == 'refs/heads/master'
         uses: actions/configure-pages@v4
       - name: Install dependencies
         run: npm ci
@@ -692,6 +710,7 @@ jobs:
         run: npm run docs:build
         working-directory: docs
       - name: Upload artifact
+        if: github.ref == 'refs/heads/master'
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/.vitepress/dist

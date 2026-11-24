@@ -1,6 +1,8 @@
-# Roaring Bitmap Commands
+# Module commands
 
-This document provides an index of all available Roaring bitmap commands with links to their detailed documentation.
+This reference covers the standalone redis-roaring module.
+For native commands in Redis 8.12 and later, see the [Redis bitmap documentation](https://redis.io/docs/latest/develop/data-types/strings/bitmaps/#roaring-compressed-bitmaps).
+See the [migration guide](../guide/migrate-to-redis.md) for command changes when moving an existing application.
 
 ## Key Differences Between 32-bit and 64-bit Commands
 
@@ -13,7 +15,6 @@ This document provides an index of all available Roaring bitmap commands with li
 ## Documentation Conventions
 
 - Commands use `R.` (32-bit) and `R64.` (64-bit) prefixes to distinguish them from standard Redis commands
-- Commands that mirror Redis functionality maintain the same parameter structure and behavior
 - 32-bit commands are suitable for most general use cases
 - 64-bit commands are designed for applications requiring large value ranges
 - Both command sets provide identical APIs where available, differing only in supported value ranges
