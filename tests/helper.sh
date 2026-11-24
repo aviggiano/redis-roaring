@@ -77,7 +77,10 @@ function start_redis() {
   export REDIS_PORT
 
   local REDIS_COMMAND="./deps/redis/src/redis-server --loglevel warning --loadmodule $LIB_PATH --port $REDIS_PORT"
-  local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect --child-silent-after-fork=yes --suppressions=./deps/redis/src/valgrind.sup --error-exitcode=1 --log-file=$LOG_FILE"
+  # Match the leak reporting policy when Valgrind sets a forked child's exit status.
+  local VALGRIND_COMMAND="valgrind --leak-check=yes --show-leak-kinds=definite,indirect \
+    --errors-for-leak-kinds=definite,indirect --child-silent-after-fork=yes \
+    --suppressions=./deps/redis/src/valgrind.sup --error-exitcode=1 --log-file=$LOG_FILE"
   local AOF_OPTION="--appendonly $USE_AOF --aof-use-rdb-preamble $USE_RDB_PREAMBLE"
   local CLUSTER_OPTION=""
   if [ "$USE_VALGRIND" == "no" ]; then

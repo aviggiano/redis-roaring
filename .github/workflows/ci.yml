@@ -95,8 +95,7 @@ jobs:
   test:
     if: github.event_name != 'schedule'
     name: Test project (Redis ${{ matrix.redis-version }})
-    # Legacy Redis AOF rewrites fail under the Ubuntu 26.04 Valgrind stack.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
